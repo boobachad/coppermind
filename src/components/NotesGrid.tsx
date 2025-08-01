@@ -24,7 +24,7 @@ const getPreviewText = (content: string) => {
   }
 };
 
-export function NotesGrid() {
+export function NotesGrid({ parentId = null, embedded = false }: { parentId?: string | null, embedded?: boolean }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const navigate = useNavigate();
 
@@ -32,35 +32,52 @@ export function NotesGrid() {
     loadNotes();
     window.addEventListener('notes-updated', loadNotes);
     return () => window.removeEventListener('notes-updated', loadNotes);
-  }, []);
+  }, [parentId]);
 
   const loadNotes = async () => {
     try {
       const db = await getDb();
-      const result = await db.select<Note[]>('SELECT * FROM notes ORDER BY updated_at DESC');
-      setNotes(result);
+      // Fetch all notes to calculate counts locally for now (efficient enough for local app)
+      const allNotes = await db.select<Note[]>('SELECT * FROM notes');
+      const filteredNotes = allNotes
+        .filter(n => parentId ? n.parent_id === parentId : !n.parent_id)
+        .sort((a, b) => b.updated_at - a.updated_at);
+        
+      const notesWithCounts = filteredNotes.map(note => ({
+        ...note,
+        nestedCount: allNotes.filter(n => n.parent_id === note.id).length
+      }));
+      
+      setNotes(notesWithCounts);
     } catch (err) {
       console.error("Failed to load notes", err);
     }
   };
 
   return (
-    <div className="h-full p-8 bg-gray-50 overflow-y-auto">
-      <div className="max-w-6xl mx-auto">
+    <div className={embedded ? "w-full" : "h-full p-8 bg-gray-50 overflow-y-auto"}>
+      <div className={embedded ? "w-full" : "max-w-6xl mx-auto"}>
         {notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-            <p className="text-xl font-medium mb-2">No notes yet</p>
-            <p>Create a new note to get started.</p>
+          <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+            <p className="text-sm font-medium mb-1">No nested notes</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {notes.map((note) => (
+            {(notes as any[]).map((note) => (
               <div
                 key={note.id}
                 onClick={() => navigate(`/notes/${note.id}`)}
-                className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-100 flex flex-col h-48 group"
+                className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-100 flex flex-col h-48 group relative"
               >
-                <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate group-hover:text-blue-600 transition-colors">
+                {note.nestedCount > 0 && (
+                  <div 
+                    className="absolute top-3 right-3 bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full"
+                    title={`${note.nestedCount} nested notes inside`}
+                  >
+                    {note.nestedCount}
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate group-hover:text-blue-600 transition-colors pr-8">
                   {note.title || 'Untitled'}
                 </h3>
                 <p className="text-sm text-gray-500 mb-4 flex-1 overflow-hidden relative">

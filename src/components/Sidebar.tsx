@@ -19,7 +19,8 @@ export function Sidebar() {
   const loadNotes = async () => {
     try {
       const db = await getDb();
-      const result = await db.select<Note[]>('SELECT * FROM notes ORDER BY updated_at DESC');
+      // Filter for top-level notes only
+      const result = await db.select<Note[]>('SELECT * FROM notes WHERE parent_id IS NULL ORDER BY updated_at DESC');
       setNotes(result);
     } catch (err) {
       console.error("Failed to load notes", err);

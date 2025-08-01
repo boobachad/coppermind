@@ -7,6 +7,16 @@ export interface Note {
   parent_id?: string | null;
 }
 
+export interface StickyNote {
+  id: string;
+  note_id: string;
+  content: string;
+  color: string;
+  x: number;
+  y: number;
+  created_at: number;
+}
+
 export interface Todo {
   id: number;
   text: string;
