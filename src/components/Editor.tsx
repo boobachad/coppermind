@@ -25,7 +25,7 @@ import { DragHandle } from './DragHandle';
 import { ContextMenu } from './ContextMenu';
 import { PDFExtension } from './extensions/PDFExtension';
 import { MindMapTreeExtension, MindMapBlockExtension } from './extensions/MindMapExtension';
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { TableControls } from './extensions/TableControls';
 
 const lowlight = createLowlight(all);
@@ -41,6 +41,9 @@ interface EditorProps {
 
 export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange }, ref) => {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  // Use a ref to track if we've synced the initial content
+  // We only want to force-set content once when the editor loads
+  const hasSyncedInitialContent = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -97,7 +100,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none max-w-none',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none max-w-none pt-32', // Added pt-32 for top spacing
       },
       handleDOMEvents: {
         contextmenu: (_view, event) => {
@@ -157,6 +160,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
       }
     },
   });
+
+  useEffect(() => {
+    if (editor && content && !hasSyncedInitialContent.current) {
+      const currentContent = JSON.stringify(editor.getJSON());
+      if (currentContent !== content) {
+        editor.commands.setContent(tryParse(content));
+      }
+      hasSyncedInitialContent.current = true;
+    }
+  }, [editor, content]);
 
   useImperativeHandle(ref, () => ({
     setTitle: (title: string) => {

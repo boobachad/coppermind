@@ -86,15 +86,14 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
         "absolute w-64 h-64 rounded-xl shadow-xl transition-shadow duration-300",
         COLORS[data.color] || COLORS.yellow,
         isDragging ? "cursor-grabbing z-50 shadow-2xl scale-105" : "cursor-grab z-10",
-        "flex flex-col overflow-hidden",
-        "animate-in fade-in zoom-in slide-in-from-top-4 duration-500 ease-out-back" // Swing-like entrance
+        "flex flex-col overflow-hidden"
       )}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
     >
       {/* Pin Icon */}
       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="animate-bounce">
+        <div>
           <Pin className="w-6 h-6 text-red-500 drop-shadow-md fill-current" />
         </div>
       </div>

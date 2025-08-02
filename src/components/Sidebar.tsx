@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, CheckSquare, Settings, Plus } from 'lucide-react';
+import { FileText, CheckSquare, Settings, Plus, Share2 } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { Note } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,10 +32,19 @@ export function Sidebar() {
       const id = uuidv4();
       const db = await getDb();
       const now = Date.now();
+      const initialContent = JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'heading',
+            attrs: { level: 1 }
+          }
+        ]
+      });
       await db.execute('INSERT INTO notes (id, title, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [
         id,
         'Untitled',
-        '',
+        initialContent,
         now,
         now
       ]);
@@ -65,6 +74,13 @@ export function Sidebar() {
           >
             <CheckSquare className="mr-3 h-5 w-5" />
             To-Dos
+          </NavLink>
+          <NavLink
+            to="/nodes"
+            className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-gray-200 text-gray-900" : "text-gray-600 hover:bg-gray-100")}
+          >
+            <Share2 className="mr-3 h-5 w-5" />
+            Nodes & Graphs
           </NavLink>
         </nav>
 

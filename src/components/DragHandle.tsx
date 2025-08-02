@@ -70,7 +70,7 @@ export function DragHandle({ editor }: DragHandleProps) {
         
         setPosition({
           top: rect.top,
-          left: rect.left - 24,
+          left: rect.left - 48, // Moved further left
         });
         setCurrentNode({ node: blockNode, pos: blockPos });
       }

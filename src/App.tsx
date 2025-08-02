@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { NotePage } from './pages/NotePage';
 import { TodosPage } from './pages/TodosPage';
+import { NodesPage } from './pages/NodesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { initDb } from './lib/db';
-
 import { NotesGrid } from './components/NotesGrid';
 
 function App() {
@@ -20,6 +20,7 @@ function App() {
           <Route index element={<NotesGrid />} />
           <Route path="notes/:id" element={<NotePage />} />
           <Route path="todos" element={<TodosPage />} />
+          <Route path="nodes" element={<NodesPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

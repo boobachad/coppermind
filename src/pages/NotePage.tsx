@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Editor, EditorRef } from '../components/Editor';
 import { FloatingHeader } from '../components/FloatingHeader';
 import { StickyNote } from '../components/StickyNote';
+import { StickerLayer, StickerLayerRef } from '../components/StickerLayer';
 import { NotesGrid } from '../components/NotesGrid';
 import { getDb } from '../lib/db';
 import { Note, StickyNote as StickyNoteType } from '../lib/types';
@@ -17,6 +18,7 @@ export function NotePage() {
   const [stickyNotes, setStickyNotes] = useState<StickyNoteType[]>([]);
   const saveTimeoutRef = useRef<any>(null);
   const editorRef = useRef<EditorRef>(null);
+  const stickerLayerRef = useRef<StickerLayerRef>(null);
 
   useEffect(() => {
     loadNote();
@@ -120,16 +122,31 @@ export function NotePage() {
     } else if (action === 'new-nested') {
         const newId = uuidv4();
         const now = Date.now();
+        const initialContent = JSON.stringify({
+          type: 'doc',
+          content: [
+            {
+              type: 'heading',
+              attrs: { level: 1 }
+            }
+          ]
+        });
+
         await db.execute('INSERT INTO notes (id, title, content, created_at, updated_at, parent_id) VALUES ($1, $2, $3, $4, $5, $6)', [
             newId,
             'Untitled',
-            '',
+            initialContent,
             now,
             now,
             note.id
         ]);
         window.dispatchEvent(new Event('notes-updated'));
         navigate(`/notes/${newId}`);
+    } else if (action.startsWith('add-sticker:')) {
+        const type = action.split(':')[1];
+        if (stickerLayerRef.current) {
+            stickerLayerRef.current.addSticker(type);
+        }
     } else if (action === 'new-sticky') {
         const newId = uuidv4();
         const now = Date.now();
@@ -195,9 +212,31 @@ export function NotePage() {
       setStickyNotes(prev => prev.filter(s => s.id !== stickyId));
   };
 
-  const extractTitle = (html: string) => {
+  const extractTitle = (content: string) => {
+    try {
+      const json = JSON.parse(content);
+      if (json.type === 'doc' && Array.isArray(json.content)) {
+        // First try to find an H1
+        const h1 = json.content.find((node: any) => node.type === 'heading' && node.attrs?.level === 1);
+        if (h1?.content) {
+          const text = h1.content.map((c: any) => c.text || '').join('');
+          if (text.trim()) return text.substring(0, 50);
+        }
+
+        // Fallback to first non-empty block
+        for (const node of json.content) {
+           if (node.content && Array.isArray(node.content)) {
+             const text = node.content.map((c: any) => c.text || '').join('');
+             if (text.trim()) return text.substring(0, 50);
+           }
+        }
+      }
+    } catch {
+       // Ignore JSON parse errors, fall through to HTML handling
+    }
+
     const div = document.createElement('div');
-    div.innerHTML = html;
+    div.innerHTML = content;
     const h1 = div.querySelector('h1');
     if (h1 && h1.textContent) return h1.textContent.substring(0, 50);
     const p = div.querySelector('p');
@@ -223,10 +262,11 @@ export function NotePage() {
       />
       
       <div className="flex-1 overflow-y-auto relative">
-        <div className="max-w-4xl mx-auto w-full pb-24">
-          <Editor 
-            ref={editorRef}
-            initialContent={note.content} 
+         <div className="max-w-4xl mx-auto w-full pb-24 relative">
+           <StickerLayer ref={stickerLayerRef} noteId={note.id} />
+            <Editor 
+              ref={editorRef}
+            content={note.content} 
             onChange={handleContentChange} 
           />
           
@@ -243,7 +283,7 @@ export function NotePage() {
         </div>
 
         {/* Sticky Notes Overlay */}
-        {stickyNotes.map(sn => (
+        {stickyNotes.filter(sn => sn.type !== 'stamp').map(sn => (
            <StickyNote 
               key={sn.id} 
               data={sn} 

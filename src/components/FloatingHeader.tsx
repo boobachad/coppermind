@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, ChevronDown, FileText, StickyNote, Trash2, ExternalLink, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, FileText, StickyNote, Trash2, ExternalLink, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { STICKER_TYPES } from '../lib/constants';
 
 interface FloatingHeaderProps {
   title: string;
@@ -14,6 +15,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
   const [isEditing, setIsEditing] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
   const [showMenu, setShowMenu] = useState(false);
+  const [showStickerMenu, setShowStickerMenu] = useState(false);
   const [showBreadcrumbDropdown, setShowBreadcrumbDropdown] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -153,6 +155,37 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
         {showMenu && (
           <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-black rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 z-50">
+            {showStickerMenu ? (
+              <>
+                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 flex items-center">
+                   <button 
+                     onClick={() => setShowStickerMenu(false)}
+                     className="mr-2 text-gray-500 hover:text-gray-900"
+                   >
+                     <ChevronLeft className="w-4 h-4" />
+                   </button>
+                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Stickers</span>
+                </div>
+                <div className="p-2 grid grid-cols-3 gap-2">
+                  {STICKER_TYPES.map(type => (
+                    <button
+                      key={type.id}
+                      onClick={() => {
+                        onAction(`add-sticker:${type.id}`);
+                        setShowMenu(false);
+                        setShowStickerMenu(false);
+                      }}
+                      className="flex flex-col items-center justify-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      title={type.label}
+                    >
+                      <type.icon className="w-6 h-6 mb-1" style={{ color: type.color }} />
+                      <span className="text-[10px] text-gray-600 dark:text-gray-400">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
             <button
               onClick={() => { onAction('new-nested'); setShowMenu(false); }}
               className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm text-black dark:text-white text-left transition-colors"
@@ -178,8 +211,8 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
             </button>
             
             <button
-              disabled
-              className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-400 dark:text-gray-500 text-left cursor-not-allowed"
+              onClick={() => setShowStickerMenu(true)}
+              className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm text-black dark:text-white text-left transition-colors"
             >
               <div className="w-4 h-4 flex items-center justify-center">✨</div>
               <span>Stickers</span>
@@ -194,6 +227,8 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
               <Trash2 className="w-4 h-4" />
               <span>Delete Note</span>
             </button>
+              </>
+            )}
           </div>
         )}
       </div>
