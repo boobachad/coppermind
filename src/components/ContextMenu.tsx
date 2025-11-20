@@ -9,7 +9,17 @@ import {
   Highlighter,
   Image as ImageIcon,
   FileText,
-  Check
+  Check,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  CheckSquare,
+  Quote,
+  Code,
+  Type,
+  ArrowRight
 } from 'lucide-react';
 import { handleImageUpload, handlePDFUpload } from './extensions/uploadHelper';
 
@@ -42,7 +52,7 @@ const BACKGROUNDS = [
 ];
 
 export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => {
-  const [activeSubmenu, setActiveSubmenu] = useState<'text' | 'bg' | null>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<'text' | 'bg' | 'convert' | null>(null);
 
   if (!position) return null;
 
@@ -106,6 +116,29 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
         <MenuItem icon={Maximize} label="Select All" onClick={handleSelectAll} />
         
         <div className="h-px bg-gray-100 my-1" />
+        
+        <div className="relative">
+          <MenuItem 
+            icon={ArrowRight} 
+            label="Convert to" 
+            onClick={() => setActiveSubmenu(activeSubmenu === 'convert' ? null : 'convert')}
+            active={activeSubmenu === 'convert'}
+            hasSubmenu
+          />
+          {activeSubmenu === 'convert' && (
+            <div className="absolute left-full top-0 ml-1 bg-white shadow-xl border border-gray-200 rounded-lg py-1 w-48 z-50 max-h-64 overflow-y-auto">
+               <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
+               <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
+               <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
+               <MenuItem icon={Heading3} label="Heading 3" onClick={() => { editor.chain().focus().setHeading({ level: 3 }).run(); onClose(); }} />
+               <MenuItem icon={List} label="Bullet List" onClick={() => { editor.chain().focus().toggleBulletList().run(); onClose(); }} />
+               <MenuItem icon={ListOrdered} label="Numbered List" onClick={() => { editor.chain().focus().toggleOrderedList().run(); onClose(); }} />
+               <MenuItem icon={CheckSquare} label="Task List" onClick={() => { editor.chain().focus().toggleTaskList().run(); onClose(); }} />
+               <MenuItem icon={Quote} label="Quote" onClick={() => { editor.chain().focus().setBlockquote().run(); onClose(); }} />
+               <MenuItem icon={Code} label="Code Block" onClick={() => { editor.chain().focus().setCodeBlock().run(); onClose(); }} />
+            </div>
+          )}
+        </div>
 
         <div className="relative">
           <MenuItem 

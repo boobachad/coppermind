@@ -54,11 +54,19 @@ export function DragHandle({ editor }: DragHandleProps) {
 
       // Find the closest block-level element
       const resolvePos = view.state.doc.resolve(pos.pos);
-      let depth = resolvePos.depth;
+      let targetDepth = resolvePos.depth;
       
-      if (depth === 0) return; 
+      if (targetDepth === 0) return;
+
+      // If inside a list item, target the list item itself
+      if (targetDepth > 1) {
+        const parent = resolvePos.node(targetDepth - 1);
+        if (parent.type.name === 'listItem' || parent.type.name === 'taskItem') {
+          targetDepth -= 1;
+        }
+      }
       
-      const blockPos = resolvePos.before(1);
+      const blockPos = resolvePos.before(targetDepth);
       const blockNode = view.state.doc.nodeAt(blockPos);
       
       if (!blockNode) return;
@@ -70,19 +78,24 @@ export function DragHandle({ editor }: DragHandleProps) {
         
         setPosition({
           top: rect.top,
-          left: rect.left - 48, // Moved further left
+          left: Math.max(2, rect.left - 28),
         });
         setCurrentNode({ node: blockNode, pos: blockPos });
       }
     };
 
+    const handleScroll = () => {
+      if (menuOpen) {
+        tippyInstance.current?.hide();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, true);
     document.addEventListener('mousemove', handleMouseMove);
-    // document.addEventListener('scroll', handleMouseMove, true); 
-    // Commented out scroll for now as it needs mouse pos tracking
 
     return () => {
+      window.removeEventListener('scroll', handleScroll, true);
       document.removeEventListener('mousemove', handleMouseMove);
-      // document.removeEventListener('scroll', handleMouseMove, true);
     };
   }, [editor, menuOpen]);
   
