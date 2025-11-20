@@ -210,7 +210,7 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
                  <>
                    {/* Delete Button */}
                    <button 
-                     className="absolute -top-3 -right-3 p-1 bg-white text-red-500 rounded-full shadow-md hover:bg-red-50"
+                     className="absolute -top-3 -right-3 p-1 bg-white dark:bg-dark-surface text-red-500 dark:text-red-400 rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/20"
                      onClick={(e) => { e.stopPropagation(); removeSticker(sticker.id); }}
                    >
                      <X className="w-3 h-3" />
@@ -218,7 +218,7 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
 
                    {/* Rotate Handle */}
                    <div 
-                     className="absolute -top-6 left-1/2 transform -translate-x-1/2 cursor-ew-resize p-1 bg-white text-blue-500 rounded-full shadow-md"
+                     className="absolute -top-6 left-1/2 transform -translate-x-1/2 cursor-ew-resize p-1 bg-white dark:bg-dark-surface text-blue-500 dark:text-blue-400 rounded-full shadow-md"
                      onMouseDown={(e) => {
                        e.stopPropagation();
                        transformRef.current = { id: sticker.id, type: 'rotate', startX: e.clientX, startY: e.clientY, initialVal: sticker.rotation || 0 };
@@ -229,7 +229,7 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
 
                    {/* Scale Handle */}
                    <div 
-                     className="absolute -bottom-3 -right-3 cursor-nwse-resize p-1 bg-white text-blue-500 rounded-full shadow-md"
+                     className="absolute -bottom-3 -right-3 cursor-nwse-resize p-1 bg-white dark:bg-dark-surface text-blue-500 dark:text-blue-400 rounded-full shadow-md"
                      onMouseDown={(e) => {
                        e.stopPropagation();
                        transformRef.current = { id: sticker.id, type: 'scale', startX: e.clientX, startY: e.clientY, initialVal: sticker.scale || 1 };

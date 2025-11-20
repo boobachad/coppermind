@@ -160,7 +160,7 @@ export function DragHandle({ editor }: DragHandleProps) {
         draggable
         onDragStart={handleDragStart}
         onClick={openMenu}
-        className="fixed z-50 cursor-grab flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+        className="fixed z-50 cursor-grab flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-dark-surface text-gray-400 dark:text-dark-text-secondary hover:text-gray-600 dark:hover:text-dark-text-primary transition-colors"
         style={{
           top: position.top,
           left: position.left,
@@ -170,42 +170,42 @@ export function DragHandle({ editor }: DragHandleProps) {
       </div>
 
       <div className="hidden">
-        <div ref={menuRef} className="bg-white text-black shadow-md border border-stone-200 rounded-lg py-1 min-w-[160px] flex flex-col z-[9999]">
-           <button onClick={deleteBlock} className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left w-full outline-none">
+        <div ref={menuRef} className="bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary shadow-md border border-stone-200 dark:border-dark-border rounded-lg py-1 min-w-[160px] flex flex-col z-[9999]">
+           <button onClick={deleteBlock} className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left w-full outline-none">
              <Trash size={14} /> Delete
            </button>
-           <button onClick={duplicateBlock} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={duplicateBlock} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Copy size={14} /> Duplicate
            </button>
            
-           <div className="h-px bg-gray-200 my-1" />
-           <div className="px-4 py-1 text-xs font-semibold text-gray-500">Turn into</div>
+           <div className="h-px bg-gray-200 dark:bg-dark-border my-1" />
+           <div className="px-4 py-1 text-xs font-semibold text-gray-500 dark:text-dark-text-secondary">Turn into</div>
            
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setParagraph().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setParagraph().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Type size={14} /> Text
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 1 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 1 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Heading1 size={14} /> Heading 1
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 2 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 2 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Heading2 size={14} /> Heading 2
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 3 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setHeading({ level: 3 }).run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Heading3 size={14} /> Heading 3
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleBulletList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleBulletList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <List size={14} /> Bullet List
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleOrderedList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleOrderedList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <ListOrdered size={14} /> Numbered List
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleTaskList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).toggleTaskList().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <CheckSquare size={14} /> To-do List
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setBlockquote().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setBlockquote().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Quote size={14} /> Quote
            </button>
-           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setCodeBlock().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black hover:bg-gray-100 text-left w-full outline-none">
+           <button onClick={() => { editor.chain().focus().setNodeSelection(currentNode!.pos).setCodeBlock().run(); closeMenu(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-border text-left w-full outline-none">
              <Code size={14} /> Code
            </button>
         </div>

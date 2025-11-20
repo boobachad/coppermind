@@ -253,7 +253,7 @@ export function NotePage() {
   }
 
   return (
-    <div className="h-full relative flex flex-col bg-white">
+    <div className="h-full relative flex flex-col bg-white dark:bg-dark-bg">
       <FloatingHeader 
         title={note.title || 'Untitled'} 
         onTitleChange={handleTitleChange}
@@ -271,10 +271,10 @@ export function NotePage() {
           />
           
           {/* Nested Notes Section */}
-          <div className="mt-8 px-12 pt-8 border-t border-gray-100">
-             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-6 flex items-center gap-2">
+          <div className="mt-8 px-12 pt-8 border-t border-gray-100 dark:border-dark-border">
+             <h3 className="text-sm font-semibold text-gray-400 dark:text-dark-text-secondary uppercase tracking-wider mb-6 flex items-center gap-2">
                 <span>Nested Notes</span>
-                <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs">
+                <span className="bg-gray-100 dark:bg-dark-surface text-gray-500 dark:text-dark-text-secondary px-2 py-0.5 rounded-full text-xs">
                    {/* We could show count here if we fetched it, but NotesGrid handles empty state */}
                 </span>
              </h3>

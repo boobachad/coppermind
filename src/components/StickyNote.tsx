@@ -120,12 +120,12 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
 
       {/* Context Menu */}
       {showMenu && (
-        <div className="absolute top-2 right-2 bg-white rounded-lg shadow-xl border border-gray-100 p-2 z-50 flex flex-col gap-1 min-w-[140px]">
-          <div className="flex gap-1 p-1 mb-1 border-b border-gray-100">
+        <div className="absolute top-2 right-2 bg-white dark:bg-dark-surface rounded-lg shadow-xl border border-gray-100 dark:border-dark-border p-2 z-50 flex flex-col gap-1 min-w-[140px]">
+          <div className="flex gap-1 p-1 mb-1 border-b border-gray-100 dark:border-dark-border">
             {Object.keys(COLORS).map(color => (
               <button
                 key={color}
-                className={clsx("w-4 h-4 rounded-full border border-gray-200", COLORS[color])}
+                className={clsx("w-4 h-4 rounded-full border border-gray-200 dark:border-dark-border", COLORS[color])}
                 onClick={() => onUpdate(data.id, { color })}
               />
             ))}
@@ -137,30 +137,30 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
               setTimeout(() => contentRef.current?.focus(), 10);
               setShowMenu(false);
             }}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
           >
             <Edit className="w-3 h-3" /> Edit
           </button>
 
           <button
             onClick={() => onReorder(data.id, 'front')}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
           >
             <ArrowUp className="w-3 h-3" /> Bring to front
           </button>
 
           <button
             onClick={() => onReorder(data.id, 'back')}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
           >
             <ArrowDown className="w-3 h-3" /> Send to back
           </button>
 
-          <div className="h-px bg-gray-100 my-1" />
+          <div className="h-px bg-gray-100 dark:bg-dark-border my-1" />
 
           <button
             onClick={() => onDelete(data.id)}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
           >
             <Trash2 className="w-3 h-3" /> Delete
           </button>

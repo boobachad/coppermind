@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '../lib/ThemeContext';
 import { 
   Monitor, 
   Download, 
@@ -93,6 +94,7 @@ We may update our Privacy Policy from time to time. We will notify you of any ch
 };
 
 export function SettingsPage() {
+  const { theme, toggleTheme } = useTheme();
   const [uiScale, setUiScale] = useState(() => {
     // Try to recover state from localStorage or default to 1
     const saved = localStorage.getItem('app_ui_scale');
@@ -117,39 +119,49 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-8 pb-32">
-      <h1 className="text-3xl font-bold mb-8 text-gray-800">Settings</h1>
+    <div className="max-w-3xl mx-auto p-8 pb-32 dark:text-dark-text-primary">
+      <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-dark-text-primary">Settings</h1>
 
       {/* Appearance Section */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700">
+        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700 dark:text-dark-text-primary">
           <Palette className="w-5 h-5 mr-2" />
           Appearance
         </h2>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl shadow-sm overflow-hidden">
           
-          {/* Themes (Disabled) */}
-          <div className="p-6 border-b border-gray-100 opacity-60 relative">
+          {/* Themes */}
+          <div className="p-6 border-b border-gray-200 dark:border-dark-border relative">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h3 className="font-medium text-gray-900">Theme</h3>
-                <p className="text-sm text-gray-500">Choose your preferred visual style</p>
+                <h3 className="font-medium text-gray-900 dark:text-dark-text-primary">Theme</h3>
+                <p className="text-sm text-gray-500 dark:text-dark-text-secondary">Choose your preferred visual style</p>
               </div>
-              <span className="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-500 rounded">Coming Soon</span>
             </div>
-            <div className="flex space-x-3 mt-4 pointer-events-none">
-              <div className="w-24 h-16 rounded-lg bg-white border-2 border-blue-500 shadow-sm flex items-center justify-center relative">
-                <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-sm font-medium">Light</span>
-              </div>
-              <div className="w-24 h-16 rounded-lg bg-gray-900 border border-gray-200 flex items-center justify-center">
-                <span className="text-sm font-medium text-white">Dark</span>
-              </div>
-              <div className="w-24 h-16 rounded-lg bg-amber-50 border border-gray-200 flex items-center justify-center">
-                <span className="text-sm font-medium text-amber-900">Sepia</span>
-              </div>
+            <div className="flex space-x-3 mt-4">
+              <button 
+                onClick={() => theme === 'dark' && toggleTheme()}
+                className={`w-24 h-16 rounded-lg bg-white border-2 flex items-center justify-center relative transition-all ${theme === 'light' ? 'border-blue-500 shadow-md ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
+              >
+                {theme === 'light' && (
+                  <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <span className={`text-sm font-medium ${theme === 'light' ? 'text-gray-900' : 'text-gray-500'}`}>Light</span>
+              </button>
+              
+              <button 
+                onClick={() => theme === 'light' && toggleTheme()}
+                className={`w-24 h-16 rounded-lg bg-[#121212] border-2 flex items-center justify-center relative transition-all ${theme === 'dark' ? 'border-blue-500 shadow-md ring-2 ring-blue-100' : 'border-gray-700 hover:border-gray-600'}`}
+              >
+                {theme === 'dark' && (
+                  <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-400'}`}>Dark</span>
+              </button>
             </div>
           </div>
 
@@ -157,13 +169,13 @@ export function SettingsPage() {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-medium text-gray-900 flex items-center">
-                  <Maximize className="w-4 h-4 mr-2 text-gray-500" />
+                <h3 className="font-medium text-gray-900 dark:text-dark-text-primary flex items-center">
+                  <Maximize className="w-4 h-4 mr-2 text-gray-500 dark:text-dark-text-secondary" />
                   UI Scale
                 </h3>
-                <p className="text-sm text-gray-500">Adjust the size of the interface</p>
+                <p className="text-sm text-gray-500 dark:text-dark-text-secondary">Adjust the size of the interface</p>
               </div>
-              <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+              <span className="text-sm font-mono bg-gray-100 dark:bg-dark-bg dark:text-dark-text-primary px-2 py-1 rounded">
                 {Math.round(uiScale * 100)}%
               </span>
             </div>
@@ -174,9 +186,9 @@ export function SettingsPage() {
               step="0.05"
               value={uiScale}
               onChange={(e) => setUiScale(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              className="w-full h-2 bg-gray-200 dark:bg-dark-bg rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <div className="flex justify-between mt-2 text-xs text-gray-400">
+            <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-dark-text-secondary">
               <span>75%</span>
               <span>100%</span>
               <span>150%</span>
@@ -188,85 +200,90 @@ export function SettingsPage() {
 
       {/* Data Management */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700">
+        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700 dark:text-dark-text-primary">
           <Monitor className="w-5 h-5 mr-2" />
           Data & Storage
         </h2>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl shadow-sm overflow-hidden">
           <div 
             onClick={() => setShowExportModal(true)}
-            className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+            className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
           >
             <div className="flex items-center">
-              <div className="p-2 bg-green-50 rounded-lg mr-4">
-                <Download className="w-6 h-6 text-green-600" />
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg mr-4">
+                <Download className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900">Export Notes</h3>
-                <p className="text-sm text-gray-500">Download your notes in various formats</p>
+                <h3 className="font-medium text-gray-900 dark:text-dark-text-primary">Export Notes</h3>
+                <p className="text-sm text-gray-500 dark:text-dark-text-secondary">Download your notes in various formats</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <ChevronRight className="w-5 h-5 text-gray-400 dark:text-dark-text-secondary" />
           </div>
         </div>
       </section>
 
       {/* About & Legal */}
       <section>
-        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700">
+        <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-700 dark:text-dark-text-primary">
           <Shield className="w-5 h-5 mr-2" />
           About & Legal
         </h2>
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100">
+        <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-dark-border">
           
           <button 
             onClick={() => setActiveLegalDoc('agreement')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors text-left"
           >
             <div className="flex items-center">
-              <Scale className="w-5 h-5 text-gray-400 mr-3" />
-              <span className="text-gray-700 font-medium">User Agreement</span>
+              <Scale className="w-5 h-5 text-gray-400 dark:text-dark-text-secondary mr-3" />
+              <span className="text-gray-700 dark:text-dark-text-primary font-medium">User Agreement</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-dark-text-secondary" />
           </button>
 
           <button 
             onClick={() => setActiveLegalDoc('license')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors text-left"
           >
             <div className="flex items-center">
-              <FileText className="w-5 h-5 text-gray-400 mr-3" />
-              <span className="text-gray-700 font-medium">License (GNU GPLv3)</span>
+              <FileText className="w-5 h-5 text-gray-400 dark:text-dark-text-secondary mr-3" />
+              <span className="text-gray-700 dark:text-dark-text-primary font-medium">License (GNU GPLv3)</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-dark-text-secondary" />
           </button>
 
           <button 
             onClick={() => setActiveLegalDoc('privacy')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors text-left"
           >
             <div className="flex items-center">
-              <Shield className="w-5 h-5 text-gray-400 mr-3" />
-              <span className="text-gray-700 font-medium">Privacy Policy</span>
+              <Shield className="w-5 h-5 text-gray-400 dark:text-dark-text-secondary mr-3" />
+              <span className="text-gray-700 dark:text-dark-text-primary font-medium">Privacy Policy</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-dark-text-secondary" />
           </button>
 
         </div>
       </section>
 
+      <div className="mt-12 text-center text-sm text-gray-400 dark:text-dark-text-secondary">
+        <p>NoteDown v1.0.0</p>
+        <p className="mt-1">Built with React, Tauri & Tailwind</p>
+      </div>
+
       {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-900">Export Notes</h3>
-              <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 dark:border-dark-border flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary">Export Notes</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-400 dark:text-dark-text-secondary hover:text-gray-600 dark:hover:text-dark-text-primary">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6">
-              <p className="text-gray-600 mb-4">Select the format you'd like to export your notes in:</p>
+              <p className="text-gray-600 dark:text-dark-text-secondary mb-4">Select the format you'd like to export your notes in:</p>
               
               <div className="grid grid-cols-2 gap-4">
                 {[
@@ -280,8 +297,8 @@ export function SettingsPage() {
                     onClick={() => setExportFormat(fmt.id)}
                     className={`p-4 rounded-xl border-2 text-left transition-all ${
                       exportFormat === fmt.id 
-                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+                        : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-dark-text-primary'
                     }`}
                   >
                     <div className="font-bold text-lg">{fmt.ext}</div>
@@ -293,7 +310,7 @@ export function SettingsPage() {
               <div className="mt-8 flex justify-end space-x-3">
                 <button 
                   onClick={() => setShowExportModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                  className="px-4 py-2 text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg rounded-lg font-medium"
                 >
                   Cancel
                 </button>
@@ -313,30 +330,30 @@ export function SettingsPage() {
       {/* Legal Doc Modal */}
       {activeLegalDoc && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setActiveLegalDoc(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="text-xl font-semibold text-gray-900">
+          <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-bg">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary">
                 {LEGAL_DOCS[activeLegalDoc].title}
               </h3>
-              <button onClick={() => setActiveLegalDoc(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setActiveLegalDoc(null)} className="text-gray-400 dark:text-dark-text-secondary hover:text-gray-600 dark:hover:text-dark-text-primary">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-8 overflow-y-auto prose prose-blue max-w-none">
+            <div className="p-8 overflow-y-auto prose prose-blue dark:prose-invert max-w-none dark:text-dark-text-secondary">
               {LEGAL_DOCS[activeLegalDoc].content.split('\n').map((line, i) => {
                  // Simple markdown-ish parser for display
-                 if (line.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mb-4">{line.replace('# ', '')}</h1>;
-                 if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-semibold mt-6 mb-3">{line.replace('## ', '')}</h2>;
-                 if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-medium mt-4 mb-2">{line.replace('### ', '')}</h3>;
-                 if (line.startsWith('**')) return <p key={i} className="mb-2"><strong>{line.replace(/\*\*/g, '')}</strong></p>;
+                 if (line.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mb-4 text-gray-900 dark:text-dark-text-primary">{line.replace('# ', '')}</h1>;
+                 if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-semibold mt-6 mb-3 text-gray-900 dark:text-dark-text-primary">{line.replace('## ', '')}</h2>;
+                 if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-medium mt-4 mb-2 text-gray-900 dark:text-dark-text-primary">{line.replace('### ', '')}</h3>;
+                 if (line.startsWith('**')) return <p key={i} className="mb-2"><strong className="text-gray-900 dark:text-dark-text-primary">{line.replace(/\*\*/g, '')}</strong></p>;
                  if (line.trim() === '') return <br key={i} />;
-                 return <p key={i} className="mb-2 text-gray-600">{line}</p>;
+                 return <p key={i} className="mb-2 text-gray-600 dark:text-dark-text-secondary">{line}</p>;
               })}
             </div>
-            <div className="p-4 border-t border-gray-100 flex justify-end">
+            <div className="p-4 border-t border-gray-100 dark:border-dark-border flex justify-end">
               <button 
                 onClick={() => setActiveLegalDoc(null)}
-                className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800"
+                className="px-6 py-2 bg-gray-900 dark:bg-dark-bg text-white dark:text-dark-text-primary rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-700 border border-transparent dark:border-dark-border"
               >
                 Close
               </button>

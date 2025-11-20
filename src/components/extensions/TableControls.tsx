@@ -170,7 +170,7 @@ export function TableControls({ editor }: TableControlsProps) {
     <>
       <div
         ref={horizRef}
-        className="z-50 flex items-center justify-center bg-white text-black border border-gray-300 rounded-full shadow-sm cursor-pointer select-none"
+        className="z-50 flex items-center justify-center bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary border border-gray-300 dark:border-dark-border rounded-full shadow-sm cursor-pointer select-none"
         onClick={onHorizClick}
         onMouseDown={startHorizDrag}
         style={{ height: 28 }}
@@ -179,7 +179,7 @@ export function TableControls({ editor }: TableControlsProps) {
       </div>
       <div
         ref={vertRef}
-        className="z-50 flex items-center justify-center bg-white text-black border border-gray-300 rounded-full shadow-sm cursor-pointer select-none"
+        className="z-50 flex items-center justify-center bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary border border-gray-300 dark:border-dark-border rounded-full shadow-sm cursor-pointer select-none"
         onClick={onVertClick}
         onMouseDown={startVertDrag}
         style={{ width: 28 }}

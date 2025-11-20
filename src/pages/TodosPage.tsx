@@ -201,13 +201,13 @@ export function TodosPage() {
   ];
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-full bg-gray-50 dark:bg-dark-bg flex flex-col overflow-hidden">
       {/* Dashboard Header */}
-      <div className="bg-white border-b border-gray-200 p-8 shadow-sm">
+      <div className="bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border p-8 shadow-sm">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500 mt-1">Manage your tasks and priorities</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text-primary">Dashboard</h1>
+            <p className="text-gray-500 dark:text-dark-text-secondary mt-1">Manage your tasks and priorities</p>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
@@ -220,17 +220,17 @@ export function TodosPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Stats Cards */}
-          <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-            <p className="text-sm font-medium text-blue-600 uppercase tracking-wider">Total Tasks</p>
-            <p className="text-4xl font-bold text-blue-900 mt-2">{stats.total}</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Tasks</p>
+            <p className="text-4xl font-bold text-blue-900 dark:text-blue-100 mt-2">{stats.total}</p>
           </div>
-          <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
-            <p className="text-sm font-medium text-green-600 uppercase tracking-wider">Completed</p>
-            <p className="text-4xl font-bold text-green-900 mt-2">{stats.completed}</p>
+          <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-2xl border border-green-100 dark:border-green-800">
+            <p className="text-sm font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">Completed</p>
+            <p className="text-4xl font-bold text-green-900 dark:text-green-100 mt-2">{stats.completed}</p>
           </div>
-          <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
-            <p className="text-sm font-medium text-red-600 uppercase tracking-wider">Pending</p>
-            <p className="text-4xl font-bold text-red-900 mt-2">{stats.pending}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-100 dark:border-red-800">
+            <p className="text-sm font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Pending</p>
+            <p className="text-4xl font-bold text-red-900 dark:text-red-100 mt-2">{stats.pending}</p>
           </div>
           
           {/* Chart */}
@@ -258,27 +258,27 @@ export function TodosPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="px-8 py-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="px-8 py-4 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border flex flex-wrap items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
           <input 
             type="text" 
             placeholder="Search tasks..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-dark-surface dark:text-dark-text-primary border-none rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500 dark:placeholder-gray-600"
           />
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-dark-surface rounded-lg p-1">
             {(['all', 'active', 'completed', 'urgent'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 className={clsx(
                   "px-3 py-1.5 text-sm font-medium rounded-md capitalize transition-all",
-                  filter === f ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  filter === f ? "bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text-primary shadow-sm" : "text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text-primary"
                 )}
               >
                 {f}
@@ -289,7 +289,7 @@ export function TodosPage() {
           <select 
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 border-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-gray-100 dark:bg-dark-surface rounded-lg text-sm font-medium text-gray-700 dark:text-dark-text-secondary border-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="newest">Newest First</option>
             <option value="priority">Priority</option>
@@ -305,8 +305,8 @@ export function TodosPage() {
             <div 
               key={todo.id} 
               className={clsx(
-                "group bg-white p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-4",
-                todo.completed ? "border-gray-100 opacity-60" : "border-gray-200",
+                "group bg-white dark:bg-dark-surface p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-4",
+                todo.completed ? "border-gray-100 dark:border-dark-border opacity-60" : "border-gray-200 dark:border-dark-border",
                 todo.urgent && !todo.completed && "border-l-4 border-l-red-500"
               )}
             >
@@ -314,7 +314,7 @@ export function TodosPage() {
                 onClick={() => toggleTodo(todo)}
                 className={clsx(
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
-                  todo.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-green-500"
+                  todo.completed ? "bg-green-500 border-green-500" : "border-gray-300 dark:border-gray-600 hover:border-green-500"
                 )}
               >
                 {todo.completed && <CheckCircle2 className="w-4 h-4 text-white" />}
@@ -322,17 +322,17 @@ export function TodosPage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className={clsx("font-medium truncate", todo.completed && "line-through text-gray-500")}>
+                  <h3 className={clsx("font-medium truncate", todo.completed ? "line-through text-gray-500 dark:text-gray-500" : "text-gray-900 dark:text-dark-text-primary")}>
                     {todo.text}
                   </h3>
-                  {todo.urgent && <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase">Urgent</span>}
-                  {todo.priority === 'high' && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full uppercase">High</span>}
+                  {todo.urgent && <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold rounded-full uppercase">Urgent</span>}
+                  {todo.priority === 'high' && <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold rounded-full uppercase">High</span>}
                 </div>
-                {todo.description && <p className="text-sm text-gray-500 truncate">{todo.description}</p>}
+                {todo.description && <p className="text-sm text-gray-500 dark:text-dark-text-secondary truncate">{todo.description}</p>}
                 
-                <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 dark:text-gray-500">
                   {todo.due_date && (
-                    <span className="flex items-center text-gray-500">
+                    <span className="flex items-center text-gray-500 dark:text-gray-400">
                       <Calendar className="w-3 h-3 mr-1" />
                       {format(new Date(todo.due_date), 'MMM d, yyyy HH:mm')}
                     </span>
@@ -364,46 +364,46 @@ export function TodosPage() {
       {/* New Task Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-bold text-gray-900">New Task</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100 dark:border-dark-border flex justify-between items-center bg-gray-50 dark:bg-dark-bg">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-dark-text-primary">New Task</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Task Name</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Task Name</label>
                 <input 
                   autoFocus
                   type="text" 
                   value={formText}
                   onChange={(e) => setFormText(e.target.value)}
                   placeholder="e.g. Submit report by Friday urgent"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-600"
                 />
-                <p className="text-xs text-blue-600 mt-1 italic">
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
                   Tip: Try typing "tomorrow" or "urgent" to auto-fill
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Description</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Description</label>
                 <textarea 
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg h-20 resize-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg h-20 resize-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Priority</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Priority</label>
                   <select 
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -411,44 +411,44 @@ export function TodosPage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 rounded-lg w-full hover:bg-red-50 transition-colors">
+                  <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-dark-border rounded-lg w-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                     <input 
                       type="checkbox" 
                       checked={formUrgent}
                       onChange={(e) => setFormUrgent(e.target.checked)}
                       className="w-4 h-4 text-red-600 rounded focus:ring-red-500" 
                     />
-                    <span className="text-sm font-medium text-red-700">Mark Urgent</span>
+                    <span className="text-sm font-medium text-red-700 dark:text-red-400">Mark Urgent</span>
                   </label>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Date</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Date</label>
                   <input 
                     type="date" 
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg dark:color-scheme-dark"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Time</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Time</label>
                   <input 
                     type="time" 
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg dark:color-scheme-dark"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-bg flex justify-end gap-3">
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg"
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-dark-surface rounded-lg"
               >
                 Cancel
               </button>
