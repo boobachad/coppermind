@@ -15,6 +15,24 @@ body {
   @apply bg-gray-50 text-gray-900 dark:bg-dark-bgSecondary dark:text-dark-text-primary;
 }
 
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
+
 /* TipTap Editor Styles */
 .ProseMirror {
   @apply outline-none min-h-[500px] px-4 py-2 text-gray-900 dark:text-dark-text-primary;
