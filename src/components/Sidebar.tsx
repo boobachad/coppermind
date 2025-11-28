@@ -56,7 +56,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-gray-50 dark:bg-dark-bgSecondary h-screen flex flex-col flex-shrink-0">
+    <div className="w-64 bg-gray-50 dark:bg-dark-bgSecondary h-full flex flex-col flex-shrink-0">
       <div className="p-4 flex-1 overflow-hidden flex flex-col">
         <h1 className="text-lg font-semibold text-gray-700 dark:text-dark-text-primary mb-4 px-2">NoteDown</h1>
         <nav className="space-y-1">

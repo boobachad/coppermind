@@ -19,6 +19,7 @@ import * as chrono from 'chrono-node';
 import { format } from 'date-fns';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import clsx from 'clsx';
+import { DatePicker } from '../components/DatePicker';
 
 // Smart Parsing Helper
 const parseSmartInput = (text: string) => {
@@ -48,7 +49,7 @@ export function TodosPage() {
   const [formDesc, setFormDesc] = useState('');
   const [formPriority, setFormPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [formUrgent, setFormUrgent] = useState(false);
-  const [formDate, setFormDate] = useState('');
+  const [formDate, setFormDate] = useState<Date | undefined>(undefined);
   const [formTime, setFormTime] = useState('');
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function TodosPage() {
     if (smart.urgent) setFormUrgent(true);
     if (smart.priority === 'high') setFormPriority('high');
     if (smart.date) {
-      setFormDate(format(smart.date, 'yyyy-MM-dd'));
+      setFormDate(smart.date);
       setFormTime(format(smart.date, 'HH:mm'));
     }
   }, [formText]);
@@ -91,7 +92,8 @@ export function TodosPage() {
     let dueDate = undefined;
     
     if (formDate) {
-      const d = new Date(`${formDate}T${formTime || '00:00'}`);
+      const dateStr = format(formDate, 'yyyy-MM-dd');
+      const d = new Date(`${dateStr}T${formTime || '00:00'}`);
       dueDate = d.getTime();
     }
 
@@ -137,7 +139,7 @@ export function TodosPage() {
     setFormDesc('');
     setFormPriority('medium');
     setFormUrgent(false);
-    setFormDate('');
+    setFormDate(undefined);
     setFormTime('');
   };
 
@@ -426,12 +428,7 @@ export function TodosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Date</label>
-                  <input 
-                    type="date" 
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg dark:color-scheme-dark"
-                  />
+                  <DatePicker date={formDate} setDate={setFormDate} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Time</label>
