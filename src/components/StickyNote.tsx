@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { StickyNote as StickyNoteType } from '../lib/types';
 import clsx from 'clsx';
-import { Trash2, Palette, Pin, Edit, Layers, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Pin, Edit, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface Props {
   data: StickyNoteType;

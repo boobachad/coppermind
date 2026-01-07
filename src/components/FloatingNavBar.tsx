@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 
 export function FloatingNavBar() {
   const [isVisible, setIsVisible] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {

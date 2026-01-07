@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { getDb } from '../lib/db';
 import { StickyNote } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { Smile, Check, Stamp, X, RotateCw, Maximize2 } from 'lucide-react';
+import { X, RotateCw, Maximize2 } from 'lucide-react';
 import { STICKER_TYPES } from '../lib/constants';
 
 interface StickerProps {

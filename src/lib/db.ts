@@ -1,5 +1,4 @@
 import Database from "@tauri-apps/plugin-sql";
-import { StickyNote } from './types';
 
 // Mock Database interface for browser environment
 class MockDatabase {

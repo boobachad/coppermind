@@ -122,7 +122,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
           {showBreadcrumbDropdown && (
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white/95 dark:bg-dark-surface/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 dark:border-dark-border overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex flex-col">
-                {breadcrumbs.map((crumb, index) => (
+                {breadcrumbs.map((crumb) => (
                   <div 
                     key={crumb.id}
                     onClick={() => navigate(`/notes/${crumb.id}`)}

@@ -17,16 +17,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Image as ImageIcon, FileText, CheckSquare, Type, Share2, Trash2, BarChart, Link as LinkIcon } from 'lucide-react';
+import { Image as ImageIcon, FileText, CheckSquare, Type, BarChart } from 'lucide-react';
 import { getDb } from '../lib/db';
-import { Note, Todo } from '../lib/types';
 import { useTheme } from '../lib/ThemeContext';
 
 // Custom Node Components
 const NodeWrapper = ({ children, label, icon: Icon, selected }: any) => {
-  // Common handle styles
-  const handleStyle = { w: 3, h: 3, bg: 'bg-blue-500' };
-  
   return (
     <div className={`bg-white dark:bg-dark-surface rounded-lg shadow-md border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-gray-200 dark:border-dark-border'}`}>
       <div className="flex items-center px-3 py-2 bg-gray-50 dark:bg-dark-bg border-b border-gray-100 dark:border-dark-border rounded-t-lg">
@@ -100,7 +96,7 @@ const ImageNode = ({ data, selected }: any) => (
   </NodeWrapper>
 );
 
-const GraphNode = ({ data, selected }: any) => (
+const GraphNode = ({ selected }: any) => (
   <NodeWrapper label="Graph" icon={BarChart} selected={selected}>
     <div className="w-full h-32 flex items-end justify-between space-x-1 px-2 pt-4 pb-0 bg-gray-50 dark:bg-dark-bg rounded">
       {[40, 70, 30, 85, 50, 65].map((h, i) => (
@@ -136,8 +132,8 @@ const nodeTypes: NodeTypes = {
 
 export function NodesPage() {
   const { theme } = useTheme();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [db, setDb] = useState<any>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);

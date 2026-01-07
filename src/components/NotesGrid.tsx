@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/db';
 import { Note } from '../lib/types';
@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { Trash2, Move, X } from 'lucide-react';
+import { Trash2, Move } from 'lucide-react';
 
 const getPreviewText = (content: string) => {
   if (!content) return '';

@@ -1,18 +1,13 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getDb } from '../lib/db';
 import { Todo } from '../lib/types';
 import { 
   Plus, 
   Trash2, 
   Search, 
-  Filter, 
-  AlertCircle, 
-  Calendar, 
-  Clock, 
   CheckCircle2, 
-  Circle,
   X,
-  Tag
+  Calendar,
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import * as chrono from 'chrono-node';
