@@ -4,7 +4,10 @@ import { useParams } from 'react-router-dom';
 import { MessageBubble } from '../components/MessageBubble';
 import { StickyNote } from '../components/StickyNote';
 import { StickerLayer, StickerLayerRef } from '../components/StickerLayer';
+import { SourceUrlsDisplay } from '../components/SourceUrlsDisplay';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { getDb } from '../lib/db';
+import { setActiveNote } from '../lib/CaptureService';
 import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,10 +25,58 @@ export function NotePage() {
   const [inputValue, setInputValue] = useState('');
   const [inputRole, setInputRole] = useState<'question' | 'answer'>('question');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [sourceUrls, setSourceUrls] = useState<string[]>([]);
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadNote();
     loadStickyNotes();
+    // Track this as the active note for capture
+    if (id) {
+      setActiveNote(id);
+    }
+    return () => setActiveNote(null);
+  }, [id]);
+
+
+  // Listen for capture events
+  useEffect(() => {
+    const handleUrlUpdate = (e: CustomEvent<{ noteId: string }>) => {
+      console.log('[NotePage] Received note-urls-updated for:', e.detail.noteId, 'current id:', id);
+      if (e.detail.noteId === id) loadNote();
+    };
+    const handleContentUpdate = (e: CustomEvent<{ noteId: string }>) => {
+      console.log(`[NotePage] Received note-content-updated for: ${e.detail.noteId}, current id: ${id}`);
+      if (e.detail.noteId === id) {
+        console.log('[NotePage] Received notes-updated, reloading note');
+
+        // Fetch and log current content for debugging
+        getDb().then(db => {
+          db.select<{ content: string }[]>('SELECT content FROM notes WHERE id = $1', [id])
+            .then(result => {
+              if (result && result.length > 0) {
+                console.log(`[NotePage] Content in DB for note ${id}:`, result[0].content);
+              } else {
+                console.log(`[NotePage] No content found in DB for note ${id}`);
+              }
+            });
+        });
+
+        loadNote();
+      }
+    };
+    const handleNotesUpdated = () => {
+      console.log('[NotePage] Received notes-updated, reloading note');
+      loadNote();
+    };
+    window.addEventListener('note-urls-updated', handleUrlUpdate as EventListener);
+    window.addEventListener('note-content-updated', handleContentUpdate as EventListener);
+    window.addEventListener('notes-updated', handleNotesUpdated);
+    return () => {
+      window.removeEventListener('note-urls-updated', handleUrlUpdate as EventListener);
+      window.removeEventListener('note-content-updated', handleContentUpdate as EventListener);
+      window.removeEventListener('notes-updated', handleNotesUpdated);
+    };
   }, [id]);
 
   const loadNote = async () => {
@@ -37,6 +88,15 @@ export function NotePage() {
       if (result.length > 0) {
         const loadedNote = result[0];
         setNote(loadedNote);
+
+        // Load source URLs
+        try {
+          const urlsStr = loadedNote.source_urls as string | undefined;
+          const urls = JSON.parse(urlsStr || '[]');
+          setSourceUrls(Array.isArray(urls) ? urls : []);
+        } catch {
+          setSourceUrls([]);
+        }
 
         // Load messages from content
         try {
@@ -180,11 +240,64 @@ export function NotePage() {
   };
 
   const deleteSticky = async (stickyId: string) => {
-    if (!confirm("Delete sticky note?")) return;
+    const confirmed = await confirm({
+      title: 'Delete Sticky Note',
+      description: 'Delete this sticky note?',
+      confirmText: 'Delete',
+      variant: 'destructive'
+    });
+    if (!confirmed) return;
     const db = await getDb();
     await db.execute('DELETE FROM sticky_notes WHERE id = $1', [stickyId]);
     setStickyNotes(prev => prev.filter(s => s.id !== stickyId));
   };
+
+  const handleAddUrl = async (url: string) => {
+    if (!id) return;
+    const newUrls = [...sourceUrls, url];
+    setSourceUrls(newUrls);
+    const db = await getDb();
+    await db.execute('UPDATE notes SET source_urls = $1, updated_at = $2 WHERE id = $3', [
+      JSON.stringify(newUrls),
+      Date.now(),
+      id
+    ]);
+  };
+
+  const handleRemoveUrl = async (url: string) => {
+    if (!id) return;
+    const newUrls = sourceUrls.filter(u => u !== url);
+    setSourceUrls(newUrls);
+    const db = await getDb();
+    await db.execute('UPDATE notes SET source_urls = $1, updated_at = $2 WHERE id = $3', [
+      JSON.stringify(newUrls),
+      Date.now(),
+      id
+    ]);
+  };
+
+  // Stable handlers for messages using Ref
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  const handleMessageUpdate = useRef((id: string, newContent: string) => {
+    const currentMessages = messagesRef.current;
+    const updated = currentMessages.map(m => m.id === id ? { ...m, content: newContent } : m);
+    setMessages(updated);
+
+    // Save logic
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveMessages(updated);
+    }, 1000);
+  }).current;
+
+  const handleMessageDelete = useRef((id: string) => {
+    const currentMessages = messagesRef.current;
+    const updated = currentMessages.filter(m => m.id !== id);
+    setMessages(updated);
+    saveMessages(updated);
+  }).current;
 
 
   if (loading) {
@@ -212,13 +325,14 @@ export function NotePage() {
 
           {/* Meta Row */}
           <div className="flex items-center text-gray-400 dark:text-dark-text-secondary mb-8 text-sm gap-4 px-4">
-            <div className="flex items-center gap-2 hover:text-gray-600 dark:hover:text-dark-text-primary cursor-pointer transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-              <span className="truncate max-w-xs">Link to resource...</span>
-            </div>
+            <SourceUrlsDisplay
+              urls={sourceUrls}
+              onAdd={handleAddUrl}
+              onRemove={handleRemoveUrl}
+            />
             <div className="flex-1"></div>
             <span className="text-xs opacity-60">
-              {new Date(note.updated_at).toLocaleDateString()}
+              {note.updated_at ? new Date(note.updated_at).toLocaleDateString() : ''}
             </span>
           </div>
 
@@ -230,21 +344,8 @@ export function NotePage() {
               <MessageBubble
                 key={msg.id}
                 message={msg}
-                onUpdate={(newContent) => {
-                  const updated = messages.map(m => m.id === msg.id ? { ...m, content: newContent } : m);
-                  setMessages(updated);
-                  // For simplicity, we trigger save on every update (debouncing logic handled in Editor usually, but here we just save)
-                  // Ideally we debounce this.
-                  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                  saveTimeoutRef.current = setTimeout(() => {
-                    saveMessages(updated);
-                  }, 1000);
-                }}
-                onDelete={() => {
-                  const updated = messages.filter(m => m.id !== msg.id);
-                  setMessages(updated);
-                  saveMessages(updated);
-                }}
+                onUpdate={handleMessageUpdate}
+                onDelete={handleMessageDelete}
               />
             ))}
             {/* Fallback for empty new notes */}
@@ -268,7 +369,7 @@ export function NotePage() {
 
       {/* Input Pill Area */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-dark-bg dark:via-dark-bg pb-8 pt-12 px-4 z-40">
-        <div className="max-w-3xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
+        <div className="max-w-5xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
 
           {/* Role Selection Tabs - Floating above input */}
           <div className="absolute -top-10 left-0 flex space-x-2">

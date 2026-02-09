@@ -67,10 +67,10 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
       CodeBlockLowlight.configure({
         lowlight,
       }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-      }),
+      // Underline, // Duplicate
+      // Link.configure({ // Duplicate
+      //   openOnClick: false,
+      // }),
       Highlight.configure({
         multicolor: true,
       }),

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, ChevronDown, FileText, StickyNote, Trash2, ExternalLink, ChevronRight, ChevronLeft } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, StickyNote, Trash2, ExternalLink, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { STICKER_TYPES } from '../lib/constants';

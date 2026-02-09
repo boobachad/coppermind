@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../lib/ThemeContext';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import {
   Monitor,
   Download,
@@ -21,6 +22,7 @@ export function SettingsPage() {
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('md');
+  const { alert } = useConfirmDialog();
 
   // Apply UI Scale
   useEffect(() => {
@@ -30,9 +32,9 @@ export function SettingsPage() {
     localStorage.setItem('app_ui_scale', uiScale.toString());
   }, [uiScale]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     // Mock export functionality
-    alert(`Exporting as .${exportFormat} (Feature coming soon!)`);
+    await alert(`Exporting as .${exportFormat} (Feature coming soon!)`, 'Export');
     setShowExportModal(false);
   };
 
@@ -140,8 +142,6 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
-
-      {/* About & Legal - Removed as per user request */}
 
       <div className="mt-12 text-center text-sm text-gray-400 dark:text-dark-text-secondary">
         <p>NoteDown v1.0.0</p>

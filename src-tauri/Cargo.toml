@@ -24,3 +24,12 @@ log = "0.4"
 tauri = { version = "2.10.0", features = [] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-log = "2"
+
+# Low-level keyboard input for double-shift detection
+rdev = { version = "0.5", features = ["unstable_grab"] }
+
+# PRIMARY selection reading (highlighted text, not clipboard)
+wl-clipboard-rs = "0.9"   # Wayland (Hyprland)
+x11-clipboard = "0.9"     # X11/XWayland fallback
+tauri-plugin-clipboard-manager = "2.3.2"
+tauri-plugin-shell = "2.3.5"

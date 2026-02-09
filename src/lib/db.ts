@@ -30,6 +30,7 @@ class MockDatabase {
         if (query.includes('content =')) notes[index].content = args?.[1];
         if (query.includes('updated_at =')) notes[index].updated_at = args?.[2];
         if (query.includes('position =')) notes[index].position = args?.[0];
+        if (query.includes('source_urls =')) notes[index].source_urls = JSON.parse(args?.[0] || '[]');
         localStorage.setItem('mock_notes', JSON.stringify(notes));
       }
     } else if (query.includes('DELETE FROM notes')) {
@@ -219,106 +220,114 @@ let db: Database | MockDatabase | null = null;
 export const initDb = async () => {
   if (db) return db;
 
+  // Try to initialize SQLite first
   try {
-    if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
-      db = await Database.load("sqlite:coppermind.db");
+    // In Tauri v2, we can just try to load the plugin. 
+    // If it fails (e.g. in browser), it throws/returns null, then we fall back.
+    db = await Database.load("sqlite:coppermind.db");
 
-      // Notes Table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS notes (
-          id TEXT PRIMARY KEY,
-          title TEXT,
-          content TEXT,
-          created_at INTEGER,
-          updated_at INTEGER,
-          parent_id TEXT,
-          position INTEGER
-        )
-      `);
+    // Check if db is actually usable (sometimes load returns an object even if plugin missing?)
+    // But usually load() throws if backend not found.
+    console.log("[db] SQLite plugin loaded successfully");
 
-      // Migration helpers
-      const addCol = async (table: string, col: string, type: string) => {
-        try {
-          await db?.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
-        } catch (e) { /* ignore if exists */ }
-      };
+    // Notes Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        title TEXT,
+        content TEXT,
+        created_at INTEGER,
+        updated_at INTEGER,
+        parent_id TEXT,
+        position INTEGER
+      )
+    `);
 
-      await addCol('notes', 'parent_id', 'TEXT');
-      await addCol('notes', 'position', 'INTEGER');
+    // Migration helpers
+    const addCol = async (table: string, col: string, type: string) => {
+      try {
+        await db?.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+      } catch (e) { /* ignore if exists */ }
+    };
 
-      // Sticky Notes Table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS sticky_notes (
-          id TEXT PRIMARY KEY,
-          note_id TEXT,
-          content TEXT,
-          color TEXT,
-          x REAL,
-          y REAL,
-          created_at INTEGER,
-          FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
-        )
-      `);
+    await addCol('notes', 'parent_id', 'TEXT');
+    await addCol('notes', 'position', 'INTEGER');
+    await addCol('notes', 'source_urls', 'TEXT'); // JSON array of source URLs
 
-      // Todos Table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS todos (
-          id TEXT PRIMARY KEY,
-          text TEXT,
-          completed INTEGER,
-          description TEXT,
-          priority TEXT,
-          labels TEXT,
-          urgent INTEGER,
-          due_date INTEGER,
-          created_at INTEGER
-        )
-      `);
+    // Sticky Notes Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sticky_notes (
+        id TEXT PRIMARY KEY,
+        note_id TEXT,
+        content TEXT,
+        color TEXT,
+        x REAL,
+        y REAL,
+        created_at INTEGER,
+        FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+      )
+    `);
 
-      await addCol('todos', 'description', 'TEXT');
-      await addCol('todos', 'priority', 'TEXT');
-      await addCol('todos', 'labels', 'TEXT');
-      await addCol('todos', 'urgent', 'INTEGER');
-      await addCol('todos', 'due_date', 'INTEGER');
-      await addCol('todos', 'created_at', 'INTEGER');
+    // Todos Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS todos (
+        id TEXT PRIMARY KEY,
+        text TEXT,
+        completed INTEGER,
+        description TEXT,
+        priority TEXT,
+        labels TEXT,
+        urgent INTEGER,
+        due_date INTEGER,
+        created_at INTEGER
+      )
+    `);
 
-      // Nodes Table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS nodes (
-          id TEXT PRIMARY KEY,
-          type TEXT,
-          data TEXT,
-          position_x REAL,
-          position_y REAL,
-          created_at INTEGER
-        )
-      `);
+    await addCol('todos', 'description', 'TEXT');
+    await addCol('todos', 'priority', 'TEXT');
+    await addCol('todos', 'labels', 'TEXT');
+    await addCol('todos', 'urgent', 'INTEGER');
+    await addCol('todos', 'due_date', 'INTEGER');
+    await addCol('todos', 'created_at', 'INTEGER');
 
-      // Edges Table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS edges (
-          id TEXT PRIMARY KEY,
-          source TEXT,
-          target TEXT,
-          type TEXT,
-          created_at INTEGER
-        )
-      `);
+    // Nodes Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS nodes (
+        id TEXT PRIMARY KEY,
+        type TEXT,
+        data TEXT,
+        position_x REAL,
+        position_y REAL,
+        created_at INTEGER
+      )
+    `);
 
-      // Stickers Columns
-      await addCol('sticky_notes', 'type', 'TEXT');
-      await addCol('sticky_notes', 'rotation', 'REAL');
-      await addCol('sticky_notes', 'scale', 'REAL');
+    // Edges Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS edges (
+        id TEXT PRIMARY KEY,
+        source TEXT,
+        target TEXT,
+        type TEXT,
+        created_at INTEGER
+      )
+    `);
 
-      console.log("Database initialized (SQLite)");
-    } else {
-      console.warn("Tauri environment not detected. Using Mock Database.");
-      db = new MockDatabase();
-    }
+    // Stickers Columns
+    await addCol('sticky_notes', 'type', 'TEXT');
+    await addCol('sticky_notes', 'rotation', 'REAL');
+    await addCol('sticky_notes', 'scale', 'REAL');
 
+    console.log("Database initialized (SQLite)");
     return db;
+
   } catch (error) {
-    console.error("Failed to initialize database:", error);
+    console.error("CRITICAL: Failed to load SQLite plugin.", error);
+    // Explicitly alert in dev mode to make sure we see it
+    if (import.meta.env.DEV) {
+      alert(`Failed to load SQLite: ${error}`);
+    }
+    console.warn("Falling back to MockDB.");
     db = new MockDatabase();
     return db;
   }

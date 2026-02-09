@@ -37,32 +37,32 @@ export default {
           pin: '#F87171',
         },
         editor: {
-            text: {
-                lightblue: '#8AB4FF',
-                lightred: '#F28B82',
-                lightgreen: '#81C995',
-                lightorange: '#FFB86C',
-                lightyellow: '#FCD34D',
-                lightpurple: '#CFA8FF',
-                lightpink: '#FF9ACF',
-                gray: '#A1A1AA',
-            },
-            bg: {
-                softyellow: '#4A3F1A',
-                softorange: '#4A2F1A',
-                softpink: '#4A1F35',
-                softblue: '#1A2F4A',
-                softgreen: '#1A4A2C',
-                softpurple: '#3A1A4A',
-                softgray: '#2A2A2A',
-            }
+          text: {
+            lightblue: '#8AB4FF',
+            lightred: '#F28B82',
+            lightgreen: '#81C995',
+            lightorange: '#FFB86C',
+            lightyellow: '#FCD34D',
+            lightpurple: '#CFA8FF',
+            lightpink: '#FF9ACF',
+            gray: '#A1A1AA',
+          },
+          bg: {
+            softyellow: '#4A3F1A',
+            softorange: '#4A2F1A',
+            softpink: '#4A1F35',
+            softblue: '#1A2F4A',
+            softgreen: '#1A4A2C',
+            softpurple: '#3A1A4A',
+            softgray: '#2A2A2A',
+          }
         },
         sticker: {
-            postal: '#EF4444',
-            approved: '#22C55E',
-            smile: '#FACC15',
-            completed: '#10B981',
-            pending: '#EF4444',
+          postal: '#EF4444',
+          approved: '#22C55E',
+          smile: '#FACC15',
+          completed: '#10B981',
+          pending: '#EF4444',
         }
       }
     },

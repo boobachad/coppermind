@@ -6,6 +6,7 @@ export interface Note {
   updated_at: number;
   parent_id?: string | null;
   position?: number;
+  source_urls?: string[]; // Source URLs captured via double-shift
 }
 
 export interface Message {

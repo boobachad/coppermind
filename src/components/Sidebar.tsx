@@ -5,11 +5,13 @@ import { getDb } from '../lib/db';
 import { Note } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import clsx from 'clsx';
+import { useConfirmDialog } from './ConfirmDialog';
 
 export function Sidebar() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadNotes();
@@ -131,7 +133,13 @@ export function Sidebar() {
                 onClick={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (confirm('Are you sure you want to delete this note?')) {
+                  const confirmed = await confirm({
+                    title: 'Delete Note',
+                    description: 'Are you sure you want to delete this note? This action cannot be undone.',
+                    confirmText: 'Delete',
+                    variant: 'destructive'
+                  });
+                  if (confirmed) {
                     try {
                       const db = await getDb();
                       await db.execute('DELETE FROM notes WHERE id = $1', [note.id]);

@@ -1,20 +1,22 @@
 import { Editor } from './Editor';
 import { Message } from '../lib/types';
 import clsx from 'clsx';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
+import { useConfirmDialog } from './ConfirmDialog';
 
 interface MessageBubbleProps {
     message: Message;
-    onUpdate: (content: string) => void;
-    onDelete?: () => void;
+    onUpdate: (id: string, content: string) => void;
+    onDelete: (id: string) => void;
 }
 
-export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProps) {
     const isQuestion = message.role === 'question';
     const [isFocused, setIsFocused] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
     const [draftContent, setDraftContent] = useState(message.content);
+    const { confirm } = useConfirmDialog();
 
     // Reset draft content when opening focus mode
     const openFocusMode = () => {
@@ -49,7 +51,7 @@ export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProp
                 <div
                     onContextMenu={handleContextMenu}
                     className={clsx(
-                        "rounded-2xl px-5 py-3 shadow-sm text-sm overflow-hidden max-w-[80%] inline-block", // inline-block for content sizing
+                        "rounded-2xl px-5 py-3 shadow-sm text-sm overflow-hidden max-w-[90%] inline-block", // inline-block for content sizing
                         isQuestion
                             ? "bg-gray-100 dark:bg-white border border-gray-200 dark:border-transparent rounded-tr-sm"
                             : "bg-white dark:bg-transparent border border-gray-100 dark:border-transparent rounded-tl-sm"
@@ -58,7 +60,7 @@ export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProp
                         content={message.content}
                         editable={false} // Read-only by default
                         className={clsx(
-                            "prose-sm max-w-none focus:outline-none pointer-events-none", // pointer-events-none to prevent interaction
+                            "prose-sm w-full !max-w-none focus:outline-none pointer-events-none", // pointer-events-none to prevent interaction
                             // Only apply prose-invert (white text) for Answer/Assistant bubbles
                             !isQuestion && "dark:prose-invert",
                             // Ensure Question text remains dark even in dark mode (on white bg)
@@ -86,9 +88,16 @@ export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProp
                     </button>
                     <button
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-bg text-red-600 dark:text-red-400"
-                        onClick={() => {
-                            if (confirm('Delete this message?')) {
-                                onDelete?.();
+                        onClick={async () => {
+                            setShowContextMenu(false);
+                            const confirmed = await confirm({
+                                title: 'Delete Message',
+                                description: 'Delete this message? This cannot be undone.',
+                                confirmText: 'Delete',
+                                variant: 'destructive'
+                            });
+                            if (confirmed) {
+                                onDelete(message.id);
                             }
                         }}
                     >
@@ -120,7 +129,7 @@ export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProp
                         <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-bg/50 flex justify-end gap-2">
                             <button
                                 onClick={() => {
-                                    onUpdate(draftContent);
+                                    onUpdate(message.id, draftContent);
                                     setIsFocused(false);
                                 }}
                                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
@@ -133,4 +142,14 @@ export function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProp
             )}
         </>
     );
-}
+}, (prev, next) => {
+    // Custom comparison to ensure strict equality check
+    return (
+        prev.message.id === next.message.id &&
+        prev.message.content === next.message.content &&
+        prev.message.role === next.message.role &&
+        // Handlers are stable references, so strict equality is fine
+        prev.onUpdate === next.onUpdate &&
+        prev.onDelete === next.onDelete
+    );
+});
