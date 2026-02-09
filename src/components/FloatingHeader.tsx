@@ -43,7 +43,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
   const getBreadcrumbLabel = () => {
     if (breadcrumbs.length === 0) return 'Root';
-    
+
     if (breadcrumbs.length > 2) {
       const lastParent = breadcrumbs[breadcrumbs.length - 1];
       return (
@@ -69,15 +69,18 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
   return (
     <div className="absolute top-6 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-50">
-      
+
       {/* Pill #1: Note Title */}
       <div className="relative group">
         <div className={clsx(
-          "flex items-center justify-center px-4 py-2 rounded-full backdrop-blur-2xl shadow-lg border transition-all duration-300",
-          "bg-white/80 border-gray-200 text-gray-900 hover:bg-white hover:border-gray-300",
-          "dark:bg-dark-surface/50 dark:border-white/40 dark:text-dark-text-primary dark:hover:bg-dark-node-bg",
-          "hover:shadow-xl hover:scale-[1.02]",
-          "text-sm font-medium",
+          "flex items-center justify-center px-4 py-2 rounded-full transition-all duration-300",
+          // Light Mode: High contrast text, subtle white glass, distinct border
+          "bg-white/40 backdrop-blur-xl border border-gray-200/50 shadow-sm text-gray-900",
+          // Dark Mode: High contrast text, dark glass, distinct border
+          "dark:bg-black/40 dark:border-white/10 dark:text-white dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]",
+          "hover:bg-white/60 dark:hover:bg-black/60",
+          "hover:scale-[1.02] hover:shadow-md",
+          "text-sm font-semibold tracking-wide", // Increased weight for readability
           isEditing ? "w-64" : "min-w-[120px] max-w-[200px]"
         )}>
           {isEditing ? (
@@ -91,7 +94,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
               className="w-full bg-transparent outline-none text-center"
             />
           ) : (
-            <span 
+            <span
               onClick={() => setIsEditing(true)}
               className="truncate cursor-pointer w-full text-center"
             >
@@ -103,17 +106,19 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
       {/* Pill #2: Breadcrumb */}
       {breadcrumbs.length > 0 && (
-        <div 
+        <div
           className="relative"
           onMouseEnter={() => setShowBreadcrumbDropdown(true)}
           onMouseLeave={() => setShowBreadcrumbDropdown(false)}
         >
           <div className={clsx(
-            "flex items-center justify-center px-3 py-2 rounded-full backdrop-blur-2xl shadow-lg border cursor-pointer transition-all duration-300",
-          "bg-white/80 border-gray-200 text-gray-900 hover:bg-white hover:border-gray-300",
-          "dark:bg-dark-surface/50 dark:border-white/40 dark:text-dark-text-primary dark:hover:bg-dark-node-bg",
-          "hover:shadow-xl hover:scale-[1.02]",
-            "text-sm"
+            "flex items-center justify-center px-3 py-2 rounded-full backdrop-blur-xl shadow-sm border cursor-pointer transition-all duration-300",
+            // Light Mode
+            "bg-white/40 border-gray-200/50 text-gray-800 hover:bg-white/60 hover:border-gray-300",
+            // Dark Mode
+            "dark:bg-black/40 dark:border-white/10 dark:text-gray-100 dark:hover:bg-black/60",
+            "hover:shadow-md hover:scale-[1.02]",
+            "text-sm font-medium"
           )}>
             {getBreadcrumbLabel()}
             <ChevronDown className="w-3 h-3 ml-2 opacity-60" />
@@ -123,13 +128,13 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white/95 dark:bg-dark-surface/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 dark:border-dark-border overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex flex-col">
                 {breadcrumbs.map((crumb) => (
-                  <div 
+                  <div
                     key={crumb.id}
                     onClick={() => navigate(`/notes/${crumb.id}`)}
                     className="px-4 py-2 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer text-xs flex items-center text-gray-700 dark:text-dark-text-primary"
                   >
-                     <span className="truncate flex-1">{crumb.title || 'Untitled'}</span>
-                     <ChevronRight className="w-3 h-3 text-gray-400 ml-1" />
+                    <span className="truncate flex-1">{crumb.title || 'Untitled'}</span>
+                    <ChevronRight className="w-3 h-3 text-gray-400 ml-1" />
                   </div>
                 ))}
                 <div className="px-4 py-2 bg-black/5 dark:bg-white/5 text-xs font-semibold text-gray-900 dark:text-dark-text-primary truncate border-t border-gray-200 dark:border-dark-border">
@@ -146,10 +151,12 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
         <button
           onClick={() => setShowMenu(!showMenu)}
           className={clsx(
-            "w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-2xl shadow-lg border transition-all duration-300",
-          "bg-white/80 border-gray-200 text-gray-900 hover:bg-white hover:border-gray-300",
-          "dark:bg-dark-surface/50 dark:border-white/40 dark:text-dark-text-primary dark:hover:bg-dark-node-bg",
-          "hover:shadow-xl hover:scale-105"
+            "w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-xl shadow-sm border transition-all duration-300",
+            // Light Mode
+            "bg-white/40 border-gray-200/50 text-gray-800 hover:bg-white/60 hover:border-gray-300",
+            // Dark Mode
+            "dark:bg-black/40 dark:border-white/10 dark:text-gray-100 dark:hover:bg-black/60",
+            "hover:shadow-md hover:scale-105"
           )}
         >
           <MoreHorizontal className="w-5 h-5" />
@@ -160,13 +167,13 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
             {showStickerMenu ? (
               <>
                 <div className="px-4 py-2 border-b border-gray-100 dark:border-dark-border flex items-center">
-                   <button 
-                     onClick={() => setShowStickerMenu(false)}
-                     className="mr-2 text-gray-500 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
-                   >
-                     <ChevronLeft className="w-4 h-4" />
-                   </button>
-                   <span className="text-sm font-semibold text-gray-700 dark:text-dark-text-primary">Stickers</span>
+                  <button
+                    onClick={() => setShowStickerMenu(false)}
+                    className="mr-2 text-gray-500 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-dark-text-primary">Stickers</span>
                 </div>
                 <div className="p-2 grid grid-cols-3 gap-2">
                   {STICKER_TYPES.map(type => (
@@ -188,47 +195,40 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
               </>
             ) : (
               <>
-            <button
-              onClick={() => { onAction('new-nested'); setShowMenu(false); }}
-              className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
-            >
-              <FileText className="w-4 h-4" />
-              <span>New Nested Note</span>
-            </button>
-            
-            <button
-              onClick={() => { onAction('new-sticky'); setShowMenu(false); }}
-              className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
-            >
-              <StickyNote className="w-4 h-4" />
-              <span>New Sticky Note</span>
-            </button>
 
-            <button
-              disabled
-              className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-400 dark:text-dark-text-muted text-left cursor-not-allowed"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>Open in New Tab</span>
-            </button>
-            
-            <button
-              onClick={() => setShowStickerMenu(true)}
-              className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
-            >
-              <div className="w-4 h-4 flex items-center justify-center">✨</div>
-              <span>Stickers</span>
-            </button>
+                <button
+                  onClick={() => { onAction('new-sticky'); setShowMenu(false); }}
+                  className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
+                >
+                  <StickyNote className="w-4 h-4" />
+                  <span>New Sticky Note</span>
+                </button>
 
-            <div className="h-px bg-gray-200 dark:bg-dark-border my-1 mx-2" />
+                <button
+                  disabled
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-400 dark:text-dark-text-muted text-left cursor-not-allowed"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Open in New Tab</span>
+                </button>
 
-            <button
-              onClick={() => { onAction('delete'); setShowMenu(false); }}
-              className="w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-sm text-red-600 dark:text-red-400 text-left transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete Note</span>
-            </button>
+                <button
+                  onClick={() => setShowStickerMenu(true)}
+                  className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
+                >
+                  <div className="w-4 h-4 flex items-center justify-center">✨</div>
+                  <span>Stickers</span>
+                </button>
+
+                <div className="h-px bg-gray-200 dark:bg-dark-border my-1 mx-2" />
+
+                <button
+                  onClick={() => { onAction('delete'); setShowMenu(false); }}
+                  className="w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-sm text-red-600 dark:text-red-400 text-left transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Note</span>
+                </button>
               </>
             )}
           </div>

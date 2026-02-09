@@ -1,13 +1,14 @@
 import Database from "@tauri-apps/plugin-sql";
+import { Note, Todo, StickyNote, GraphNode, GraphEdge } from "./types";
 
 // Mock Database interface for browser environment
 class MockDatabase {
   async execute(query: string, args?: any[]) {
     console.log('[MockDB] Execute:', query, args);
-    
+
     // Notes Operations
     if (query.includes('INSERT INTO notes')) {
-      const note = {
+      const note: Note = {
         id: args?.[0],
         title: args?.[1],
         content: args?.[2],
@@ -16,99 +17,109 @@ class MockDatabase {
         parent_id: args?.[5] || null,
         position: args?.[6] || 0
       };
-      const notes = JSON.parse(localStorage.getItem('mock_notes') || '[]');
+      const notes: Note[] = JSON.parse(localStorage.getItem('mock_notes') || '[]');
       notes.push(note);
       localStorage.setItem('mock_notes', JSON.stringify(notes));
     } else if (query.includes('UPDATE notes')) {
-      const notes = JSON.parse(localStorage.getItem('mock_notes') || '[]');
+      const notes: Note[] = JSON.parse(localStorage.getItem('mock_notes') || '[]');
       const id = args?.[args.length - 1]; // ID is usually last
-      const index = notes.findIndex((n: any) => n.id === id);
-      
+      const index = notes.findIndex((n) => n.id === id);
+
       if (index !== -1) {
         if (query.includes('title =')) notes[index].title = args?.[0];
         if (query.includes('content =')) notes[index].content = args?.[1];
         if (query.includes('updated_at =')) notes[index].updated_at = args?.[2];
-        if (query.includes('position =')) notes[index].position = args?.[0]; // Assumes single update for simplicity in mock
+        if (query.includes('position =')) notes[index].position = args?.[0];
         localStorage.setItem('mock_notes', JSON.stringify(notes));
       }
     } else if (query.includes('DELETE FROM notes')) {
-      let notes = JSON.parse(localStorage.getItem('mock_notes') || '[]');
+      let notes: Note[] = JSON.parse(localStorage.getItem('mock_notes') || '[]');
       const id = args?.[0];
-      notes = notes.filter((n: any) => n.id !== id);
+
+      // Cascading delete: Remove sticky notes associated with this note
+      let stickies: StickyNote[] = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
+      const stickiesBefore = stickies.length;
+      stickies = stickies.filter(s => s.note_id !== id);
+      if (stickies.length !== stickiesBefore) {
+        console.log(`[MockDB] Cascading delete: Removed ${stickiesBefore - stickies.length} sticky notes.`);
+        localStorage.setItem('mock_stickies', JSON.stringify(stickies));
+      }
+
+      notes = notes.filter((n) => n.id !== id);
       localStorage.setItem('mock_notes', JSON.stringify(notes));
     }
-    
+
     // Todos Operations
     else if (query.includes('INSERT INTO todos')) {
-      const todo = {
+      const todo: Todo = {
         id: args?.[0],
         text: args?.[1],
-        completed: args?.[2],
+        completed: args?.[2] === 1 || args?.[2] === true, // handle variations
         description: args?.[3],
         priority: args?.[4],
-        labels: args?.[5],
-        urgent: args?.[6],
+        labels: args?.[5] ? JSON.parse(args[5]) : [], // Assuming stored as string in DB
+        urgent: args?.[6] === 1 || args?.[6] === true,
         due_date: args?.[7],
         created_at: args?.[8]
       };
-      const todos = JSON.parse(localStorage.getItem('mock_todos') || '[]');
+      const todos: Todo[] = JSON.parse(localStorage.getItem('mock_todos') || '[]');
       todos.push(todo);
       localStorage.setItem('mock_todos', JSON.stringify(todos));
     } else if (query.includes('UPDATE todos')) {
-      const todos = JSON.parse(localStorage.getItem('mock_todos') || '[]');
+      const todos: Todo[] = JSON.parse(localStorage.getItem('mock_todos') || '[]');
       const id = args?.[args.length - 1];
-      const index = todos.findIndex((t: any) => t.id === id);
-      
+      const index = todos.findIndex((t) => t.id === id);
+
       if (index !== -1) {
         if (query.includes('completed =')) todos[index].completed = args?.[0];
-        // Add other update logic as needed, for now mostly completed is toggled or full update
+        // Basic update support
         localStorage.setItem('mock_todos', JSON.stringify(todos));
       }
     } else if (query.includes('DELETE FROM todos')) {
-      let todos = JSON.parse(localStorage.getItem('mock_todos') || '[]');
+      let todos: Todo[] = JSON.parse(localStorage.getItem('mock_todos') || '[]');
       const id = args?.[0];
-      todos = todos.filter((t: any) => t.id !== id);
+      todos = todos.filter((t) => t.id !== id);
       localStorage.setItem('mock_todos', JSON.stringify(todos));
     }
 
     // Nodes & Edges Operations (Mock)
     else if (query.includes('INSERT INTO nodes')) {
-      const node = {
+      const node: GraphNode = {
         id: args?.[0],
         type: args?.[1],
-        data: args?.[2],
-        position_x: args?.[3],
-        position_y: args?.[4],
-        created_at: args?.[5]
+        data: JSON.parse(args?.[2] || '{}'),
+        position: { x: args?.[3], y: args?.[4] }
       };
-      const nodes = JSON.parse(localStorage.getItem('mock_nodes_graph') || '[]');
+      const nodes: GraphNode[] = JSON.parse(localStorage.getItem('mock_nodes_graph') || '[]');
       nodes.push(node);
       localStorage.setItem('mock_nodes_graph', JSON.stringify(nodes));
+    } else if (query.includes('DELETE FROM nodes')) {
+      // Support delete node
+      let nodes: GraphNode[] = JSON.parse(localStorage.getItem('mock_nodes_graph') || '[]');
+      const id = args?.[0];
+      nodes = nodes.filter(n => n.id !== id);
+      localStorage.setItem('mock_nodes_graph', JSON.stringify(nodes));
+
+      // Cascade delete edges connected to this node
+      let edges: GraphEdge[] = JSON.parse(localStorage.getItem('mock_edges') || '[]');
+      edges = edges.filter(e => e.source !== id && e.target !== id);
+      localStorage.setItem('mock_edges', JSON.stringify(edges));
+
     } else if (query.includes('INSERT INTO edges')) {
-      const edge = {
+      const edge: GraphEdge = {
         id: args?.[0],
         source: args?.[1],
         target: args?.[2],
-        type: args?.[3],
-        created_at: args?.[4]
+        type: args?.[3]
       };
-      const edges = JSON.parse(localStorage.getItem('mock_edges') || '[]');
+      const edges: GraphEdge[] = JSON.parse(localStorage.getItem('mock_edges') || '[]');
       edges.push(edge);
       localStorage.setItem('mock_edges', JSON.stringify(edges));
     }
 
     // Sticky Notes Operations (Mock)
     else if (query.includes('INSERT INTO sticky_notes')) {
-      // args order depends on query. 
-      // NotePage: id, note_id, content, color, x, y, created_at (7 args)
-      // StickerLayer: id, note_id, content, color, x, y, created_at, type, rotation, scale (10 args)
-      // We can map by index if consistent, or use object if we parsed query.
-      // Assuming consistent order based on recent code.
-      // But NotePage and StickerLayer use different columns?
-      // NotePage: INSERT INTO sticky_notes (id, note_id, content, color, x, y, created_at) VALUES ...
-      // StickerLayer: INSERT INTO sticky_notes (id, note_id, content, color, x, y, created_at, type, rotation, scale) VALUES ...
-      
-      const sticky = {
+      const sticky: StickyNote = {
         id: args?.[0],
         note_id: args?.[1],
         content: args?.[2],
@@ -120,18 +131,18 @@ class MockDatabase {
         rotation: args?.[8] || 0,
         scale: args?.[9] || 1
       };
-      const stickies = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
+      const stickies: StickyNote[] = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
       stickies.push(sticky);
       localStorage.setItem('mock_stickies', JSON.stringify(stickies));
     } else if (query.includes('UPDATE sticky_notes')) {
-      const stickies = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
+      const stickies: StickyNote[] = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
       const id = args?.[args.length - 1];
-      const index = stickies.findIndex((s: any) => s.id === id);
-      
+      const index = stickies.findIndex((s) => s.id === id);
+
       if (index !== -1) {
         if (query.includes('x =')) {
-             stickies[index].x = args?.[0];
-             stickies[index].y = args?.[1];
+          stickies[index].x = args?.[0];
+          stickies[index].y = args?.[1];
         }
         if (query.includes('rotation =')) stickies[index].rotation = args?.[0];
         if (query.includes('scale =')) stickies[index].scale = args?.[0];
@@ -140,56 +151,66 @@ class MockDatabase {
         localStorage.setItem('mock_stickies', JSON.stringify(stickies));
       }
     } else if (query.includes('DELETE FROM sticky_notes')) {
-      let stickies = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
+      let stickies: StickyNote[] = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
       const id = args?.[0];
-      stickies = stickies.filter((s: any) => s.id !== id);
+      stickies = stickies.filter((s) => s.id !== id);
       localStorage.setItem('mock_stickies', JSON.stringify(stickies));
     }
-    
+
     return Promise.resolve();
   }
 
   async select<T>(query: string, args?: any[]): Promise<T> {
     console.log('[MockDB] Select:', query, args);
-    
+
     if (query.includes('FROM notes')) {
-      const notes = JSON.parse(localStorage.getItem('mock_notes') || '[]');
-      
+      const notes: Note[] = JSON.parse(localStorage.getItem('mock_notes') || '[]');
+
       if (query.includes('WHERE id =')) {
-        return Promise.resolve(notes.filter((n: any) => n.id === args?.[0]) as any);
+        return Promise.resolve(notes.filter((n) => n.id === args?.[0]) as unknown as T);
       } else if (query.includes('WHERE parent_id IS NULL')) {
-        return Promise.resolve(notes.filter((n: any) => !n.parent_id) as any);
+        return Promise.resolve(notes.filter((n) => !n.parent_id) as unknown as T);
       } else if (query.includes('WHERE parent_id =')) {
-        return Promise.resolve(notes.filter((n: any) => n.parent_id === args?.[0]) as any);
+        return Promise.resolve(notes.filter((n) => n.parent_id === args?.[0]) as unknown as T);
       }
-      
-      return Promise.resolve(notes as any);
-    } 
-    
+
+      return Promise.resolve(notes as unknown as T);
+    }
+
     if (query.includes('FROM sticky_notes')) {
-      const stickies = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
+      const stickies: StickyNote[] = JSON.parse(localStorage.getItem('mock_stickies') || '[]');
       if (query.includes('WHERE note_id =')) {
-        return Promise.resolve(stickies.filter((s: any) => s.note_id === args?.[0]) as any);
+        return Promise.resolve(stickies.filter((s) => s.note_id === args?.[0]) as unknown as T);
       }
-      return Promise.resolve(stickies as any);
+      return Promise.resolve(stickies as unknown as T);
     }
 
     if (query.includes('FROM todos')) {
-      const todos = JSON.parse(localStorage.getItem('mock_todos') || '[]');
-      return Promise.resolve(todos as any);
+      const todos: Todo[] = JSON.parse(localStorage.getItem('mock_todos') || '[]');
+      return Promise.resolve(todos as unknown as T);
     }
 
     if (query.includes('FROM nodes')) {
-      const nodes = JSON.parse(localStorage.getItem('mock_nodes_graph') || '[]');
-      return Promise.resolve(nodes as any);
+      const nodes: any[] = JSON.parse(localStorage.getItem('mock_nodes_graph') || '[]');
+      // Map back to DB format if needed, but here we just return stored objects
+      // Ideally we store flat structure and map back to match SQL
+      const mappedNodes = nodes.map(n => ({
+        id: n.id,
+        type: n.type,
+        data: JSON.stringify(n.data), // SQL returns stringified JSON
+        position_x: n.position.x,
+        position_y: n.position.y,
+        created_at: Date.now()
+      }));
+      return Promise.resolve(mappedNodes as unknown as T);
     }
 
     if (query.includes('FROM edges')) {
-      const edges = JSON.parse(localStorage.getItem('mock_edges') || '[]');
-      return Promise.resolve(edges as any);
+      const edges: GraphEdge[] = JSON.parse(localStorage.getItem('mock_edges') || '[]');
+      return Promise.resolve(edges as unknown as T);
     }
 
-    return Promise.resolve([] as any);
+    return Promise.resolve([] as unknown as T);
   }
 }
 
@@ -197,11 +218,11 @@ let db: Database | MockDatabase | null = null;
 
 export const initDb = async () => {
   if (db) return db;
-  
+
   try {
     if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
       db = await Database.load("sqlite:coppermind.db");
-      
+
       // Notes Table
       await db.execute(`
         CREATE TABLE IF NOT EXISTS notes (
@@ -214,14 +235,16 @@ export const initDb = async () => {
           position INTEGER
         )
       `);
-      
-      try {
-        await db.execute('ALTER TABLE notes ADD COLUMN parent_id TEXT');
-      } catch (e) { /* ignore */ }
 
-      try {
-        await db.execute('ALTER TABLE notes ADD COLUMN position INTEGER');
-      } catch (e) { /* ignore */ }
+      // Migration helpers
+      const addCol = async (table: string, col: string, type: string) => {
+        try {
+          await db?.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+        } catch (e) { /* ignore if exists */ }
+      };
+
+      await addCol('notes', 'parent_id', 'TEXT');
+      await addCol('notes', 'position', 'INTEGER');
 
       // Sticky Notes Table
       await db.execute(`
@@ -251,25 +274,13 @@ export const initDb = async () => {
           created_at INTEGER
         )
       `);
-      
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN description TEXT');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN priority TEXT');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN labels TEXT');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN urgent INTEGER');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN due_date INTEGER');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE todos ADD COLUMN created_at INTEGER');
-      } catch (e) { /* ignore */ }
+
+      await addCol('todos', 'description', 'TEXT');
+      await addCol('todos', 'priority', 'TEXT');
+      await addCol('todos', 'labels', 'TEXT');
+      await addCol('todos', 'urgent', 'INTEGER');
+      await addCol('todos', 'due_date', 'INTEGER');
+      await addCol('todos', 'created_at', 'INTEGER');
 
       // Nodes Table
       await db.execute(`
@@ -294,23 +305,17 @@ export const initDb = async () => {
         )
       `);
 
-      // Stickers Table (for global stickers, or modify sticky_notes to include type/rotation)
-      try {
-        await db.execute('ALTER TABLE sticky_notes ADD COLUMN type TEXT');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE sticky_notes ADD COLUMN rotation REAL');
-      } catch (e) { /* ignore */ }
-      try {
-        await db.execute('ALTER TABLE sticky_notes ADD COLUMN scale REAL');
-      } catch (e) { /* ignore */ }
-      
+      // Stickers Columns
+      await addCol('sticky_notes', 'type', 'TEXT');
+      await addCol('sticky_notes', 'rotation', 'REAL');
+      await addCol('sticky_notes', 'scale', 'REAL');
+
       console.log("Database initialized (SQLite)");
     } else {
       console.warn("Tauri environment not detected. Using Mock Database.");
       db = new MockDatabase();
     }
-    
+
     return db;
   } catch (error) {
     console.error("Failed to initialize database:", error);

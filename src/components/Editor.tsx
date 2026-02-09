@@ -36,21 +36,26 @@ export interface EditorRef {
 
 interface EditorProps {
   content: string;
-  onChange: (content: string) => void;
+  onChange?: (content: string) => void;
+  editable?: boolean;
+  className?: string; // Allow custom classes
 }
 
-export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange }, ref) => {
+export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, editable = true, className }, ref) => {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   // Use a ref to track if we've synced the initial content
   // We only want to force-set content once when the editor loads
   const hasSyncedInitialContent = useRef(false);
 
   const editor = useEditor({
+    editable,
     extensions: [
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
+        codeBlock: false,
+        horizontalRule: false,
       }),
       Placeholder.configure({
         placeholder: "Type '/' for commands...",
@@ -96,11 +101,11 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
     ],
     content: content ? tryParse(content) : '',
     onUpdate: ({ editor }) => {
-      onChange(JSON.stringify(editor.getJSON()));
+      onChange?.(JSON.stringify(editor.getJSON()));
     },
     editorProps: {
       attributes: {
-        class: 'prose mx-auto focus:outline-none max-w-none pt-32 dark:prose-invert text-gray-900 dark:text-dark-text-primary', // Added text colors explicitly
+        class: className || 'prose mx-auto focus:outline-none max-w-none dark:prose-invert text-gray-900 dark:text-dark-text-primary',
       },
       handleDOMEvents: {
         contextmenu: (_view, event) => {
@@ -114,45 +119,45 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
           event.preventDefault();
           const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
           if (!coordinates) return false;
-          
+
           const { selection } = view.state;
           const { from, to } = selection;
-          
+
           // Don't drop inside itself
           if (coordinates.pos >= from && coordinates.pos <= to) return false;
 
           const node = view.state.doc.slice(from, to).content.firstChild;
           if (!node) return false;
 
-          let dropPos = coordinates.pos;
-          
+          const dropPos = coordinates.pos;
+
           // Adjust drop position to be block-level
           // This is a simplification; ideally we find the block at coordinates and insert before/after
           const resolved = view.state.doc.resolve(dropPos);
-          
+
           // If dropping in the second half of a block, insert after? 
           // For now, just insert at the resolved position which is usually inside a text node?
           // No, we want to move BLOCKS.
-          
+
           // Let's try to insert BEFORE the block we hover over
           // If we are deep inside, we go up to depth 1 (top level blocks usually)
           // Actually, we should check `resolved.depth`.
-          
+
           let targetPos = dropPos;
           if (resolved.depth > 0) {
-             targetPos = resolved.before(1);
+            targetPos = resolved.before(1);
           }
-          
+
           // Map position if we delete first?
           // If target is AFTER source, we delete first, target shifts by (to-from).
           // If target is BEFORE source, we delete first, target stays same.
-          
+
           let transaction = view.state.tr;
           transaction = transaction.delete(from, to);
-          
+
           const mappedPos = transaction.mapping.map(targetPos);
           transaction = transaction.insert(mappedPos, node);
-          
+
           view.dispatch(transaction);
           return true;
         }
@@ -162,14 +167,25 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
   });
 
   useEffect(() => {
-    if (editor && content && !hasSyncedInitialContent.current) {
-      const currentContent = JSON.stringify(editor.getJSON());
-      if (currentContent !== content) {
-        editor.commands.setContent(tryParse(content));
+    if (editor && content) {
+      const isInitialSync = !hasSyncedInitialContent.current;
+      // If it's the first sync OR we are in read-only mode, we trust the prop.
+      // In read-only mode, the prop is the source of truth and we need to update
+      // when the parent updates (e.g. after an edit in the modal).
+      if (isInitialSync || !editable) {
+        const currentContent = JSON.stringify(editor.getJSON());
+        // Simple comparison to avoid unnecessary updates
+        // parse check is handled by tryParse in setContent usually but here we compare strings
+        // This might be imperfect if ordering changes but good enough for now
+        if (currentContent !== content && JSON.stringify(tryParse(content)) !== currentContent) {
+          editor.commands.setContent(tryParse(content));
+        }
+        if (isInitialSync) {
+          hasSyncedInitialContent.current = true;
+        }
       }
-      hasSyncedInitialContent.current = true;
     }
-  }, [editor, content]);
+  }, [editor, content, editable]);
 
   useImperativeHandle(ref, () => ({
     setTitle: (title: string) => {
@@ -226,7 +242,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange },
         </button>
       </BubbleMenu>
 
-      <div className="min-h-screen overflow-x-auto">
+      <div>
         <EditorContent editor={editor} />
       </div>
       <DragHandle editor={editor} />

@@ -22,7 +22,7 @@ import { getDb } from '../lib/db';
 import { useTheme } from '../lib/ThemeContext';
 
 // Custom Node Components
-const NodeWrapper = ({ children, label, icon: Icon, selected }: any) => {
+const NodeWrapper = ({ children, label, icon: Icon, selected }: { children: React.ReactNode, label: string, icon: React.ElementType, selected?: boolean }) => {
   return (
     <div className={`bg-white dark:bg-dark-surface rounded-lg shadow-md border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-gray-200 dark:border-dark-border'}`}>
       <div className="flex items-center px-3 py-2 bg-gray-50 dark:bg-dark-bg border-b border-gray-100 dark:border-dark-border rounded-t-lg">
@@ -32,19 +32,19 @@ const NodeWrapper = ({ children, label, icon: Icon, selected }: any) => {
       <div className="p-3">
         {children}
       </div>
-      
+
       {/* Top Handles */}
       <Handle type="target" position={Position.Top} id="top-target" className="w-3 h-3 bg-blue-500" style={{ left: '40%' }} />
       <Handle type="source" position={Position.Top} id="top-source" className="w-3 h-3 bg-blue-500" style={{ left: '60%' }} />
-      
+
       {/* Bottom Handles */}
       <Handle type="target" position={Position.Bottom} id="bottom-target" className="w-3 h-3 bg-blue-500" style={{ left: '40%' }} />
       <Handle type="source" position={Position.Bottom} id="bottom-source" className="w-3 h-3 bg-blue-500" style={{ left: '60%' }} />
-      
+
       {/* Left Handles */}
       <Handle type="target" position={Position.Left} id="left-target" className="w-3 h-3 bg-blue-500" style={{ top: '40%' }} />
       <Handle type="source" position={Position.Left} id="left-source" className="w-3 h-3 bg-blue-500" style={{ top: '60%' }} />
-      
+
       {/* Right Handles */}
       <Handle type="target" position={Position.Right} id="right-target" className="w-3 h-3 bg-blue-500" style={{ top: '40%' }} />
       <Handle type="source" position={Position.Right} id="right-source" className="w-3 h-3 bg-blue-500" style={{ top: '60%' }} />
@@ -52,9 +52,9 @@ const NodeWrapper = ({ children, label, icon: Icon, selected }: any) => {
   );
 };
 
-const TextNode = ({ data, selected }: any) => (
+const TextNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   <NodeWrapper label="Text" icon={Type} selected={selected}>
-    <textarea 
+    <textarea
       className="w-full text-sm border-none resize-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-dark-text-primary"
       placeholder="Enter text..."
       defaultValue={data.text}
@@ -64,7 +64,7 @@ const TextNode = ({ data, selected }: any) => (
   </NodeWrapper>
 );
 
-const NoteNode = ({ data, selected }: any) => (
+const NoteNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   <NodeWrapper label="Note" icon={FileText} selected={selected}>
     <div className="text-sm font-medium text-gray-800 dark:text-dark-text-primary mb-1">{data.title}</div>
     <div className="text-xs text-gray-600 dark:text-dark-text-secondary line-clamp-3">
@@ -73,7 +73,7 @@ const NoteNode = ({ data, selected }: any) => (
   </NodeWrapper>
 );
 
-const TaskNode = ({ data, selected }: any) => (
+const TaskNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   <NodeWrapper label="Task" icon={CheckSquare} selected={selected}>
     <div className="flex items-center space-x-2">
       <div className={`w-4 h-4 rounded border ${data.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-dark-border'}`} />
@@ -84,7 +84,7 @@ const TaskNode = ({ data, selected }: any) => (
   </NodeWrapper>
 );
 
-const ImageNode = ({ data, selected }: any) => (
+const ImageNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   <NodeWrapper label="Image" icon={ImageIcon} selected={selected}>
     {data.url ? (
       <img src={data.url} alt="Node" className="w-full h-32 object-cover rounded" />
@@ -96,7 +96,7 @@ const ImageNode = ({ data, selected }: any) => (
   </NodeWrapper>
 );
 
-const GraphNode = ({ selected }: any) => (
+const GraphNode = ({ selected }: { selected?: boolean }) => (
   <NodeWrapper label="Graph" icon={BarChart} selected={selected}>
     <div className="w-full h-32 flex items-end justify-between space-x-1 px-2 pt-4 pb-0 bg-gray-50 dark:bg-dark-bg rounded">
       {[40, 70, 30, 85, 50, 65].map((h, i) => (
@@ -107,7 +107,7 @@ const GraphNode = ({ selected }: any) => (
   </NodeWrapper>
 );
 
-const FileNode = ({ data, selected }: any) => (
+const FileNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   <NodeWrapper label="PDF File" icon={FileText} selected={selected}>
     <div className="flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded border border-red-100 dark:border-red-800 h-32">
       <FileText className="w-12 h-12 text-red-500 dark:text-red-400 mb-2" />
@@ -138,6 +138,10 @@ export function NodesPage() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkType, setLinkType] = useState<'note' | 'todo' | null>(null);
+  const [linkOptions, setLinkOptions] = useState<any[]>([]);
+
   useEffect(() => {
     const init = async () => {
       const database = await getDb();
@@ -145,26 +149,26 @@ export function NodesPage() {
       loadGraph(database);
     };
     init();
-  }, []);
+  }, []); // loadGraph is stable/dependency-free in this context or could be added if memoized
 
-  const loadGraph = async (database: any) => {
+  const loadGraph = useCallback(async (database: any) => {
     try {
       const savedNodes = await database.select('SELECT * FROM nodes');
       const savedEdges = await database.select('SELECT * FROM edges');
-      
+
       const parsedNodes = savedNodes.map((n: any) => ({
         id: n.id,
         type: n.type,
         position: { x: n.position_x, y: n.position_y },
         data: JSON.parse(n.data)
       }));
-      
+
       setNodes(parsedNodes);
       setEdges(savedEdges);
     } catch (err) {
       console.error("Failed to load graph", err);
     }
-  };
+  }, [setNodes, setEdges]);
 
   const saveNode = async (node: Node) => {
     if (!db) return;
@@ -172,9 +176,7 @@ export function NodesPage() {
       // Check if exists
       const exists = await db.select('SELECT id FROM nodes WHERE id = ?', [node.id]);
       if (exists.length > 0) {
-        // Update (simplified, real app would update specific fields)
-        // For now we just re-insert or ignore, but better to support position update
-        // We'll rely on periodic save or explicit save for now to keep it simple
+        // Update (simplified) - in real app we'd update position on drag end
       } else {
         await db.execute(
           'INSERT INTO nodes (id, type, data, position_x, position_y, created_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -185,6 +187,17 @@ export function NodesPage() {
       console.error("Failed to save node", err);
     }
   };
+
+  const onNodesDelete = useCallback(async (deleted: Node[]) => {
+    if (!db) return;
+    for (const node of deleted) {
+      try {
+        await db.execute('DELETE FROM nodes WHERE id = ?', [node.id]);
+      } catch (e) {
+        console.error("Failed to delete node", e);
+      }
+    }
+  }, [db]);
 
   const onConnect = useCallback((params: Connection | Edge) => {
     setEdges((eds) => addEdge(params, eds));
@@ -198,10 +211,28 @@ export function NodesPage() {
     }
   }, [db, setEdges]);
 
+  // Also handle edge deletion if needed, but for now focus on nodes
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
+
+  const addNode = useCallback((type: string, data: any = {}, position?: { x: number; y: number }) => {
+    const id = uuidv4();
+    const newNode: Node = {
+      id,
+      type,
+      position: position || { x: Math.random() * 500 + 100, y: Math.random() * 500 + 100 },
+      data: {
+        label: `New ${type}`,
+        onChange: (val: string) => updateNodeData(id, { text: val }),
+        ...data
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    saveNode(newNode);
+  }, [setNodes, saveNode]);
 
   const onDrop = useCallback(
     async (event: React.DragEvent) => {
@@ -242,24 +273,8 @@ export function NodesPage() {
         addNode(type, {}, position);
       }
     },
-    [reactFlowInstance]
+    [reactFlowInstance, addNode]
   );
-
-  const addNode = (type: string, data: any = {}, position?: { x: number; y: number }) => {
-    const id = uuidv4();
-    const newNode: Node = {
-      id,
-      type,
-      position: position || { x: Math.random() * 500, y: Math.random() * 500 },
-      data: { 
-        label: `New ${type}`, 
-        onChange: (val: string) => updateNodeData(id, { text: val }),
-        ...data 
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
-    saveNode(newNode);
-  };
 
   const updateNodeData = (id: string, data: any) => {
     setNodes((nds) =>
@@ -272,28 +287,30 @@ export function NodesPage() {
     );
   };
 
-  const linkNote = async () => {
-    // For demo: fetch first note
+  const openLinkModal = async (type: 'note' | 'todo') => {
     if (!db) return;
-    const result = await db.select('SELECT * FROM notes LIMIT 1');
-    if (result && result.length > 0) {
-      const note = result[0];
-      addNode('noteNode', { title: note.title, preview: note.content });
+    setLinkType(type);
+    if (type === 'note') {
+      const result = await db.select('SELECT * FROM notes WHERE parent_id IS NULL ORDER BY updated_at DESC');
+      setLinkOptions(result);
+    } else {
+      const result = await db.select('SELECT * FROM todos ORDER BY created_at DESC');
+      setLinkOptions(result);
     }
+    setIsLinkModalOpen(true);
   };
 
-  const linkTodo = async () => {
-    // For demo: fetch first todo
-    if (!db) return;
-    const result = await db.select('SELECT * FROM todos LIMIT 1');
-    if (result && result.length > 0) {
-      const todo = result[0];
-      addNode('taskNode', { label: todo.text, completed: todo.completed });
+  const confirmLink = (item: any) => {
+    if (linkType === 'note') {
+      addNode('noteNode', { title: item.title, preview: item.content });
+    } else {
+      addNode('taskNode', { label: item.text, completed: item.completed });
     }
+    setIsLinkModalOpen(false);
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-white dark:bg-dark-bg">
+    <div className="h-screen w-full flex flex-col bg-white dark:bg-dark-bg relative">
       <div className="h-14 border-b border-gray-200 dark:border-dark-border flex items-center px-4 justify-between bg-white dark:bg-dark-surface z-10">
         <div className="font-semibold text-gray-700 dark:text-dark-text-primary">Graph View</div>
         <div className="flex space-x-2">
@@ -304,10 +321,10 @@ export function NodesPage() {
             <BarChart className="w-4 h-4" />
           </button>
           <div className="w-px h-6 bg-gray-300 dark:bg-dark-border mx-2" />
-          <button onClick={linkNote} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Note">
+          <button onClick={() => openLinkModal('note')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Note">
             <FileText className="w-4 h-4" />
           </button>
-          <button onClick={linkTodo} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Task">
+          <button onClick={() => openLinkModal('todo')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Task">
             <CheckSquare className="w-4 h-4" />
           </button>
         </div>
@@ -318,6 +335,7 @@ export function NodesPage() {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodesDelete={onNodesDelete}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           onInit={setReactFlowInstance}
@@ -330,6 +348,42 @@ export function NodesPage() {
           <MiniMap className="dark:bg-dark-surface dark:border-dark-border" maskColor={theme === 'dark' ? 'rgba(30, 30, 30, 0.7)' : 'rgba(240, 240, 240, 0.7)'} nodeColor={theme === 'dark' ? '#555' : '#e0e0e0'} />
         </ReactFlow>
       </div>
+
+      {/* Link Modal */}
+      {isLinkModalOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-dark-surface rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">
+                Link {linkType === 'note' ? 'Note' : 'Task'}
+              </h3>
+              <button
+                onClick={() => setIsLinkModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-dark-text-secondary"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {linkOptions.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">No items found</div>
+              ) : (
+                <div className="space-y-1">
+                  {linkOptions.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => confirmLink(item)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-sm text-gray-700 dark:text-dark-text-primary truncate"
+                    >
+                      {linkType === 'note' ? (item.title || 'Untitled') : item.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

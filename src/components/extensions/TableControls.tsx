@@ -15,18 +15,28 @@ export function TableControls({ editor }: TableControlsProps) {
 
   useEffect(() => {
     const updateTableEl = () => {
-      if (!editor?.view) return;
-      const sel = editor.view.state.selection;
-      const domSel = editor.view.domAtPos(sel.from);
-      const node = domSel.node as HTMLElement;
-      const table = node.closest('table');
-      if (table) {
-        setTableEl(table as HTMLTableElement);
-      } else {
+      if (!editor || editor.isDestroyed || !editor.view || !editor.view.dom) return;
+      
+      // Safety check for view.domAtPos access
+      try {
+        const sel = editor.view.state.selection;
+        const domSel = editor.view.domAtPos(sel.from);
+        const node = domSel.node as HTMLElement;
+        const table = node.closest('table');
+        if (table) {
+          setTableEl(table as HTMLTableElement);
+        } else {
+          setTableEl(null);
+        }
+      } catch (e) {
+        // View might not be ready
+        console.warn('TableControls: Error accessing DOM', e);
         setTableEl(null);
       }
     };
-    updateTableEl();
+    
+    // Defer initial check to ensure view is mounted
+    requestAnimationFrame(updateTableEl);
     const onTrans = () => updateTableEl();
     editor.on('transaction', onTrans);
     return () => {

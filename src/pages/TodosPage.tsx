@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getDb } from '../lib/db';
 import { Todo } from '../lib/types';
-import { 
-  Plus, 
-  Trash2, 
-  Search, 
-  CheckCircle2, 
+import {
+  Plus,
+  Trash2,
+  Search,
+  CheckCircle2,
   X,
   Calendar,
 } from 'lucide-react';
@@ -21,10 +21,10 @@ const parseSmartInput = (text: string) => {
   const parsedDate = chrono.parseDate(text);
   const isUrgent = /urgent|asap|immediately/i.test(text);
   const isHighPriority = /high priority|priority high|important/i.test(text) || isUrgent;
-  
+
   // Clean text by removing detected keywords (optional, keeping it simple for now)
   // Ideally we would strip the date string from the text, but user might want to keep it.
-  
+
   return {
     date: parsedDate,
     urgent: isUrgent,
@@ -65,7 +65,7 @@ export function TodosPage() {
   const loadTodos = async () => {
     try {
       const db = await getDb();
-      const result = await db.select<any[]>('SELECT * FROM todos ORDER BY created_at DESC');
+      const result = await db.select<any[]>('SELECT * FROM todos ORDER BY created_at DESC'); // Keep any[] for now as we parse it below
       // Parse labels and ensure types
       const parsed = result.map(t => ({
         ...t,
@@ -81,11 +81,11 @@ export function TodosPage() {
 
   const handleAddTodo = async () => {
     if (!formText.trim()) return;
-    
+
     const id = uuidv4();
     const now = Date.now();
     let dueDate = undefined;
-    
+
     if (formDate) {
       const dateStr = format(formDate, 'yyyy-MM-dd');
       const d = new Date(`${dateStr}T${formTime || '00:00'}`);
@@ -206,7 +206,7 @@ export function TodosPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-dark-text-primary">Dashboard</h1>
             <p className="text-gray-500 dark:text-dark-text-secondary mt-1">Manage your tasks and priorities</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all"
           >
@@ -229,7 +229,7 @@ export function TodosPage() {
             <p className="text-sm font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Pending</p>
             <p className="text-4xl font-bold text-red-900 dark:text-red-100 mt-2">{stats.pending}</p>
           </div>
-          
+
           {/* Chart */}
           <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
@@ -258,15 +258,15 @@ export function TodosPage() {
       <div className="px-8 py-4 bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border flex flex-wrap items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-          <input 
-            type="text" 
-            placeholder="Search tasks..." 
+          <input
+            type="text"
+            placeholder="Search tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-dark-surface dark:text-dark-text-primary border-none rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500 dark:placeholder-gray-600"
           />
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex bg-gray-100 dark:bg-dark-surface rounded-lg p-1">
             {(['all', 'active', 'completed', 'urgent'] as const).map((f) => (
@@ -282,10 +282,10 @@ export function TodosPage() {
               </button>
             ))}
           </div>
-          
-          <select 
+
+          <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'priority' | 'due')}
             className="px-3 py-2 bg-gray-100 dark:bg-dark-surface rounded-lg text-sm font-medium text-gray-700 dark:text-dark-text-secondary border-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="newest">Newest First</option>
@@ -299,15 +299,15 @@ export function TodosPage() {
       <div className="flex-1 overflow-y-auto p-8">
         <div className="space-y-3 max-w-5xl mx-auto">
           {filteredTodos.map(todo => (
-            <div 
-              key={todo.id} 
+            <div
+              key={todo.id}
               className={clsx(
                 "group bg-white dark:bg-dark-surface p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-4",
                 todo.completed ? "border-gray-100 dark:border-dark-border opacity-60" : "border-gray-200 dark:border-dark-border",
                 todo.urgent && !todo.completed && "border-l-4 border-l-red-500"
               )}
             >
-              <button 
+              <button
                 onClick={() => toggleTodo(todo)}
                 className={clsx(
                   "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
@@ -326,7 +326,7 @@ export function TodosPage() {
                   {todo.priority === 'high' && <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold rounded-full uppercase">High</span>}
                 </div>
                 {todo.description && <p className="text-sm text-gray-500 dark:text-dark-text-secondary truncate">{todo.description}</p>}
-                
+
                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 dark:text-gray-500">
                   {todo.due_date && (
                     <span className="flex items-center text-gray-500 dark:text-gray-400">
@@ -338,7 +338,7 @@ export function TodosPage() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => deleteTodo(todo.id)}
                 className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
               >
@@ -346,7 +346,7 @@ export function TodosPage() {
               </button>
             </div>
           ))}
-          
+
           {filteredTodos.length === 0 && (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -368,13 +368,13 @@ export function TodosPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Task Name</label>
-                <input 
+                <input
                   autoFocus
-                  type="text" 
+                  type="text"
                   value={formText}
                   onChange={(e) => setFormText(e.target.value)}
                   placeholder="e.g. Submit report by Friday urgent"
@@ -387,7 +387,7 @@ export function TodosPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Description</label>
-                <textarea 
+                <textarea
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg h-20 resize-none focus:ring-2 focus:ring-blue-500"
@@ -397,9 +397,9 @@ export function TodosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Priority</label>
-                  <select 
+                  <select
                     value={formPriority}
-                    onChange={(e) => setFormPriority(e.target.value as any)}
+                    onChange={(e) => setFormPriority(e.target.value as 'low' | 'medium' | 'high')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg"
                   >
                     <option value="low">Low</option>
@@ -409,11 +409,11 @@ export function TodosPage() {
                 </div>
                 <div className="flex items-end">
                   <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-dark-border rounded-lg w-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={formUrgent}
                       onChange={(e) => setFormUrgent(e.target.checked)}
-                      className="w-4 h-4 text-red-600 rounded focus:ring-red-500" 
+                      className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
                     />
                     <span className="text-sm font-medium text-red-700 dark:text-red-400">Mark Urgent</span>
                   </label>
@@ -427,8 +427,8 @@ export function TodosPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase mb-1">Time</label>
-                  <input 
-                    type="time" 
+                  <input
+                    type="time"
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-primary rounded-lg dark:color-scheme-dark"
@@ -438,13 +438,13 @@ export function TodosPage() {
             </div>
 
             <div className="p-6 border-t border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-bg flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-200 dark:hover:bg-dark-surface rounded-lg"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleAddTodo}
                 className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm"
               >

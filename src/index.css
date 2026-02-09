@@ -5,7 +5,9 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
@@ -35,7 +37,7 @@ body {
 
 /* TipTap Editor Styles */
 .ProseMirror {
-  @apply outline-none min-h-[500px] px-4 py-2 text-gray-900 dark:text-dark-text-primary;
+  @apply outline-none text-gray-900 dark:text-dark-text-primary;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -55,13 +57,13 @@ body {
   @apply text-2xl font-bold mt-4 mb-2 text-gray-900 dark:text-dark-text-primary;
 }
 
-.ProseMirror p, 
-.ProseMirror span, 
+.ProseMirror p,
+.ProseMirror span,
 .ProseMirror div {
   @apply text-gray-900 dark:text-dark-text-primary;
 }
 
-.ProseMirror strong, 
+.ProseMirror strong,
 .ProseMirror b {
   @apply text-gray-900 dark:text-dark-text-primary font-bold;
 }
@@ -99,11 +101,11 @@ ul[data-type="taskList"] li {
   @apply flex items-start gap-2 my-1;
 }
 
-ul[data-type="taskList"] li > label {
+ul[data-type="taskList"] li>label {
   @apply flex-shrink-0 mt-1 select-none mr-2;
 }
 
-ul[data-type="taskList"] li > div {
+ul[data-type="taskList"] li>div {
   @apply flex-grow;
 }
 
@@ -152,7 +154,10 @@ ul[data-type="taskList"] li > div {
   z-index: 2;
   position: absolute;
   content: "";
-  left: 0; right: 0; top: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   background: rgba(200, 200, 255, 0.4);
   pointer-events: none;
 }

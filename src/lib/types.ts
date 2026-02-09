@@ -8,6 +8,13 @@ export interface Note {
   position?: number;
 }
 
+export interface Message {
+  id: string;
+  role: 'question' | 'answer';
+  content: string; // HTML string or plain text
+  created_at: number;
+}
+
 export interface StickyNote {
   id: string;
   note_id: string;
@@ -36,7 +43,17 @@ export interface Todo {
 export interface GraphNode {
   id: string;
   type: string;
-  data: any;
+  data: {
+    label?: string;
+    text?: string;
+    title?: string;
+    preview?: string;
+    completed?: boolean;
+    url?: string;
+    fileName?: string;
+    onChange?: (val: string) => void;
+    [key: string]: any; // Keep flexibilty for now but bounded
+  };
   position: { x: number, y: number };
 }
 

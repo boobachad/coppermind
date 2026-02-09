@@ -21,7 +21,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
     const newNodes = JSON.parse(JSON.stringify(nodes));
     
     const findAndAdd = (list: any[]) => {
-      for (let item of list) {
+      for (const item of list) {
         if (item.id === parentId) {
           item.children.push({
             id: Math.random().toString(36).substr(2, 9),
@@ -44,7 +44,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   const updateText = (id: string, text: string) => {
     const newNodes = JSON.parse(JSON.stringify(nodes));
     const findAndUpdate = (list: any[]) => {
-        for (let item of list) {
+        for (const item of list) {
             if (item.id === id) {
                 item.text = text;
                 return true;

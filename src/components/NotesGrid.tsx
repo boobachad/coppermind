@@ -44,16 +44,16 @@ const getPreviewText = (content: string) => {
 };
 
 // Sortable Item Component
-function SortableNote({ 
-  note, 
-  onClick, 
-  onContextMenu, 
-  isRearrangeMode 
-}: { 
-  note: Note & { nestedCount: number }, 
-  onClick: () => void, 
+function SortableNote({
+  note,
+  onClick,
+  onContextMenu,
+  isRearrangeMode
+}: {
+  note: Note & { nestedCount: number },
+  onClick: () => void,
   onContextMenu: (e: React.MouseEvent) => void,
-  isRearrangeMode: boolean 
+  isRearrangeMode: boolean
 }) {
   const {
     attributes,
@@ -86,7 +86,7 @@ function SortableNote({
       )}
     >
       {note.nestedCount > 0 && (
-        <div 
+        <div
           className="absolute top-3 right-3 bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text-secondary text-xs font-semibold px-2 py-0.5 rounded-full"
           title={`${note.nestedCount} nested notes inside`}
         >
@@ -102,7 +102,15 @@ function SortableNote({
         </span>
       </p>
       <div className="text-xs text-gray-400 mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
-        <span>{formatDistanceToNow(note.updated_at, { addSuffix: true })}</span>
+        <span>
+          {(() => {
+            try {
+              return note.updated_at ? formatDistanceToNow(new Date(note.updated_at), { addSuffix: true }) : 'Unknown date';
+            } catch {
+              return 'Unknown date';
+            }
+          })()}
+        </span>
         {isRearrangeMode && <Move className="w-4 h-4 text-gray-400" />}
       </div>
     </div>
@@ -114,7 +122,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; noteId: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  
+
   const navigate = useNavigate();
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -145,16 +153,16 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
         .sort((a, b) => {
           // Sort by position if available, otherwise by updated_at desc
           if (a.position !== undefined && b.position !== undefined && a.position !== b.position) {
-             return a.position - b.position;
+            return a.position - b.position;
           }
           return b.updated_at - a.updated_at;
         });
-        
+
       const notesWithCounts = filteredNotes.map(note => ({
         ...note,
         nestedCount: allNotes.filter(n => n.parent_id === note.id).length
       }));
-      
+
       setNotes(notesWithCounts);
     } catch (err) {
       console.error("Failed to load notes", err);
@@ -163,16 +171,16 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
       setNotes((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
-        
+
         // Persist order asynchronously
         persistOrder(newItems);
-        
+
         return newItems;
       });
     }
@@ -181,7 +189,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   const persistOrder = async (items: Note[]) => {
     try {
       const db = await getDb();
-      await Promise.all(items.map((note, index) => 
+      await Promise.all(items.map((note, index) =>
         db.execute('UPDATE notes SET position = $1 WHERE id = $2', [index, note.id])
       ));
     } catch (err) {
@@ -202,15 +210,15 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       // Current DB schema has FOREIGN KEY but let's just delete the note. 
       // The user just said "Delete note".
       await db.execute('DELETE FROM notes WHERE id = $1', [deleteConfirm]);
-      
+
       // Also delete sticky notes associated with it? 
       // Schema says: FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
       // So stickies are safe.
-      
+
       // Nested notes? Schema doesn't have CASCADE for parent_id. 
       // Ideally we should delete children too or orphan them.
       // For now, let's just delete the note.
-      
+
       setDeleteConfirm(null);
       loadNotes();
       window.dispatchEvent(new Event('notes-updated'));
@@ -223,15 +231,15 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
     <div className={embedded ? "w-full" : "h-full p-8 bg-gray-50 dark:bg-dark-bg overflow-y-auto"}>
       <div className={embedded ? "w-full" : "max-w-6xl mx-auto"}>
         <div className="flex justify-end mb-4 h-8">
-           {isRearrangeMode && (
-             <button 
-               onClick={() => setIsRearrangeMode(false)}
-               className="flex items-center text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-             >
-               <Move className="w-4 h-4 mr-2" />
-               Done Rearranging
-             </button>
-           )}
+          {isRearrangeMode && (
+            <button
+              onClick={() => setIsRearrangeMode(false)}
+              className="flex items-center text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+            >
+              <Move className="w-4 h-4 mr-2" />
+              Done Rearranging
+            </button>
+          )}
         </div>
 
         {notes.length === 0 ? (
@@ -239,13 +247,13 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
             <p className="text-sm font-medium mb-1">No nested notes</p>
           </div>
         ) : (
-          <DndContext 
-            sensors={sensors} 
-            collisionDetection={closestCenter} 
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext 
-              items={notes.map(n => n.id)} 
+            <SortableContext
+              items={notes.map(n => n.id)}
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -266,12 +274,12 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
 
       {/* Context Menu */}
       {contextMenu && (
-        <div 
+        <div
           className="fixed bg-white dark:bg-dark-surface rounded-lg shadow-xl border border-gray-200 dark:border-dark-border py-1 w-48 z-50"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button 
+          <button
             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border flex items-center"
             onClick={() => {
               setIsRearrangeMode(!isRearrangeMode);
@@ -281,7 +289,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
             <Move className="w-4 h-4 mr-2" />
             {isRearrangeMode ? 'Disable Rearrange' : 'Re-arrange notes'}
           </button>
-          <button 
+          <button
             className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
             onClick={() => {
               setDeleteConfirm(contextMenu.noteId);
@@ -303,13 +311,13 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
               Are you sure you want to delete this note? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
-              <button 
+              <button
                 onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg rounded-lg"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
               >
