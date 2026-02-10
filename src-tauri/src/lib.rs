@@ -2,8 +2,14 @@ use std::io::Read;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::thread;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use rdev::{grab, Event, EventType, Key};
+use sqlx::postgres::PgPoolOptions;
+
+mod pos;
+
+/// Wrapper for PG pool stored in Tauri managed state
+pub struct PosDb(pub sqlx::PgPool);
 
 /// Double-tap threshold in milliseconds
 const DOUBLE_TAP_MS: u64 = 300;
@@ -191,6 +197,9 @@ fn start_keyboard_listener(app_handle: AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load .env from project root (coppermind/)
+    let _ = dotenvy::dotenv();
+
     tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -206,6 +215,35 @@ pub fn run() {
             
             // Start keyboard listener for double-shift detection
             start_keyboard_listener(app.handle().clone());
+
+            // ─── POS: Initialize PostgreSQL connection pool ───────────
+            let db_url = std::env::var("POS_DATABASE_URL")
+                .or_else(|_| std::env::var("VITE_DATABASE_URL"))
+                .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/coppermind".to_string());
+
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                match PgPoolOptions::new()
+                    .max_connections(5)
+                    .connect(&db_url)
+                    .await
+                {
+                    Ok(pool) => {
+                        // Create POS tables
+                        if let Err(e) = pos::db::init_pos_tables(&pool).await {
+                            log::error!("[POS] Failed to init tables: {e}");
+                            return;
+                        }
+                        // Store pool in managed state
+                        handle.manage(PosDb(pool));
+                        log::info!("[POS] PostgreSQL pool ready");
+                    }
+                    Err(e) => {
+                        log::error!("[POS] Failed to connect to PostgreSQL: {e}");
+                        log::error!("[POS] POS features will be unavailable");
+                    }
+                }
+            });
             
             Ok(())
         })
