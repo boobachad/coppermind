@@ -258,6 +258,9 @@ pub fn run() {
             pos::goals::get_debt_goals,
             pos::goals::transition_debt_goals,
             pos::goals::resolve_debt_goal,
+            pos::submissions::get_submissions,
+            pos::scraper::scrape_leetcode,
+            pos::scraper::scrape_codeforces,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
