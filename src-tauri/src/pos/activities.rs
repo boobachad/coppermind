@@ -1,0 +1,287 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use tauri::State;
+
+use crate::PosDb;
+
+// ─── Row type ───────────────────────────────────────────────────────
+// Uses chrono::DateTime<Utc> for TIMESTAMPTZ columns.
+// sqlx decodes natively; serde serializes to ISO 8601 "2026-02-10T22:16:23.092025Z".
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ActivityRow {
+    pub id: String,
+    pub date: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: String,
+    pub description: String,
+    pub is_productive: bool,
+    pub is_shadow: bool,
+    pub goal_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+// ─── Request/Response types ─────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct CreateActivityRequest {
+    pub start_time: String,       // ISO 8601 from frontend
+    pub end_time: String,         // ISO 8601 from frontend
+    pub category: String,
+    pub description: String,
+    pub is_productive: Option<bool>,
+    pub goal_id: Option<String>,
+    pub updates: Option<Vec<MetricUpdate>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MetricUpdate {
+    pub metric_id: String,
+    pub value: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ActivityResponse {
+    pub activities: Vec<ActivityRow>,
+    pub total_minutes: i64,
+    pub productive_minutes: i64,
+    pub goal_directed_minutes: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DateRange {
+    pub min_date: Option<String>,
+    pub max_date: Option<String>,
+}
+
+// ─── ID generator ───────────────────────────────────────────────────
+
+/// cuid-style unique ID. Good enough for local-first app.
+fn gen_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    format!("c{}{:08x}", ts, rand_u32())
+}
+
+fn rand_u32() -> u32 {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    let s = RandomState::new();
+    let mut h = s.build_hasher();
+    h.write_u8(0);
+    h.finish() as u32
+}
+
+// ─── Commands ───────────────────────────────────────────────────────
+
+/// GET activities for a date with computed metrics.
+#[tauri::command]
+pub async fn get_activities(
+    db: State<'_, PosDb>,
+    date: String,
+) -> Result<ActivityResponse, String> {
+    let pool = &db.0;
+
+    let rows = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, start_time, end_time, category, description,
+                  is_productive, is_shadow, goal_id, created_at
+           FROM pos_activities
+           WHERE date = $1
+           ORDER BY start_time ASC"#,
+    )
+    .bind(&date)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("DB error: {e}"))?;
+
+    // Compute metrics in O(n) — chrono arithmetic is native, no parsing needed
+    let mut total_minutes: i64 = 0;
+    let mut productive_minutes: i64 = 0;
+    let mut goal_directed_minutes: i64 = 0;
+
+    for a in &rows {
+        let dur = (a.end_time - a.start_time).num_minutes();
+        total_minutes += dur;
+        if a.is_productive {
+            productive_minutes += dur;
+        }
+        if a.goal_id.is_some() {
+            goal_directed_minutes += dur;
+        }
+    }
+
+    Ok(ActivityResponse {
+        activities: rows,
+        total_minutes,
+        productive_minutes,
+        goal_directed_minutes,
+    })
+}
+
+/// CREATE activity with optional metric updates + goal verification.
+/// Transaction: insert activity → link metrics → verify goal.
+#[tauri::command]
+pub async fn create_activity(
+    db: State<'_, PosDb>,
+    req: CreateActivityRequest,
+) -> Result<ActivityRow, String> {
+    let pool = &db.0;
+
+    // Parse ISO 8601 strings from frontend into chrono DateTime<Utc>
+    let start: DateTime<Utc> = req.start_time.parse::<DateTime<chrono::FixedOffset>>()
+        .map(|d| d.with_timezone(&Utc))
+        .or_else(|_| req.start_time.parse::<DateTime<Utc>>())
+        .map_err(|e| format!("Invalid start_time: {e}"))?;
+    let end: DateTime<Utc> = req.end_time.parse::<DateTime<chrono::FixedOffset>>()
+        .map(|d| d.with_timezone(&Utc))
+        .or_else(|_| req.end_time.parse::<DateTime<Utc>>())
+        .map_err(|e| format!("Invalid end_time: {e}"))?;
+
+    if start >= end {
+        return Err("end_time must be after start_time".into());
+    }
+
+    let date = start.format("%Y-%m-%d").to_string();
+    let activity_id = gen_id();
+    let is_productive = req.is_productive.unwrap_or(true);
+
+    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
+
+    // 1. Insert activity — sqlx+chrono handles DateTime<Utc> → TIMESTAMPTZ natively
+    sqlx::query(
+        r#"INSERT INTO pos_activities
+           (id, date, start_time, end_time, category, description, is_productive, is_shadow, goal_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8)"#,
+    )
+    .bind(&activity_id)
+    .bind(&date)
+    .bind(start)
+    .bind(end)
+    .bind(&req.category)
+    .bind(&req.description)
+    .bind(is_productive)
+    .bind(&req.goal_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("Insert activity: {e}"))?;
+
+    // 2. Handle metric updates
+    if let Some(updates) = &req.updates {
+        for u in updates {
+            if u.value == 0 { continue; }
+
+            let am_id = gen_id();
+            sqlx::query(
+                "INSERT INTO pos_activity_metrics (id, activity_id, goal_metric_id, value) VALUES ($1, $2, $3, $4)",
+            )
+            .bind(&am_id)
+            .bind(&activity_id)
+            .bind(&u.metric_id)
+            .bind(u.value)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Insert activity_metric: {e}"))?;
+
+            // Increment goal metric current_value
+            sqlx::query(
+                "UPDATE pos_goal_metrics SET current_value = current_value + $1 WHERE id = $2",
+            )
+            .bind(u.value)
+            .bind(&u.metric_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Update goal_metric: {e}"))?;
+        }
+    }
+
+    // 3. If linked to a goal, mark as verified
+    if let Some(ref gid) = req.goal_id {
+        sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
+            .bind(gid)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Verify goal: {e}"))?;
+    }
+
+    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
+
+    // Fetch the created activity
+    let activity = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, start_time, end_time, category, description,
+                  is_productive, is_shadow, goal_id, created_at
+           FROM pos_activities WHERE id = $1"#,
+    )
+    .bind(&activity_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Fetch created: {e}"))?;
+
+    log::info!(
+        "[POS] Created activity {} (goal: {:?}, metrics: {})",
+        activity.id,
+        req.goal_id,
+        req.updates.as_ref().map_or(0, |u| u.len())
+    );
+
+    Ok(activity)
+}
+
+/// PATCH: Link an activity to a goal + mark goal verified.
+#[tauri::command]
+pub async fn patch_activity(
+    db: State<'_, PosDb>,
+    id: String,
+    goal_id: String,
+) -> Result<ActivityRow, String> {
+    let pool = &db.0;
+
+    sqlx::query("UPDATE pos_activities SET goal_id = $1 WHERE id = $2")
+        .bind(&goal_id)
+        .bind(&id)
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Patch activity: {e}"))?;
+
+    sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
+        .bind(&goal_id)
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Verify goal: {e}"))?;
+
+    let activity = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, start_time, end_time, category, description,
+                  is_productive, is_shadow, goal_id, created_at
+           FROM pos_activities WHERE id = $1"#,
+    )
+    .bind(&id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Fetch patched: {e}"))?;
+
+    log::info!("[POS] Linked activity {} → goal {}", id, goal_id);
+    Ok(activity)
+}
+
+/// GET the min/max activity dates (for grid date range).
+#[tauri::command]
+pub async fn get_activity_range(
+    db: State<'_, PosDb>,
+) -> Result<DateRange, String> {
+    let pool = &db.0;
+
+    let row: (Option<String>, Option<String>) = sqlx::query_as(
+        "SELECT MIN(date), MAX(date) FROM pos_activities",
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Range query: {e}"))?;
+
+    Ok(DateRange {
+        min_date: row.0,
+        max_date: row.1,
+    })
+}

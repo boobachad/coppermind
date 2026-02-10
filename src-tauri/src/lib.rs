@@ -247,7 +247,18 @@ pub fn run() {
             
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![read_primary_selection])
+        .invoke_handler(tauri::generate_handler![
+            read_primary_selection,
+            pos::activities::get_activities,
+            pos::activities::create_activity,
+            pos::activities::patch_activity,
+            pos::activities::get_activity_range,
+            pos::goals::get_goals,
+            pos::goals::create_goal,
+            pos::goals::get_debt_goals,
+            pos::goals::transition_debt_goals,
+            pos::goals::resolve_debt_goal,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
