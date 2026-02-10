@@ -9,17 +9,21 @@ import { SettingsPage } from './pages/SettingsPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
+import { initPgSync, stopPgSync } from './lib/pgSync';
 import { ConfirmDialogProvider } from './components/ConfirmDialog';
 
 import { Toaster } from './components/ui/sonner';
 
 function App() {
   useEffect(() => {
-    initDb();
+    initDb().then(() => {
+      initPgSync();
+    });
     initCaptureService();
 
     return () => {
       cleanupCaptureService();
+      stopPgSync();
     };
   }, []);
 

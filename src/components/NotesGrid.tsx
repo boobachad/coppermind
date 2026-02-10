@@ -80,23 +80,23 @@ function SortableNote({
       onClick={isRearrangeMode ? undefined : onClick}
       onContextMenu={onContextMenu}
       className={clsx(
-        "bg-white dark:bg-dark-surface rounded-xl p-6 shadow-sm transition-all border border-gray-100 dark:border-dark-border flex flex-col h-48 group relative",
+        "bg-themed-surface rounded-xl p-6 shadow-sm transition-all border border-themed-border flex flex-col h-48 group relative",
         !isRearrangeMode && "hover:shadow-md cursor-pointer",
         isRearrangeMode && "cursor-move ring-2 ring-transparent dark:ring-transparent hover:ring-blue-200 dark:hover:ring-blue-900"
       )}
     >
       {note.nestedCount > 0 && (
         <div
-          className="absolute top-3 right-3 bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text-secondary text-xs font-semibold px-2 py-0.5 rounded-full"
+          className="absolute top-3 right-3 bg-themed-bg text-themed-text-secondary text-xs font-semibold px-2 py-0.5 rounded-full"
           title={`${note.nestedCount} nested notes inside`}
         >
           {note.nestedCount}
         </div>
       )}
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pr-8">
+      <h3 className="text-lg font-semibold text-themed-text-primary mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pr-8">
         {note.title || 'Untitled'}
       </h3>
-      <p className="text-sm text-gray-500 dark:text-dark-text-secondary mb-4 flex-1 overflow-hidden relative">
+      <p className="text-sm text-themed-text-secondary mb-4 flex-1 overflow-hidden relative">
         <span className="line-clamp-4">
           {getPreviewText(note.content) || <span className="italic text-gray-400">No content</span>}
         </span>
@@ -228,7 +228,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   };
 
   return (
-    <div className={embedded ? "w-full" : "h-full p-8 bg-gray-50 dark:bg-dark-bg overflow-y-auto"}>
+    <div className={embedded ? "w-full" : "h-full p-8 bg-themed-bg overflow-y-auto"}>
       <div className={embedded ? "w-full" : "max-w-6xl mx-auto"}>
         <div className="flex justify-end mb-4 h-8">
           {isRearrangeMode && (
@@ -243,8 +243,8 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
         </div>
 
         {notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400 dark:text-dark-text-secondary">
-            <p className="text-sm font-medium mb-1">No nested notes</p>
+          <div className="flex flex-col items-center justify-center h-32 text-themed-text-secondary">
+            <p className="text-sm font-medium mb-1">No notes</p>
           </div>
         ) : (
           <DndContext
@@ -275,12 +275,12 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-white dark:bg-dark-surface rounded-lg shadow-xl border border-gray-200 dark:border-dark-border py-1 w-48 z-50"
+          className="fixed bg-themed-surface rounded-lg shadow-xl border border-themed-border py-1 w-48 z-50"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border flex items-center"
+            className="w-full text-left px-4 py-2 text-sm text-themed-text-primary hover:bg-themed-bg flex items-center"
             onClick={() => {
               setIsRearrangeMode(!isRearrangeMode);
               setContextMenu(null);
@@ -305,15 +305,15 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-dark-surface rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary mb-2">Delete Note?</h3>
-            <p className="text-sm text-gray-500 dark:text-dark-text-secondary mb-6">
+          <div className="bg-themed-surface rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-themed-text-primary mb-2">Delete Note?</h3>
+            <p className="text-sm text-themed-text-secondary mb-6">
               Are you sure you want to delete this note? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-primary hover:bg-gray-100 dark:hover:bg-dark-bg rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-themed-text-primary hover:bg-themed-bg rounded-lg"
               >
                 Cancel
               </button>

@@ -34,22 +34,21 @@ export default forwardRef((props: any, ref) => {
   }));
 
   return (
-    <div className="bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary rounded-lg shadow-md border border-stone-200 dark:border-dark-border outline-none overflow-y-auto max-h-[300px] w-60 py-2 z-50">
+    <div className="bg-themed-surface text-themed-text-primary rounded-lg shadow-md border border-themed-border outline-none overflow-y-auto max-h-[300px] w-60 py-2 z-50">
       {props.items.length ? (
         props.items.map((item: CommandItemProps, index: number) => (
           <button
             key={index}
-            className={`flex items-center gap-2 w-full px-4 py-2 text-sm text-left outline-none hover:bg-gray-100 dark:hover:bg-dark-border text-black dark:text-dark-text-primary ${
-              index === selectedIndex ? 'bg-gray-100 dark:bg-dark-border' : ''
-            }`}
+            className={`flex items-center gap-2 w-full px-4 py-2 text-sm text-left outline-none hover:bg-themed-bg text-themed-text-primary ${index === selectedIndex ? 'bg-themed-bg' : ''
+              }`}
             onClick={() => selectItem(index)}
           >
-            <item.icon className="w-4 h-4 text-gray-600 dark:text-dark-text-secondary" />
-            <span className="text-black dark:text-dark-text-primary">{item.title}</span>
+            <item.icon className="w-4 h-4 text-themed-text-secondary" />
+            <span className="text-themed-text-primary">{item.title}</span>
           </button>
         ))
       ) : (
-        <div className="px-4 py-2 text-sm text-gray-500 dark:text-dark-text-muted">No results</div>
+        <div className="px-4 py-2 text-sm text-themed-text-secondary">No results</div>
       )}
     </div>
   );

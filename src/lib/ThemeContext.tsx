@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'solarized-light' | 'blue-light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -12,26 +12,29 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('app_theme');
-    return (saved as Theme) || 'light';
+    // Migrate old 'light' -> 'solarized-light' if needed, or default
+    if (saved === 'light') return 'solarized-light';
+    return (saved as Theme) || 'solarized-light';
   });
 
   useEffect(() => {
     console.log('Theme changed to:', theme);
     localStorage.setItem('app_theme', theme);
     const root = window.document.documentElement;
+
+    // Remove old class-based dark mode
+    root.classList.remove('dark');
+    root.setAttribute('data-theme', theme);
+
+    // Keep 'dark' class for Tailwind 'dark:' prefix compatibility if in dark mode
     if (theme === 'dark') {
       root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

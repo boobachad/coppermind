@@ -14,20 +14,35 @@ import {
   Handle,
   Position,
   BackgroundVariant,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
-import { Image as ImageIcon, FileText, CheckSquare, Type, BarChart } from 'lucide-react';
+import { Image as ImageIcon, FileText, CheckSquare, Type, BarChart, Trash2 } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { useTheme } from '../lib/ThemeContext';
 
 // Custom Node Components
-const NodeWrapper = ({ children, label, icon: Icon, selected }: { children: React.ReactNode, label: string, icon: React.ElementType, selected?: boolean }) => {
+const NodeWrapper = ({ children, label, icon: Icon, selected, id }: { children: React.ReactNode, label: string, icon: React.ElementType, selected?: boolean, id: string }) => {
+  const { deleteElements } = useReactFlow();
+
   return (
-    <div className={`bg-white dark:bg-dark-surface rounded-lg shadow-md border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-gray-200 dark:border-dark-border'}`}>
-      <div className="flex items-center px-3 py-2 bg-gray-50 dark:bg-dark-bg border-b border-gray-100 dark:border-dark-border rounded-t-lg">
-        <Icon className="w-4 h-4 text-gray-500 dark:text-dark-text-secondary mr-2" />
-        <span className="text-sm font-medium text-gray-700 dark:text-dark-text-primary">{label}</span>
+    <div className={`bg-themed-surface rounded-lg shadow-md border-2 min-w-[200px] ${selected ? 'border-blue-500' : 'border-themed-border'}`}>
+      <div className="flex items-center justify-between px-3 py-2 bg-themed-bg border-b border-themed-border rounded-t-lg group">
+        <div className="flex items-center">
+          <Icon className="w-4 h-4 text-themed-text-secondary mr-2" />
+          <span className="text-sm font-medium text-themed-text-primary">{label}</span>
+        </div>
+        <button
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-gray-400 hover:text-red-500 transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteElements({ nodes: [{ id }] });
+          }}
+          title="Delete Node"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
       </div>
       <div className="p-3">
         {children}
@@ -52,10 +67,10 @@ const NodeWrapper = ({ children, label, icon: Icon, selected }: { children: Reac
   );
 };
 
-const TextNode = ({ data, selected }: { data: any, selected?: boolean }) => (
-  <NodeWrapper label="Text" icon={Type} selected={selected}>
+const TextNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
+  <NodeWrapper label="Text" icon={Type} selected={selected} id={id}>
     <textarea
-      className="w-full text-sm border-none resize-none focus:ring-0 p-0 bg-transparent text-gray-900 dark:text-dark-text-primary"
+      className="w-full text-sm border-none resize-none focus:ring-0 p-0 bg-transparent text-themed-text-primary"
       placeholder="Enter text..."
       defaultValue={data.text}
       rows={3}
@@ -64,51 +79,51 @@ const TextNode = ({ data, selected }: { data: any, selected?: boolean }) => (
   </NodeWrapper>
 );
 
-const NoteNode = ({ data, selected }: { data: any, selected?: boolean }) => (
-  <NodeWrapper label="Note" icon={FileText} selected={selected}>
-    <div className="text-sm font-medium text-gray-800 dark:text-dark-text-primary mb-1">{data.title}</div>
-    <div className="text-xs text-gray-600 dark:text-dark-text-secondary line-clamp-3">
+const NoteNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
+  <NodeWrapper label="Note" icon={FileText} selected={selected} id={id}>
+    <div className="text-sm font-medium text-themed-text-primary mb-1">{data.title}</div>
+    <div className="text-xs text-themed-text-secondary line-clamp-3">
       {data.preview || "Empty note"}
     </div>
   </NodeWrapper>
 );
 
-const TaskNode = ({ data, selected }: { data: any, selected?: boolean }) => (
-  <NodeWrapper label="Task" icon={CheckSquare} selected={selected}>
+const TaskNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
+  <NodeWrapper label="Task" icon={CheckSquare} selected={selected} id={id}>
     <div className="flex items-center space-x-2">
-      <div className={`w-4 h-4 rounded border ${data.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-dark-border'}`} />
-      <span className={`text-sm ${data.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-dark-text-primary'}`}>
+      <div className={`w-4 h-4 rounded border ${data.completed ? 'bg-green-500 border-green-500' : 'border-themed-border'}`} />
+      <span className={`text-sm ${data.completed ? 'line-through text-themed-text-secondary' : 'text-themed-text-primary'}`}>
         {data.label || "New Task"}
       </span>
     </div>
   </NodeWrapper>
 );
 
-const ImageNode = ({ data, selected }: { data: any, selected?: boolean }) => (
-  <NodeWrapper label="Image" icon={ImageIcon} selected={selected}>
+const ImageNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
+  <NodeWrapper label="Image" icon={ImageIcon} selected={selected} id={id}>
     {data.url ? (
       <img src={data.url} alt="Node" className="w-full h-32 object-cover rounded" />
     ) : (
-      <div className="w-full h-32 bg-gray-100 dark:bg-dark-bg flex items-center justify-center rounded text-gray-400 dark:text-dark-text-secondary">
+      <div className="w-full h-32 bg-themed-bg flex items-center justify-center rounded text-themed-text-secondary">
         No Image
       </div>
     )}
   </NodeWrapper>
 );
 
-const GraphNode = ({ selected }: { selected?: boolean }) => (
-  <NodeWrapper label="Graph" icon={BarChart} selected={selected}>
-    <div className="w-full h-32 flex items-end justify-between space-x-1 px-2 pt-4 pb-0 bg-gray-50 dark:bg-dark-bg rounded">
+const GraphNode = ({ id, selected }: { id: string, selected?: boolean }) => (
+  <NodeWrapper label="Graph" icon={BarChart} selected={selected} id={id}>
+    <div className="w-full h-32 flex items-end justify-between space-x-1 px-2 pt-4 pb-0 bg-themed-bg rounded">
       {[40, 70, 30, 85, 50, 65].map((h, i) => (
         <div key={i} className="w-full bg-blue-500 rounded-t" style={{ height: `${h}%`, opacity: 0.6 + (i * 0.05) }} />
       ))}
     </div>
-    <div className="text-xs text-center mt-2 text-gray-500 dark:text-dark-text-secondary">Sales Report</div>
+    <div className="text-xs text-center mt-2 text-themed-text-secondary">Sales Report</div>
   </NodeWrapper>
 );
 
-const FileNode = ({ data, selected }: { data: any, selected?: boolean }) => (
-  <NodeWrapper label="PDF File" icon={FileText} selected={selected}>
+const FileNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
+  <NodeWrapper label="PDF File" icon={FileText} selected={selected} id={id}>
     <div className="flex flex-col items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded border border-red-100 dark:border-red-800 h-32">
       <FileText className="w-12 h-12 text-red-500 dark:text-red-400 mb-2" />
       <span className="text-xs font-medium text-red-700 dark:text-red-300 text-center line-clamp-2 px-1">
@@ -310,21 +325,21 @@ export function NodesPage() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-white dark:bg-dark-bg relative">
-      <div className="h-14 border-b border-gray-200 dark:border-dark-border flex items-center px-4 justify-between bg-white dark:bg-dark-surface z-10">
-        <div className="font-semibold text-gray-700 dark:text-dark-text-primary">Graph View</div>
+    <div className="h-screen w-full flex flex-col bg-themed-bg relative">
+      <div className="h-14 border-b border-themed-border flex items-center px-4 justify-between bg-themed-surface z-10">
+        <div className="font-semibold text-themed-text-primary">Graph View</div>
         <div className="flex space-x-2">
-          <button onClick={() => addNode('textNode')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Add Text">
+          <button onClick={() => addNode('textNode')} className="p-2 hover:bg-themed-bg rounded text-themed-text-secondary" title="Add Text">
             <Type className="w-4 h-4" />
           </button>
-          <button onClick={() => addNode('graphNode')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Add Graph">
+          <button onClick={() => addNode('graphNode')} className="p-2 hover:bg-themed-bg rounded text-themed-text-secondary" title="Add Graph">
             <BarChart className="w-4 h-4" />
           </button>
-          <div className="w-px h-6 bg-gray-300 dark:bg-dark-border mx-2" />
-          <button onClick={() => openLinkModal('note')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Note">
+          <div className="w-px h-6 bg-themed-border mx-2" />
+          <button onClick={() => openLinkModal('note')} className="p-2 hover:bg-themed-bg rounded text-themed-text-secondary" title="Link Note">
             <FileText className="w-4 h-4" />
           </button>
-          <button onClick={() => openLinkModal('todo')} className="p-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-gray-600 dark:text-dark-text-secondary" title="Link Task">
+          <button onClick={() => openLinkModal('todo')} className="p-2 hover:bg-themed-bg rounded text-themed-text-secondary" title="Link Task">
             <CheckSquare className="w-4 h-4" />
           </button>
         </div>
@@ -344,22 +359,22 @@ export function NodesPage() {
           fitView
         >
           <Background color={theme === 'dark' ? '#555' : '#aaa'} gap={16} variant={BackgroundVariant.Dots} />
-          <Controls className="dark:bg-dark-surface dark:border-dark-border dark:text-dark-text-primary" />
-          <MiniMap className="dark:bg-dark-surface dark:border-dark-border" maskColor={theme === 'dark' ? 'rgba(30, 30, 30, 0.7)' : 'rgba(240, 240, 240, 0.7)'} nodeColor={theme === 'dark' ? '#555' : '#e0e0e0'} />
+          <Controls className="bg-themed-surface text-themed-text-primary border-themed-border" />
+          <MiniMap className="bg-themed-surface border-themed-border" maskColor={theme === 'dark' ? 'rgba(30, 30, 30, 0.7)' : 'rgba(240, 240, 240, 0.7)'} nodeColor={theme === 'dark' ? '#555' : '#e0e0e0'} />
         </ReactFlow>
       </div>
 
       {/* Link Modal */}
       {isLinkModalOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-dark-surface rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
-              <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">
+          <div className="bg-themed-surface rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-themed-border flex justify-between items-center">
+              <h3 className="font-semibold text-themed-text-primary">
                 Link {linkType === 'note' ? 'Note' : 'Task'}
               </h3>
               <button
                 onClick={() => setIsLinkModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-dark-text-secondary"
+                className="text-themed-text-secondary hover:text-themed-text-primary"
               >
                 &times;
               </button>
@@ -373,7 +388,7 @@ export function NodesPage() {
                     <button
                       key={item.id}
                       onClick={() => confirmLink(item)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-dark-bg rounded text-sm text-gray-700 dark:text-dark-text-primary truncate"
+                      className="w-full text-left px-3 py-2 hover:bg-themed-bg rounded text-sm text-themed-text-primary truncate"
                     >
                       {linkType === 'note' ? (item.title || 'Untitled') : item.text}
                     </button>

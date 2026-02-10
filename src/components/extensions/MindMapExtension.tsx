@@ -19,7 +19,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   const addChild = (parentId: string) => {
     // Deep clone to avoid mutation issues
     const newNodes = JSON.parse(JSON.stringify(nodes));
-    
+
     const findAndAdd = (list: any[]) => {
       for (const item of list) {
         if (item.id === parentId) {
@@ -44,16 +44,16 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   const updateText = (id: string, text: string) => {
     const newNodes = JSON.parse(JSON.stringify(nodes));
     const findAndUpdate = (list: any[]) => {
-        for (const item of list) {
-            if (item.id === id) {
-                item.text = text;
-                return true;
-            }
-            if (item.children.length > 0) {
-                if (findAndUpdate(item.children)) return true;
-            }
+      for (const item of list) {
+        if (item.id === id) {
+          item.text = text;
+          return true;
         }
-        return false;
+        if (item.children.length > 0) {
+          if (findAndUpdate(item.children)) return true;
+        }
+      }
+      return false;
     };
     findAndUpdate(newNodes);
     updateNodes(newNodes);
@@ -63,29 +63,29 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
     return (
       <div key={item.id} className="flex flex-col items-center mx-4">
         <div className="relative group">
-            <input 
-                className="bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-300 dark:border-yellow-700/50 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-yellow-100 focus:outline-none focus:border-yellow-500 text-center min-w-[100px]"
-                value={item.text}
-                onChange={(e) => updateText(item.id, e.target.value)}
-            />
-            <button 
-                onClick={() => addChild(item.id)}
-                className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-300 transition-opacity"
-                title="Add Child"
-            >
-                <Plus size={12} />
-            </button>
+          <input
+            className="bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-300 dark:border-yellow-700/50 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-yellow-100 focus:outline-none focus:border-yellow-500 text-center min-w-[100px]"
+            value={item.text}
+            onChange={(e) => updateText(item.id, e.target.value)}
+          />
+          <button
+            onClick={() => addChild(item.id)}
+            className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-300 transition-opacity"
+            title="Add Child"
+          >
+            <Plus size={12} />
+          </button>
         </div>
         {item.children.length > 0 && (
           <div className="flex mt-4 relative">
-             {/* Simple lines would go here, but for now just flex layout */}
-             {item.children.map((child: any) => (
-                 <div key={child.id} className="relative pt-4">
-                    {/* Connector line simulation */}
-                    <div className="absolute top-0 left-1/2 w-px h-4 bg-gray-300 dark:bg-gray-600 -translate-x-1/2"></div>
-                    {renderNode(child)}
-                 </div>
-             ))}
+            {/* Simple lines would go here, but for now just flex layout */}
+            {item.children.map((child: any) => (
+              <div key={child.id} className="relative pt-4">
+                {/* Connector line simulation */}
+                <div className="absolute top-0 left-1/2 w-px h-4 bg-gray-300 dark:bg-gray-600 -translate-x-1/2"></div>
+                {renderNode(child)}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -93,10 +93,10 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   };
 
   return (
-    <NodeViewWrapper className="mindmap-tree-component my-4 overflow-x-auto p-4 bg-gray-50 dark:bg-dark-bgSecondary rounded-xl border border-dashed border-gray-300 dark:border-dark-border">
-       <div className="min-w-full flex justify-center">
-         {nodes.map((root: any) => renderNode(root))}
-       </div>
+    <NodeViewWrapper className="mindmap-tree-component my-4 overflow-x-auto p-4 bg-themed-bg rounded-xl border border-dashed border-themed-border">
+      <div className="min-w-full flex justify-center">
+        {nodes.map((root: any) => renderNode(root))}
+      </div>
     </NodeViewWrapper>
   );
 };
@@ -131,92 +131,92 @@ export const MindMapTreeExtension = Node.create({
 // --- Block Mind Map ---
 
 const BlockMindMapComponent = ({ node, updateAttributes }: any) => {
-    const [blocks, setBlocks] = useState(node.attrs.blocks || [
-        { id: '1', x: 50, y: 50, text: 'Start Here' }
-    ]);
+  const [blocks, setBlocks] = useState(node.attrs.blocks || [
+    { id: '1', x: 50, y: 50, text: 'Start Here' }
+  ]);
 
-    const addBlock = () => {
-        const newBlocks = [...blocks, {
-            id: Math.random().toString(36).substr(2, 9),
-            x: 150,
-            y: 150,
-            text: 'New Block'
-        }];
-        setBlocks(newBlocks);
-        updateAttributes({ blocks: newBlocks });
-    };
+  const addBlock = () => {
+    const newBlocks = [...blocks, {
+      id: Math.random().toString(36).substr(2, 9),
+      x: 150,
+      y: 150,
+      text: 'New Block'
+    }];
+    setBlocks(newBlocks);
+    updateAttributes({ blocks: newBlocks });
+  };
 
-    const updateBlockPos = (id: string, x: number, y: number) => {
-        const newBlocks = blocks.map((b: any) => b.id === id ? { ...b, x, y } : b);
-        setBlocks(newBlocks);
-        updateAttributes({ blocks: newBlocks });
-    };
+  const updateBlockPos = (id: string, x: number, y: number) => {
+    const newBlocks = blocks.map((b: any) => b.id === id ? { ...b, x, y } : b);
+    setBlocks(newBlocks);
+    updateAttributes({ blocks: newBlocks });
+  };
 
-    const updateBlockText = (id: string, text: string) => {
-        const newBlocks = blocks.map((b: any) => b.id === id ? { ...b, text } : b);
-        setBlocks(newBlocks);
-        updateAttributes({ blocks: newBlocks });
-    };
+  const updateBlockText = (id: string, text: string) => {
+    const newBlocks = blocks.map((b: any) => b.id === id ? { ...b, text } : b);
+    setBlocks(newBlocks);
+    updateAttributes({ blocks: newBlocks });
+  };
 
-    const handleDragStart = (e: React.DragEvent, id: string) => {
-        e.dataTransfer.setData('blockId', id);
-        // Calculate offset
-        const rect = (e.target as HTMLElement).getBoundingClientRect();
-        e.dataTransfer.setData('offsetX', (e.clientX - rect.left).toString());
-        e.dataTransfer.setData('offsetY', (e.clientY - rect.top).toString());
-    };
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('blockId', id);
+    // Calculate offset
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    e.dataTransfer.setData('offsetX', (e.clientX - rect.left).toString());
+    e.dataTransfer.setData('offsetY', (e.clientY - rect.top).toString());
+  };
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        const blockId = e.dataTransfer.getData('blockId');
-        const offsetX = parseFloat(e.dataTransfer.getData('offsetX'));
-        const offsetY = parseFloat(e.dataTransfer.getData('offsetY'));
-        
-        if (blockId) {
-            const containerRect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - containerRect.left - offsetX;
-            const y = e.clientY - containerRect.top - offsetY;
-            updateBlockPos(blockId, x, y);
-        }
-    };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const blockId = e.dataTransfer.getData('blockId');
+    const offsetX = parseFloat(e.dataTransfer.getData('offsetX'));
+    const offsetY = parseFloat(e.dataTransfer.getData('offsetY'));
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-    };
+    if (blockId) {
+      const containerRect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - containerRect.left - offsetX;
+      const y = e.clientY - containerRect.top - offsetY;
+      updateBlockPos(blockId, x, y);
+    }
+  };
 
-    return (
-        <NodeViewWrapper className="mindmap-block-component my-4">
-            <div 
-                className="relative h-[400px] bg-gray-50 dark:bg-dark-bgSecondary border border-slate-200 dark:border-dark-border rounded-xl overflow-hidden"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-            >
-                <div className="absolute top-2 right-2 z-10">
-                    <button onClick={addBlock} className="px-3 py-1 bg-white dark:bg-dark-surface shadow-sm border dark:border-dark-border rounded text-sm hover:bg-gray-50 dark:hover:bg-dark-bg-secondary flex items-center gap-1 text-gray-700 dark:text-dark-text-primary">
-                        <Plus size={14} /> Add Block
-                    </button>
-                </div>
-                
-                {blocks.map((block: any) => (
-                    <div
-                        key={block.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, block.id)}
-                        className="absolute bg-white dark:bg-dark-surface shadow-md border border-gray-200 dark:border-dark-border rounded-lg p-2 min-w-[120px] cursor-move"
-                        style={{ left: block.x, top: block.y }}
-                    >
-                        <textarea
-                            className="w-full h-full resize-none outline-none text-sm bg-transparent text-gray-800 dark:text-dark-text-primary"
-                            value={block.text}
-                            onChange={(e) => updateBlockText(block.id, e.target.value)}
-                            rows={2}
-                        />
-                        {/* Simple connectors could be added here */}
-                    </div>
-                ))}
-            </div>
-        </NodeViewWrapper>
-    );
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  return (
+    <NodeViewWrapper className="mindmap-block-component my-4">
+      <div
+        className="relative h-[400px] bg-themed-bg border border-themed-border rounded-xl overflow-hidden"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
+        <div className="absolute top-2 right-2 z-10">
+          <button onClick={addBlock} className="px-3 py-1 bg-themed-surface shadow-sm border border-themed-border rounded text-sm hover:bg-themed-bg flex items-center gap-1 text-themed-text-primary">
+            <Plus size={14} /> Add Block
+          </button>
+        </div>
+
+        {blocks.map((block: any) => (
+          <div
+            key={block.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, block.id)}
+            className="absolute bg-themed-surface shadow-md border border-themed-border rounded-lg p-2 min-w-[120px] cursor-move"
+            style={{ left: block.x, top: block.y }}
+          >
+            <textarea
+              className="w-full h-full resize-none outline-none text-sm bg-transparent text-themed-text-primary"
+              value={block.text}
+              onChange={(e) => updateBlockText(block.id, e.target.value)}
+              rows={2}
+            />
+            {/* Simple connectors could be added here */}
+          </div>
+        ))}
+      </div>
+    </NodeViewWrapper>
+  );
 };
 
 export const MindMapBlockExtension = Node.create({

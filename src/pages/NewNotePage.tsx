@@ -31,7 +31,7 @@ export function NewNotePage() {
     }, [navigate]);
 
     return (
-        <div className="flex items-center justify-center h-full text-gray-500 dark:text-dark-text-secondary">
+        <div className="flex items-center justify-center h-full text-themed-text-secondary">
             Creating note...
         </div>
     );

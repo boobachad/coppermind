@@ -55,26 +55,26 @@ export function Sidebar() {
   );
 
   return (
-    <div className="w-64 bg-gray-50 dark:bg-dark-bgSecondary h-full flex flex-col flex-shrink-0 border-r border-gray-200 dark:border-dark-border">
-      <div className="p-3 border-b border-gray-200 dark:border-dark-border space-y-1">
+    <div className="w-64 bg-themed-surface h-full flex flex-col flex-shrink-0 border-r border-themed-border">
+      <div className="p-3 border-b border-themed-border space-y-1">
         <NavLink
           to="/"
           end
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-gray-200 dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary" : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface")}
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
         >
           <FileText className="mr-3 h-4 w-4" />
           Home
         </NavLink>
         <NavLink
           to="/todos"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-gray-200 dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary" : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface")}
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
         >
           <CheckSquare className="mr-3 h-4 w-4" />
           To-Dos
         </NavLink>
         <NavLink
           to="/nodes"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-gray-200 dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary" : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface")}
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
         >
           <Share2 className="mr-3 h-4 w-4" />
           Graph
@@ -89,7 +89,7 @@ export function Sidebar() {
             placeholder="Search notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-200/50 dark:bg-dark-surface/50 border-none rounded-lg py-2 pl-9 pr-4 text-sm text-gray-900 dark:text-dark-text-primary placeholder-gray-500 focus:ring-0 focus:bg-gray-200 dark:focus:bg-dark-surface transition-colors"
+            className="w-full bg-themed-bg border-none rounded-lg py-2 pl-9 pr-4 text-sm text-themed-text-primary placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:bg-themed-bg transition-colors"
           />
           <svg
             className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
@@ -103,10 +103,10 @@ export function Sidebar() {
 
         {/* Section Header */}
         <div className="flex items-center justify-between px-2 mb-2">
-          <span className="text-xs font-semibold text-gray-500 dark:text-dark-text-secondary uppercase tracking-wider">Notes</span>
+          <span className="text-xs font-semibold text-themed-text-secondary uppercase tracking-wider">Notes</span>
           <button
             onClick={createNote}
-            className="text-gray-400 hover:text-gray-900 dark:hover:text-dark-text-primary transition-colors"
+            className="text-gray-400 hover:text-themed-text-primary transition-colors"
             title="Create New Note"
           >
             <Plus className="h-4 w-4" />
@@ -122,8 +122,8 @@ export function Sidebar() {
                 className={({ isActive }) => clsx(
                   "flex-1 block px-3 py-2 text-sm rounded-md truncate pr-8 transition-colors",
                   isActive
-                    ? "bg-gray-200 dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary font-medium"
-                    : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface/50"
+                    ? "bg-themed-bg text-themed-text-primary font-medium"
+                    : "text-themed-text-secondary hover:bg-themed-bg/50"
                 )}
               >
                 {note.title || 'Untitled'}
@@ -152,7 +152,7 @@ export function Sidebar() {
                     }
                   }
                 }}
-                className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded hover:bg-gray-200 dark:hover:bg-dark-bg transition-all"
+                className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded hover:bg-themed-bg transition-all"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -171,7 +171,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-gray-200 dark:border-dark-border">
         <NavLink
           to="/settings"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-gray-200 dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary" : "text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface")}
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
         >
           <Settings className="mr-3 h-4 w-4" />
           Settings

@@ -55,7 +55,7 @@ export function TitleBar() {
   const startDrag = async (e: React.MouseEvent) => {
     // Prevent dragging if clicking on buttons (just in case)
     if ((e.target as HTMLElement).closest('button')) return;
-    
+
     try {
       const appWindow = getCurrentWindow();
       await appWindow.startDragging();
@@ -65,11 +65,12 @@ export function TitleBar() {
   };
 
   return (
-    <div 
+    <div
       onMouseDown={startDrag}
       className={clsx(
         "h-[32px] flex items-center justify-between select-none z-[9999] shrink-0",
-        "bg-white dark:bg-dark-bgSecondary text-gray-900 dark:text-gray-400 transition-colors duration-300"
+        "h-[32px] flex items-center justify-between select-none z-[9999] shrink-0",
+        "bg-themed-surface text-themed-text-primary transition-colors duration-300"
       )}
     >
       {/* App Title */}
@@ -81,14 +82,14 @@ export function TitleBar() {
       <div className="flex items-center h-full z-50">
         <button
           onClick={(e) => { e.stopPropagation(); minimize(); }}
-          className="h-full px-4 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
+          className="h-full px-4 hover:bg-themed-bg transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
           title="Minimize"
         >
           <Minus className="w-4 h-4" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); toggleMaximize(); }}
-          className="h-full px-4 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
+          className="h-full px-4 hover:bg-themed-bg transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
           title={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? <Maximize2 className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}

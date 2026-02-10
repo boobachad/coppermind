@@ -60,7 +60,7 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
         return (
             <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary hover:text-gray-600 dark:hover:text-dark-text-primary cursor-pointer transition-colors text-sm"
+                className="flex items-center gap-2 text-themed-text-secondary hover:text-themed-text-primary cursor-pointer transition-colors text-sm"
             >
                 <Link2 className="w-4 h-4" />
                 <span>Add source link...</span>
@@ -79,9 +79,9 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                     rel="noopener noreferrer"
                     className={clsx(
                         "group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer",
-                        "bg-gray-100 dark:bg-dark-surface text-gray-700 dark:text-dark-text-primary",
-                        "hover:bg-gray-200 dark:hover:bg-dark-border transition-colors",
-                        "border border-gray-200 dark:border-dark-border"
+                        "bg-themed-surface text-themed-text-primary",
+                        "hover:bg-themed-bg transition-colors",
+                        "border border-themed-border"
                     )}
                     onClick={async (e) => {
                         e.preventDefault();
@@ -133,8 +133,8 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                         placeholder="https://..."
                         className={clsx(
                             "w-48 px-2.5 py-1 rounded-full text-xs",
-                            "bg-gray-100 dark:bg-dark-surface text-gray-700 dark:text-dark-text-primary",
-                            "border border-gray-300 dark:border-dark-border",
+                            "bg-themed-surface text-themed-text-primary",
+                            "border border-themed-border",
                             "focus:outline-none focus:ring-1 focus:ring-blue-500"
                         )}
                         autoFocus
@@ -145,9 +145,9 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                     onClick={() => setIsAdding(true)}
                     className={clsx(
                         "flex items-center justify-center w-6 h-6 rounded-full",
-                        "bg-gray-100 dark:bg-dark-surface text-gray-500 dark:text-dark-text-secondary",
-                        "hover:bg-gray-200 dark:hover:bg-dark-border hover:text-gray-700 dark:hover:text-dark-text-primary",
-                        "transition-colors border border-dashed border-gray-300 dark:border-dark-border"
+                        "bg-themed-surface text-themed-text-secondary",
+                        "hover:bg-themed-bg hover:text-themed-text-primary",
+                        "transition-colors border border-dashed border-themed-border"
                     )}
                     title="Add source link"
                 >

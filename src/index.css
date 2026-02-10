@@ -5,6 +5,56 @@
 @custom-variant dark (&:is(.dark *));
 @config "../tailwind.config.js";
 
+/* Theme Configuration - Moved to top for availability */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Themed Colors (mapped to CSS variables) */
+  --color-themed-bg: var(--bg-primary);
+  --color-themed-surface: var(--bg-secondary);
+  --color-themed-text-primary: var(--text-primary);
+  --color-themed-text-secondary: var(--text-secondary);
+  --color-themed-border: var(--border-color);
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   --radius: 0.625rem;
@@ -41,6 +91,33 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Theme Defines */
+:root,
+[data-theme="solarized-light"] {
+  --bg-primary: #FDF6E3;
+  --bg-secondary: #EEE8D5;
+  --text-primary: #002B36;
+  --text-secondary: #586E75;
+  --border-color: #D6D0C0;
+}
+
+[data-theme="blue-light"] {
+  --bg-primary: #F0F7FF;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border-color: #E2E8F0;
+}
+
+[data-theme="dark"] {
+  /* Using values matching original dark theme */
+  --bg-primary: #0F0F11;
+  --bg-secondary: #1A1C1F;
+  --text-primary: #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --border-color: #2A2D31;
+}
+
 html,
 body,
 #root {
@@ -50,7 +127,11 @@ body,
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-dark-bgSecondary dark:text-dark-text-primary;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 /* Scrollbar Styling */
@@ -73,7 +154,7 @@ body {
 
 /* TipTap Editor Styles */
 .ProseMirror {
-  @apply outline-none text-gray-900 dark:text-dark-text-primary;
+  @apply outline-none text-themed-text-primary;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -82,38 +163,38 @@ body {
 }
 
 .ProseMirror h1 {
-  @apply text-4xl font-bold mt-6 mb-4 text-gray-900 dark:text-dark-text-primary;
+  @apply text-4xl font-bold mt-6 mb-4 text-themed-text-primary;
 }
 
 .ProseMirror h2 {
-  @apply text-3xl font-bold mt-5 mb-3 text-gray-900 dark:text-dark-text-primary;
+  @apply text-3xl font-bold mt-5 mb-3 text-themed-text-primary;
 }
 
 .ProseMirror h3 {
-  @apply text-2xl font-bold mt-4 mb-2 text-gray-900 dark:text-dark-text-primary;
+  @apply text-2xl font-bold mt-4 mb-2 text-themed-text-primary;
 }
 
 .ProseMirror p,
 .ProseMirror span,
 .ProseMirror div {
-  @apply text-gray-900 dark:text-dark-text-primary;
+  @apply text-themed-text-primary;
 }
 
 .ProseMirror strong,
 .ProseMirror b {
-  @apply text-gray-900 dark:text-dark-text-primary font-bold;
+  @apply text-themed-text-primary font-bold;
 }
 
 .ProseMirror ul {
-  @apply list-disc ml-6 my-2 text-gray-900 dark:text-dark-text-primary;
+  @apply list-disc ml-6 my-2 text-themed-text-primary;
 }
 
 .ProseMirror ol {
-  @apply list-decimal ml-6 my-2 text-gray-900 dark:text-dark-text-primary;
+  @apply list-decimal ml-6 my-2 text-themed-text-primary;
 }
 
 .ProseMirror blockquote {
-  @apply border-l-4 border-gray-300 dark:border-dark-border pl-4 py-1 my-4 italic text-gray-700 dark:text-dark-text-secondary;
+  @apply border-l-4 border-gray-300 dark:border-dark-border pl-4 py-1 my-4 italic text-themed-text-secondary;
 }
 
 .ProseMirror code {
@@ -183,7 +264,7 @@ ul[data-type="taskList"] li>div {
   font-weight: bold;
   text-align: left;
   background-color: #f1f3f5;
-  @apply dark:bg-dark-surface text-gray-900 dark:text-dark-text-primary;
+  @apply dark:bg-dark-surface text-themed-text-primary;
 }
 
 .ProseMirror .selectedCell:after {
@@ -214,47 +295,6 @@ ul[data-type="taskList"] li>div {
 
 .resize-cursor {
   cursor: col-resize;
-}
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 .dark {
@@ -294,9 +334,5 @@ ul[data-type="taskList"] li>div {
 @layer base {
   * {
     @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }

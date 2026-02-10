@@ -309,7 +309,7 @@ export function NotePage() {
   }
 
   return (
-    <div className="h-full relative flex flex-col bg-white dark:bg-dark-bg">
+    <div className="h-full relative flex flex-col bg-themed-bg">
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto relative p-4 pb-48">
         <div className="max-w-3xl mx-auto w-full pt-12 relative animate-in fade-in duration-500">
@@ -320,11 +320,11 @@ export function NotePage() {
             value={note.title || ''}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="Untitled"
-            className="w-full text-4xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-dark-text-muted mb-4 px-4"
+            className="w-full text-4xl font-bold bg-transparent border-none outline-none text-themed-text-primary placeholder-themed-text-secondary/50 mb-4 px-4"
           />
 
           {/* Meta Row */}
-          <div className="flex items-center text-gray-400 dark:text-dark-text-secondary mb-8 text-sm gap-4 px-4">
+          <div className="flex items-center text-themed-text-secondary mb-8 text-sm gap-4 px-4">
             <SourceUrlsDisplay
               urls={sourceUrls}
               onAdd={handleAddUrl}
@@ -350,7 +350,7 @@ export function NotePage() {
             ))}
             {/* Fallback for empty new notes */}
             {messages.length === 0 && (
-              <div className="text-gray-400 italic text-center p-4">Start writing...</div>
+              <div className="text-themed-text-secondary italic text-center p-4">Start writing...</div>
             )}
           </div>
         </div>
@@ -368,7 +368,7 @@ export function NotePage() {
       </div>
 
       {/* Input Pill Area */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-dark-bg dark:via-dark-bg pb-8 pt-12 px-4 z-40">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-themed-bg via-themed-bg to-transparent pb-8 pt-12 px-4 z-40">
         <div className="max-w-5xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
 
           {/* Role Selection Tabs - Floating above input */}
@@ -378,8 +378,8 @@ export function NotePage() {
               className={clsx(
                 "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
                 inputRole === 'question'
-                  ? "bg-black text-white dark:bg-white dark:text-black"
-                  : "bg-gray-200 dark:bg-dark-surface text-gray-500 hover:bg-gray-300 dark:hover:bg-dark-border"
+                  ? "bg-themed-text-primary text-themed-bg"
+                  : "bg-themed-surface text-themed-text-secondary hover:bg-themed-border"
               )}
             >
               Question
@@ -389,8 +389,8 @@ export function NotePage() {
               className={clsx(
                 "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
                 inputRole === 'answer'
-                  ? "bg-black text-white dark:bg-white dark:text-black"
-                  : "bg-gray-200 dark:bg-dark-surface text-gray-500 hover:bg-gray-300 dark:hover:bg-dark-border"
+                  ? "bg-themed-text-primary text-themed-bg"
+                  : "bg-themed-surface text-themed-text-secondary hover:bg-themed-border"
               )}
             >
               Answer
@@ -398,7 +398,7 @@ export function NotePage() {
           </div>
 
           <div className={clsx(
-            "bg-white dark:bg-dark-surface rounded-2xl flex items-end p-2 transition-all shadow-sm ring-0 outline-none border-0",
+            "bg-themed-surface rounded-2xl flex items-end p-2 transition-all shadow-sm ring-0 outline-none border-0",
           )}>
             <textarea
               ref={inputRef}
@@ -416,22 +416,22 @@ export function NotePage() {
                 }
               }}
               placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
-              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-gray-500 shadow-none ring-0 outline-none"
+              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 text-themed-text-primary placeholder-themed-text-secondary shadow-none ring-0 outline-none"
               rows={1}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim()}
               className={clsx(
-                "mb-1 p-2 disabled:bg-gray-300 dark:disabled:bg-dark-border disabled:cursor-not-allowed text-white rounded-xl transition-colors shrink-0",
-                "bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                "mb-1 p-2 disabled:opacity-50 disabled:cursor-not-allowed text-themed-bg rounded-xl transition-colors shrink-0",
+                "bg-themed-text-primary hover:opacity-90"
               )}
             >
               {/* Arrow Up Icon */}
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
             </button>
           </div>
-          <div className="text-center text-xs text-gray-400 dark:text-dark-text-secondary mt-2">
+          <div className="text-center text-xs text-themed-text-secondary mt-2">
             Press Enter to send, Shift+Enter for new line
           </div>
         </div>

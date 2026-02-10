@@ -6,8 +6,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { all, createLowlight } from 'lowlight';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
+
 import Highlight from '@tiptap/extension-highlight';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import TextAlign from '@tiptap/extension-text-align';
@@ -105,7 +104,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
     },
     editorProps: {
       attributes: {
-        class: className || 'prose mx-auto focus:outline-none max-w-none dark:prose-invert text-gray-900 dark:text-dark-text-primary',
+        class: className || 'prose mx-auto focus:outline-none max-w-none dark:prose-invert text-themed-text-primary',
       },
       handleDOMEvents: {
         contextmenu: (_view, event) => {
@@ -215,28 +214,28 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
 
   return (
     <>
-      <BubbleMenu editor={editor} className="flex bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary shadow-md border border-stone-200 dark:border-dark-border rounded-lg overflow-hidden divide-x divide-stone-200 dark:divide-dark-border">
+      <BubbleMenu editor={editor} className="flex bg-themed-surface text-themed-text-primary shadow-md border border-themed-border rounded-lg overflow-hidden divide-x divide-stone-200 dark:divide-dark-border">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 hover:bg-gray-100 dark:hover:bg-dark-bg ${editor.isActive('bold') ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-dark-text-primary'}`}
+          className={`p-2 hover:bg-themed-bg ${editor.isActive('bold') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
         >
           <Bold className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`p-2 hover:bg-gray-100 dark:hover:bg-dark-bg ${editor.isActive('italic') ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-dark-text-primary'}`}
+          className={`p-2 hover:bg-themed-bg ${editor.isActive('italic') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
         >
           <Italic className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`p-2 hover:bg-gray-100 dark:hover:bg-dark-bg ${editor.isActive('underline') ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-dark-text-primary'}`}
+          className={`p-2 hover:bg-themed-bg ${editor.isActive('underline') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
         >
           <UnderlineIcon className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={`p-2 hover:bg-gray-100 dark:hover:bg-dark-bg ${editor.isActive('code') ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-dark-text-primary'}`}
+          className={`p-2 hover:bg-themed-bg ${editor.isActive('code') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
         >
           <Code className="w-4 h-4" />
         </button>

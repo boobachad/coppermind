@@ -102,54 +102,54 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-40" 
-        onClick={onClose} 
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onClose}
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <div
-        className="fixed z-50 bg-white dark:bg-dark-surface text-black dark:text-dark-text-primary shadow-xl border border-gray-200 dark:border-dark-border rounded-lg py-1 w-64 max-w-xs flex flex-col text-sm"
+        className="fixed z-50 bg-themed-surface text-themed-text-primary shadow-xl border border-themed-border rounded-lg py-1 w-64 max-w-xs flex flex-col text-sm"
         style={{ top: position.y, left: position.x }}
       >
         <MenuItem icon={Copy} label="Copy" onClick={handleCopy} />
         <MenuItem icon={Clipboard} label="Paste" onClick={handlePaste} />
         <MenuItem icon={Maximize} label="Select All" onClick={handleSelectAll} />
-        
-        <div className="h-px bg-gray-100 dark:bg-dark-border my-1" />
-        
+
+        <div className="h-px bg-themed-border my-1" />
+
         <div className="relative">
-          <MenuItem 
-            icon={ArrowRight} 
-            label="Convert to" 
+          <MenuItem
+            icon={ArrowRight}
+            label="Convert to"
             onClick={() => setActiveSubmenu(activeSubmenu === 'convert' ? null : 'convert')}
             active={activeSubmenu === 'convert'}
             hasSubmenu
           />
           {activeSubmenu === 'convert' && (
-            <div className="absolute left-full top-0 ml-1 bg-white dark:bg-dark-surface shadow-xl border border-gray-200 dark:border-dark-border rounded-lg py-1 w-48 z-50 max-h-64 overflow-y-auto">
-               <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
-               <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
-               <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
-               <MenuItem icon={Heading3} label="Heading 3" onClick={() => { editor.chain().focus().setHeading({ level: 3 }).run(); onClose(); }} />
-               <MenuItem icon={List} label="Bullet List" onClick={() => { editor.chain().focus().toggleBulletList().run(); onClose(); }} />
-               <MenuItem icon={ListOrdered} label="Numbered List" onClick={() => { editor.chain().focus().toggleOrderedList().run(); onClose(); }} />
-               <MenuItem icon={CheckSquare} label="Task List" onClick={() => { editor.chain().focus().toggleTaskList().run(); onClose(); }} />
-               <MenuItem icon={Quote} label="Quote" onClick={() => { editor.chain().focus().setBlockquote().run(); onClose(); }} />
-               <MenuItem icon={Code} label="Code Block" onClick={() => { editor.chain().focus().setCodeBlock().run(); onClose(); }} />
+            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg py-1 w-48 z-50 max-h-64 overflow-y-auto">
+              <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
+              <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
+              <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
+              <MenuItem icon={Heading3} label="Heading 3" onClick={() => { editor.chain().focus().setHeading({ level: 3 }).run(); onClose(); }} />
+              <MenuItem icon={List} label="Bullet List" onClick={() => { editor.chain().focus().toggleBulletList().run(); onClose(); }} />
+              <MenuItem icon={ListOrdered} label="Numbered List" onClick={() => { editor.chain().focus().toggleOrderedList().run(); onClose(); }} />
+              <MenuItem icon={CheckSquare} label="Task List" onClick={() => { editor.chain().focus().toggleTaskList().run(); onClose(); }} />
+              <MenuItem icon={Quote} label="Quote" onClick={() => { editor.chain().focus().setBlockquote().run(); onClose(); }} />
+              <MenuItem icon={Code} label="Code Block" onClick={() => { editor.chain().focus().setCodeBlock().run(); onClose(); }} />
             </div>
           )}
         </div>
 
         <div className="relative">
-          <MenuItem 
-            icon={Palette} 
-            label="Text Color" 
-            onClick={() => setActiveSubmenu(activeSubmenu === 'text' ? null : 'text')} 
+          <MenuItem
+            icon={Palette}
+            label="Text Color"
+            onClick={() => setActiveSubmenu(activeSubmenu === 'text' ? null : 'text')}
             active={activeSubmenu === 'text'}
             hasSubmenu
           />
           {activeSubmenu === 'text' && (
-            <div className="absolute left-full top-0 ml-1 bg-white dark:bg-dark-surface shadow-xl border border-gray-200 dark:border-dark-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
               {COLORS.map((c) => (
                 <button
                   key={c.value}
@@ -162,30 +162,30 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
                   }}
                 />
               ))}
-              <button 
-                className="w-8 h-8 rounded-full border border-gray-200 dark:border-dark-border flex items-center justify-center hover:bg-gray-50 dark:hover:bg-dark-border text-xs"
+              <button
+                className="w-8 h-8 rounded-full border border-themed-border flex items-center justify-center hover:bg-themed-bg text-xs"
                 onClick={() => {
                   editor.chain().focus().unsetColor().run();
                   onClose();
                 }}
                 title="Reset"
               >
-                <Check size={12} className="dark:text-dark-text-primary" />
+                <Check size={12} className="text-themed-text-primary" />
               </button>
             </div>
           )}
         </div>
 
         <div className="relative">
-          <MenuItem 
-            icon={PaintBucket} 
-            label="Background Color" 
+          <MenuItem
+            icon={PaintBucket}
+            label="Background Color"
             onClick={() => setActiveSubmenu(activeSubmenu === 'bg' ? null : 'bg')}
             active={activeSubmenu === 'bg'}
             hasSubmenu
           />
           {activeSubmenu === 'bg' && (
-            <div className="absolute left-full top-0 ml-1 bg-white dark:bg-dark-surface shadow-xl border border-gray-200 dark:border-dark-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
               {BACKGROUNDS.map((c) => (
                 <button
                   key={c.value}
@@ -194,30 +194,30 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
                   title={c.label}
                   onClick={() => {
                     if (c.value === 'unset') {
-                        editor.chain().focus().unsetHighlight().run();
+                      editor.chain().focus().unsetHighlight().run();
                     } else {
-                        editor.chain().focus().toggleHighlight({ color: c.value }).run();
+                      editor.chain().focus().toggleHighlight({ color: c.value }).run();
                     }
                     onClose();
                   }}
                 >
-                    {c.value === 'unset' && <Check size={12} className="mx-auto text-black" />}
+                  {c.value === 'unset' && <Check size={12} className="mx-auto text-black" />}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <MenuItem 
-            icon={Highlighter} 
-            label="Highlight Text" 
-            onClick={() => {
-                editor.chain().focus().toggleHighlight().run();
-                onClose();
-            }} 
+        <MenuItem
+          icon={Highlighter}
+          label="Highlight Text"
+          onClick={() => {
+            editor.chain().focus().toggleHighlight().run();
+            onClose();
+          }}
         />
 
-        <div className="h-px bg-gray-100 dark:bg-dark-border my-1" />
+        <div className="h-px bg-themed-border my-1" />
 
         <MenuItem icon={ImageIcon} label="Add Image" onClick={handleImage} />
         <MenuItem icon={FileText} label="Add PDF" onClick={handlePDF} />
@@ -229,13 +229,13 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
 
 const MenuItem = ({ icon: Icon, label, onClick, hasSubmenu, active }: any) => (
   <button
-    className={`w-full px-4 py-2 text-left flex items-center justify-between hover:bg-gray-100 dark:hover:bg-dark-border transition-colors outline-none ${active ? 'bg-gray-100 dark:bg-dark-border' : ''}`}
+    className={`w-full px-4 py-2 text-left flex items-center justify-between hover:bg-themed-bg transition-colors outline-none ${active ? 'bg-themed-bg' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center gap-3">
-      <Icon size={16} className="text-gray-500 dark:text-dark-text-secondary" />
-      <span className="dark:text-dark-text-primary">{label}</span>
+      <Icon size={16} className="text-themed-text-secondary" />
+      <span className="text-themed-text-primary">{label}</span>
     </div>
-    {hasSubmenu && <span className="text-gray-400 dark:text-dark-text-secondary">›</span>}
+    {hasSubmenu && <span className="text-themed-text-secondary">›</span>}
   </button>
 );

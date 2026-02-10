@@ -42,7 +42,7 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      
+
       const parentRect = noteRef.current?.offsetParent?.getBoundingClientRect();
       if (!parentRect) return;
 
@@ -99,7 +99,7 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
       </div>
 
       {/* Content Area with Notebook Lines */}
-      <div 
+      <div
         ref={contentRef}
         className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting text-gray-800 leading-8"
         style={{
@@ -120,24 +120,24 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
 
       {/* Context Menu */}
       {showMenu && (
-        <div className="absolute top-2 right-2 bg-white dark:bg-dark-surface rounded-lg shadow-xl border border-gray-100 dark:border-dark-border p-2 z-50 flex flex-col gap-1 min-w-[140px]">
-          <div className="flex gap-1 p-1 mb-1 border-b border-gray-100 dark:border-dark-border">
+        <div className="absolute top-2 right-2 bg-themed-surface rounded-lg shadow-xl border border-themed-border p-2 z-50 flex flex-col gap-1 min-w-[140px]">
+          <div className="flex gap-1 p-1 mb-1 border-b border-themed-border">
             {Object.keys(COLORS).map(color => (
               <button
                 key={color}
-                className={clsx("w-4 h-4 rounded-full border border-gray-200 dark:border-dark-border", COLORS[color])}
+                className={clsx("w-4 h-4 rounded-full border border-themed-border", COLORS[color])}
                 onClick={() => onUpdate(data.id, { color })}
               />
             ))}
           </div>
-          
+
           <button
             onClick={() => {
               setIsEditing(true);
               setTimeout(() => contentRef.current?.focus(), 10);
               setShowMenu(false);
             }}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm text-themed-text-primary hover:bg-themed-bg rounded"
           >
             <Edit className="w-3 h-3" /> Edit
           </button>
@@ -156,7 +156,7 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
             <ArrowDown className="w-3 h-3" /> Send to back
           </button>
 
-          <div className="h-px bg-gray-100 dark:bg-dark-border my-1" />
+          <div className="h-px bg-themed-border my-1" />
 
           <button
             onClick={() => onDelete(data.id)}

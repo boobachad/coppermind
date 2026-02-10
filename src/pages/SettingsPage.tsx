@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../lib/ThemeContext';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { syncAllTables, isPgConnected } from '../lib/pgSync';
 import {
   Monitor,
   Download,
@@ -8,12 +9,14 @@ import {
   Maximize,
   ChevronRight,
   X,
-  Check
+  Check,
+  DatabaseZap,
+  RefreshCw
 } from 'lucide-react';
 
 
 export function SettingsPage() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [uiScale, setUiScale] = useState(() => {
     // Try to recover state from localStorage or default to 1
     const saved = localStorage.getItem('app_ui_scale');
@@ -23,11 +26,27 @@ export function SettingsPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('md');
   const { alert } = useConfirmDialog();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      await syncAllTables();
+      // Only mark success if PG actually connected and synced
+      if (isPgConnected()) {
+        setLastSyncTime(new Date().toLocaleTimeString());
+      }
+    } catch (err) {
+      console.error('[Settings] Manual sync failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Apply UI Scale
   useEffect(() => {
     // Apply zoom to the body
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (document.body.style as any).zoom = uiScale;
     localStorage.setItem('app_ui_scale', uiScale.toString());
   }, [uiScale]);
@@ -58,29 +77,44 @@ export function SettingsPage() {
                 <p className="text-sm text-gray-500 dark:text-dark-text-secondary">Choose your preferred visual style</p>
               </div>
             </div>
-            <div className="flex space-x-3 mt-4">
+            <div className="grid grid-cols-3 gap-3 mt-4">
               <button
-                onClick={() => theme === 'dark' && toggleTheme()}
-                className={`w-24 h-16 rounded-lg bg-white border-2 flex items-center justify-center relative transition-all ${theme === 'light' ? 'border-blue-500 shadow-md ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
+                onClick={() => setTheme('solarized-light')}
+                className={`h-20 rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${theme === 'solarized-light' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-dark-surface'}`}
               >
-                {theme === 'light' && (
-                  <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                {theme === 'solarized-light' && (
+                  <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
-                <span className={`text-sm font-medium ${theme === 'light' ? 'text-gray-900' : 'text-gray-500'}`}>Light</span>
+                <div className="w-6 h-6 rounded-full bg-[#FDF6E3] border border-gray-300 mb-2 shadow-sm"></div>
+                <span className={`text-xs font-medium ${theme === 'solarized-light' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-dark-text-secondary'}`}>Solarized</span>
               </button>
 
               <button
-                onClick={() => theme === 'light' && toggleTheme()}
-                className={`w-24 h-16 rounded-lg bg-[#121212] border-2 flex items-center justify-center relative transition-all ${theme === 'dark' ? 'border-blue-500 shadow-md ring-2 ring-blue-100' : 'border-gray-700 hover:border-gray-600'}`}
+                onClick={() => setTheme('blue-light')}
+                className={`h-20 rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${theme === 'blue-light' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-dark-surface'}`}
               >
-                {theme === 'dark' && (
-                  <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                {theme === 'blue-light' && (
+                  <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
-                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-400'}`}>Dark</span>
+                <div className="w-6 h-6 rounded-full bg-[#F0F7FF] border border-gray-300 mb-2 shadow-sm"></div>
+                <span className={`text-xs font-medium ${theme === 'blue-light' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-dark-text-secondary'}`}>Blue Light</span>
+              </button>
+
+              <button
+                onClick={() => setTheme('dark')}
+                className={`h-20 rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${theme === 'dark' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-dark-surface'}`}
+              >
+                {theme === 'dark' && (
+                  <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div className="w-6 h-6 rounded-full bg-[#1A1C1F] border border-gray-600 mb-2 shadow-sm"></div>
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-dark-text-secondary'}`}>Dark</span>
               </button>
             </div>
           </div>
@@ -125,6 +159,33 @@ export function SettingsPage() {
           Data & Storage
         </h2>
         <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl shadow-sm overflow-hidden">
+          {/* Sync to PostgreSQL */}
+          <div
+            onClick={handleManualSync}
+            className={`p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors border-b border-gray-200 dark:border-dark-border ${isSyncing ? 'pointer-events-none opacity-60' : ''
+              }`}
+          >
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg mr-4">
+                <DatabaseZap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-dark-text-primary">Sync to PostgreSQL</h3>
+                <p className="text-sm text-gray-500 dark:text-dark-text-secondary">
+                  {isSyncing
+                    ? 'Syncing...'
+                    : lastSyncTime
+                      ? `Last synced at ${lastSyncTime}`
+                      : isPgConnected()
+                        ? 'Auto-syncs every hour · Click to sync now'
+                        : 'Not connected · Click to retry'}
+                </p>
+              </div>
+            </div>
+            <RefreshCw className={`w-5 h-5 text-gray-400 dark:text-dark-text-secondary ${isSyncing ? 'animate-spin' : ''}`} />
+          </div>
+
+          {/* Export Notes */}
           <div
             onClick={() => setShowExportModal(true)}
             className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
