@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
+use super::utils::gen_id;
 
 // ─── Row type ───────────────────────────────────────────────────────
 // Uses chrono::DateTime<Utc> for TIMESTAMPTZ columns.
@@ -55,26 +56,7 @@ pub struct DateRange {
     pub max_date: Option<String>,
 }
 
-// ─── ID generator ───────────────────────────────────────────────────
 
-/// cuid-style unique ID. Good enough for local-first app.
-fn gen_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    format!("c{}{:08x}", ts, rand_u32())
-}
-
-fn rand_u32() -> u32 {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-    let s = RandomState::new();
-    let mut h = s.build_hasher();
-    h.write_u8(0);
-    h.finish() as u32
-}
 
 // ─── Commands ───────────────────────────────────────────────────────
 
@@ -231,6 +213,7 @@ pub async fn create_activity(
 }
 
 /// PATCH: Link an activity to a goal + mark goal verified.
+/// Transactional: both writes succeed or both roll back.
 #[tauri::command]
 pub async fn patch_activity(
     db: State<'_, PosDb>,
@@ -238,19 +221,22 @@ pub async fn patch_activity(
     goal_id: String,
 ) -> Result<ActivityRow, String> {
     let pool = &db.0;
+    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
 
     sqlx::query("UPDATE pos_activities SET goal_id = $1 WHERE id = $2")
         .bind(&goal_id)
         .bind(&id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Patch activity: {e}"))?;
 
     sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
         .bind(&goal_id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Verify goal: {e}"))?;
+
+    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, description,

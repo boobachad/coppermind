@@ -1,9 +1,10 @@
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
 use super::shadow::{self, ShadowInput};
+use super::utils::gen_id;
 
 // ─── Response types ─────────────────────────────────────────────────
 
@@ -87,26 +88,6 @@ struct CodeforcesProblem {
     rating: Option<i32>,
     #[serde(default)]
     tags: Vec<String>,
-}
-
-// ─── ID generator ───────────────────────────────────────────────────
-
-fn gen_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    format!("c{}{:08x}", ts, rand_u32())
-}
-
-fn rand_u32() -> u32 {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-    let s = RandomState::new();
-    let mut h = s.build_hasher();
-    h.write_u8(0);
-    h.finish() as u32
 }
 
 // ─── LeetCode Scraper ───────────────────────────────────────────────

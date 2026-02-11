@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
+use super::utils::gen_id;
 
 // ─── Row types (native chrono for TIMESTAMPTZ) ──────────────────────
 
@@ -91,25 +92,7 @@ pub struct TransitionResponse {
     pub message: String,
 }
 
-// ─── ID generator (reuse pattern from activities) ───────────────────
 
-fn gen_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    format!("c{}{:08x}", ts, rand_u32())
-}
-
-fn rand_u32() -> u32 {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-    let s = RandomState::new();
-    let mut h = s.build_hasher();
-    h.write_u8(0);
-    h.finish() as u32
-}
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -469,9 +452,7 @@ pub async fn get_debt_goals(
 }
 
 /// Transition unverified goals before a cutoff date into debt goals.
-/// 1. Find unverified goals with date < before_date
-/// 2. Batch-insert into pos_debt_goals
-/// 3. Delete the original goals (CASCADE removes their metrics)
+/// Transactional: insert debt goals + delete originals atomically.
 #[tauri::command]
 pub async fn transition_debt_goals(
     db: State<'_, PosDb>,
@@ -495,6 +476,7 @@ pub async fn transition_debt_goals(
     }
 
     let count = unverified.len() as i32;
+    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
 
     for g in &unverified {
         let dg_id = gen_id();
@@ -505,7 +487,7 @@ pub async fn transition_debt_goals(
         .bind(&g.date)
         .bind(&g.description)
         .bind(&g.problem_id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Insert debt goal: {e}"))?;
     }
@@ -514,10 +496,12 @@ pub async fn transition_debt_goals(
     for g in &unverified {
         sqlx::query("DELETE FROM pos_goals WHERE id = $1")
             .bind(&g.id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("Delete goal: {e}"))?;
     }
+
+    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
 
     log::info!("[POS] Transitioned {} goals to DebtGoals (before {})", count, before_date);
     Ok(TransitionResponse {

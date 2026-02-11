@@ -1,6 +1,8 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 
+use super::utils::gen_id;
+
 /// Shadow activity duration in minutes.
 /// Configurable via SHADOW_ACTIVITY_MINUTES env var (default 30).
 fn shadow_duration_minutes() -> i64 {
@@ -8,25 +10,6 @@ fn shadow_duration_minutes() -> i64 {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(30)
-}
-
-/// cuid-style unique ID.
-fn gen_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    format!("c{}{:08x}", ts, rand_u32())
-}
-
-fn rand_u32() -> u32 {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-    let s = RandomState::new();
-    let mut h = s.build_hasher();
-    h.write_u8(0);
-    h.finish() as u32
 }
 
 /// Submission data needed by the shadow logger.
@@ -72,6 +55,9 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     let description = format!("{} - {}", sub.platform.to_uppercase(), sub.problem_title);
     let activity_id = gen_id();
 
+    // Transactional: insert activity + optional goal linking
+    let mut tx = pool.begin().await.map_err(|e| format!("Shadow TX begin: {e}"))?;
+
     // 1. Create shadow activity
     sqlx::query(
         r#"INSERT INTO pos_activities
@@ -84,7 +70,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     .bind(end_time)
     .bind(category)
     .bind(&description)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| format!("Create shadow activity: {e}"))?;
 
@@ -96,7 +82,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     )
     .bind(&date)
     .bind(&sub.problem_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|e| format!("Shadow goal match: {e}"))?;
 
@@ -105,18 +91,20 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
         sqlx::query("UPDATE pos_activities SET goal_id = $1 WHERE id = $2")
             .bind(&goal_id)
             .bind(&activity_id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("Shadow link: {e}"))?;
 
         sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
             .bind(&goal_id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("Shadow verify: {e}"))?;
 
         log::info!("[SHADOW] Linked activity {} to goal {} and marked verified", activity_id, goal_id);
     }
+
+    tx.commit().await.map_err(|e| format!("Shadow TX commit: {e}"))?;
 
     Ok(Some(activity_id))
 }
