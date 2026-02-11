@@ -75,7 +75,7 @@ export function TitleBar() {
     >
       {/* App Title */}
       <div className="flex-1 h-full flex items-center px-4 text-xs font-medium opacity-80 cursor-default">
-        NoteDown
+        coppermind
       </div>
 
       {/* Window Controls */}

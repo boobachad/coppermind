@@ -114,55 +114,116 @@ const PG_CREATE_TABLES = [
 
 
 // ─── Core Sync ──────────────────────────────────────────────────
-async function syncTable(sqliteDb: Database, table: TableDef): Promise<number> {
-    if (!pgDb) return 0;
+// ─── Bidirectional Sync: PostgreSQL as Source of Truth ──────────
+async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed: number; pulled: number }> {
+    if (!pgDb) return { pushed: 0, pulled: 0 };
 
-    const rows = await sqliteDb.select<Record<string, unknown>[]>(
+    // PHASE 1: Pull from PostgreSQL (PostgreSQL is source of truth)
+    const pgRows = await pgDb.select<Record<string, unknown>[]>(
         `SELECT ${table.columns.join(", ")} FROM ${table.name}`
     );
 
-    if (rows.length === 0) {
-        console.log(`[PgSync] ${table.name}: 0 rows, skipping`);
-        return 0;
+    let pulledCount = 0;
+    if (pgRows.length > 0) {
+        for (const pgRow of pgRows) {
+            const nonNullCols: string[] = [];
+            const nonNullValues: unknown[] = [];
+
+            table.columns.forEach((col) => {
+                const val = pgRow[col];
+                if (val !== undefined && val !== null) {
+                    nonNullCols.push(col);
+                    // Parse JSON strings back to objects if needed
+                    if (typeof val === 'string' && (col === 'data' || col === 'source_urls' || col === 'labels' || col.includes('_data'))) {
+                        try {
+                            nonNullValues.push(val); // Keep as string for SQLite TEXT columns
+                        } catch {
+                            nonNullValues.push(val);
+                        }
+                    } else {
+                        nonNullValues.push(val);
+                    }
+                }
+            });
+
+            // Upsert into SQLite (replace if exists)
+            const placeholders = nonNullCols.map(() => '?').join(", ");
+            const updateSet = nonNullCols
+                .filter(col => col !== "id")
+                .map(col => `${col} = excluded.${col}`)
+                .join(", ");
+
+            // Special handling for journal_entries: use date as conflict target
+            const conflictTarget = table.name === 'journal_entries' ? 'date' : 'id';
+            const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT(${conflictTarget}) DO UPDATE SET ${updateSet}`;
+
+            await sqliteDb.execute(upsertSql, nonNullValues);
+            pulledCount++;
+        }
     }
 
-    for (const row of rows) {
-        // Build dynamic SQL to handle nulls properly
-        // Tauri SQL plugin serializes params as JSON, so null becomes JSONB null
-        // Workaround: only include non-null columns in the query
-        const nonNullCols: string[] = [];
-        const nonNullValues: unknown[] = [];
-        
-        table.columns.forEach((col) => {
-            const val = row[col];
-            if (val !== undefined && val !== null) {
-                nonNullCols.push(col);
-                // Stringify objects/arrays for TEXT columns
-                if (typeof val === 'object') {
-                    nonNullValues.push(JSON.stringify(val));
-                } else {
-                    nonNullValues.push(val);
-                }
-            }
+    // PHASE 2: Push to PostgreSQL (only new/updated rows)
+    const sqliteRows = await sqliteDb.select<Record<string, unknown>[]>(
+        `SELECT ${table.columns.join(", ")} FROM ${table.name}`
+    );
+
+    let pushedCount = 0;
+    if (sqliteRows.length > 0) {
+        // Build map of PG rows for O(1) lookup
+        const pgRowMap = new Map<string, Record<string, unknown>>();
+        pgRows.forEach(row => {
+            const key = table.name === 'journal_entries' ? String(row.date) : String(row.id);
+            pgRowMap.set(key, row);
         });
 
-        // Build upsert with only non-null columns
-        const placeholders = nonNullCols.map((_, i) => `$${i + 1}`).join(", ");
-        const updateSet = nonNullCols
-            .filter(col => col !== "id")
-            .map((col) => {
-                const idx = nonNullCols.indexOf(col) + 1;
-                return `${col} = $${idx}`;
-            })
-            .join(", ");
+        for (const sqliteRow of sqliteRows) {
+            const key = table.name === 'journal_entries' ? String(sqliteRow.date) : String(sqliteRow.id);
+            const pgRow = pgRowMap.get(key);
 
-        const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${updateSet}`;
-        
-        await pgDb.execute(upsertSql, nonNullValues);
+            // Skip if exists in PG and has same or newer updated_at
+            if (pgRow && sqliteRow.updated_at && pgRow.updated_at) {
+                if (Number(pgRow.updated_at) >= Number(sqliteRow.updated_at)) {
+                    continue; // PG version is newer or same, skip push
+                }
+            }
+
+            const nonNullCols: string[] = [];
+            const nonNullValues: unknown[] = [];
+
+            table.columns.forEach((col) => {
+                const val = sqliteRow[col];
+                if (val !== undefined && val !== null) {
+                    nonNullCols.push(col);
+                    // Stringify objects/arrays for TEXT columns
+                    if (typeof val === 'object') {
+                        nonNullValues.push(JSON.stringify(val));
+                    } else {
+                        nonNullValues.push(val);
+                    }
+                }
+            });
+
+            // Build upsert with only non-null columns
+            const placeholders = nonNullCols.map((_, i) => `${i + 1}`).join(", ");
+            const updateSet = nonNullCols
+                .filter(col => col !== "id")
+                .map((col) => {
+                    const idx = nonNullCols.indexOf(col) + 1;
+                    return `${col} = ${idx}`;
+                })
+                .join(", ");
+
+            // Special handling for journal_entries: use date as conflict target
+            const conflictTarget = table.name === 'journal_entries' ? 'date' : 'id';
+            const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT (${conflictTarget}) DO UPDATE SET ${updateSet}`;
+
+            await pgDb.execute(upsertSql, nonNullValues);
+            pushedCount++;
+        }
     }
 
-    console.log(`[PgSync] ${table.name}: ${rows.length} rows synced`);
-    return rows.length;
+    console.log(`[PgSync] ${table.name}: ${pulledCount} pulled, ${pushedCount} pushed`);
+    return { pushed: pushedCount, pulled: pulledCount };
 }
 
 export async function syncAllTables(): Promise<void> {
@@ -196,12 +257,15 @@ export async function syncAllTables(): Promise<void> {
         }
 
         const start = performance.now();
-        let totalRows = 0;
+        let totalPushed = 0;
+        let totalPulled = 0;
         let failedTables = 0;
 
         for (const table of TABLES) {
             try {
-                totalRows += await syncTable(sqliteDb as Database, table);
+                const result = await syncTable(sqliteDb as Database, table);
+                totalPushed += result.pushed;
+                totalPulled += result.pulled;
             } catch (err) {
                 console.error(`[PgSync] Failed to sync ${table.name}:`, err);
                 failedTables++;
@@ -209,15 +273,15 @@ export async function syncAllTables(): Promise<void> {
         }
 
         const elapsed = (performance.now() - start).toFixed(0);
-        console.log(`[PgSync] Sync complete: ${totalRows} total rows in ${elapsed}ms`);
+        console.log(`[PgSync] Sync complete: ${totalPulled} pulled, ${totalPushed} pushed in ${elapsed}ms`);
 
         if (failedTables > 0) {
             toast.warning("Partial sync", {
-                description: `${TABLES.length - failedTables}/${TABLES.length} tables synced (${totalRows} rows, ${elapsed}ms)`,
+                description: `${TABLES.length - failedTables}/${TABLES.length} tables synced (↓${totalPulled} ↑${totalPushed}, ${elapsed}ms)`,
             });
         } else {
             toast.success("Sync complete", {
-                description: `${totalRows} rows synced in ${elapsed}ms`,
+                description: `↓${totalPulled} pulled, ↑${totalPushed} pushed (${elapsed}ms)`,
             });
         }
     } catch (err) {
@@ -263,7 +327,8 @@ export async function initPgSync(): Promise<void> {
             console.log("[PgSync] Migration: Columns may already exist");
         }
 
-        // Initial sync on startup
+        // Initial bidirectional sync on startup (PostgreSQL takes priority)
+        console.log("[PgSync] Starting initial bidirectional sync (PostgreSQL as source of truth)");
         await syncAllTables();
 
         // Schedule periodic sync every 1 hour
