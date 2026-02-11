@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FileText, CheckSquare, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen } from 'lucide-react';
 import { getDb } from '../lib/db';
+import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import clsx from 'clsx';
@@ -176,8 +177,7 @@ export function Sidebar() {
                   });
                   if (confirmed) {
                     try {
-                      const db = await getDb();
-                      await db.execute('DELETE FROM notes WHERE id = $1', [note.id]);
+                      await softDelete('notes', note.id);
                       window.dispatchEvent(new Event('notes-updated'));
                       if (window.location.pathname.includes(note.id)) {
                         navigate('/');

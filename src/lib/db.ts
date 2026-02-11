@@ -335,6 +335,15 @@ export const initDb = async () => {
     await addCol('journal_entries', 'expected_schedule_data', 'TEXT');
     await addCol('journal_entries', 'actual_schedule_data', 'TEXT');
 
+    // Tombstone Table for deletion tracking
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS deleted_items (
+        id TEXT PRIMARY KEY,
+        table_name TEXT NOT NULL,
+        deleted_at INTEGER NOT NULL
+      )
+    `);
+
     console.log("Database initialized (SQLite)");
     return db;
 

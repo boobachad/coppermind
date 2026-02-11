@@ -306,8 +306,7 @@ export function GridPage() {
                                                         style={{
                                                             background: slot.segments 
                                                                 ? 'transparent' 
-                                                                : (isCurrentTimeSlot && slot.activities.length === 0 ? 'transparent' : slot.color),
-                                                            boxShadow: isCurrentTimeSlot ? '0 0 0 2px var(--bg-primary), 0 0 0 4px var(--pos-today-border)' : undefined
+                                                                : slot.color
                                                         }}
                                                         onMouseEnter={(e) => {
                                                             if (!isCurrentTimeSlot) {
@@ -337,7 +336,7 @@ export function GridPage() {
                                                             </div>
                                                         )}
                                                         {isCurrentTimeSlot && (
-                                                            <div className="absolute inset-0 rounded-[4px] pointer-events-none" style={{ backgroundColor: 'var(--pos-today-bg)' }} />
+                                                            <div className="absolute inset-0 rounded-[4px] pointer-events-none" style={{ boxShadow: '0 0 0 2px var(--pos-today-border)' }} />
                                                         )}
                                                     </td>
                                                 );

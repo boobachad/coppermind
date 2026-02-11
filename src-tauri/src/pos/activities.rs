@@ -28,6 +28,7 @@ pub struct ActivityRow {
 // ─── Request/Response types ─────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateActivityRequest {
     pub start_time: String,       // ISO 8601 from frontend
     pub end_time: String,         // ISO 8601 from frontend
@@ -39,6 +40,7 @@ pub struct CreateActivityRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MetricUpdate {
     pub metric_id: String,
     pub value: i32,

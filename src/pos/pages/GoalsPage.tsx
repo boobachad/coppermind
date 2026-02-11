@@ -72,10 +72,12 @@ export function GoalsPage() {
             const frequency = selectedDays.length > 0 ? selectedDays.join(',') : undefined;
 
             await invoke('create_goal', {
-                date,
-                description,
-                problemId: problemId || undefined,
-                frequency,
+                req: {
+                    date,
+                    description,
+                    problemId: problemId || undefined,
+                    frequency,
+                }
             });
 
             setDescription('');

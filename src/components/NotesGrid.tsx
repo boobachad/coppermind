@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/db';
+import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -147,17 +148,16 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   const loadNotes = async () => {
     try {
       const db = await getDb();
-      const allNotes = await db.select<Note[]>('SELECT * FROM notes');
-      const filteredNotes = allNotes
-        .filter(n => parentId ? n.parent_id === parentId : !n.parent_id)
-        .sort((a, b) => {
-          // Sort by position if available, otherwise by updated_at desc
-          if (a.position !== undefined && b.position !== undefined && a.position !== b.position) {
-            return a.position - b.position;
-          }
-          return b.updated_at - a.updated_at;
-        });
+      // Direct query with proper filtering - same as Sidebar
+      const filteredNotes = await db.select<Note[]>(
+        parentId 
+          ? 'SELECT * FROM notes WHERE parent_id = $1 ORDER BY position ASC, updated_at DESC'
+          : 'SELECT * FROM notes WHERE parent_id IS NULL ORDER BY position ASC, updated_at DESC',
+        parentId ? [parentId] : []
+      );
 
+      // Get nested counts
+      const allNotes = await db.select<Note[]>('SELECT id, parent_id FROM notes');
       const notesWithCounts = filteredNotes.map(note => ({
         ...note,
         nestedCount: allNotes.filter(n => n.parent_id === note.id).length
@@ -205,20 +205,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     try {
-      const db = await getDb();
-      // Delete note and its children (cascade should handle it if set up, but safe to do recursive if needed. 
-      // Current DB schema has FOREIGN KEY but let's just delete the note. 
-      // The user just said "Delete note".
-      await db.execute('DELETE FROM notes WHERE id = $1', [deleteConfirm]);
-
-      // Also delete sticky notes associated with it? 
-      // Schema says: FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
-      // So stickies are safe.
-
-      // Nested notes? Schema doesn't have CASCADE for parent_id. 
-      // Ideally we should delete children too or orphan them.
-      // For now, let's just delete the note.
-
+      await softDelete('notes', deleteConfirm);
       setDeleteConfirm(null);
       loadNotes();
       window.dispatchEvent(new Event('notes-updated'));

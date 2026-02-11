@@ -70,12 +70,14 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
             const end = new Date(`${date}T${endTime}:00`);
 
             await invoke('create_activity', {
-                startTime: start.toISOString(),
-                endTime: end.toISOString(),
-                category,
-                description,
-                isProductive,
-                goalId: selectedGoalId === 'none' ? null : selectedGoalId,
+                req: {
+                    startTime: start.toISOString(),
+                    endTime: end.toISOString(),
+                    category,
+                    description,
+                    isProductive,
+                    goalId: selectedGoalId === 'none' ? null : selectedGoalId,
+                }
             });
 
             // Update metrics if any

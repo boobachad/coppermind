@@ -79,6 +79,7 @@ pub struct GoalWithDetails {
 // ─── Request types ──────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateGoalRequest {
     pub date: Option<String>,        // YYYY-MM-DD (required for one-off)
     pub description: String,
@@ -88,6 +89,7 @@ pub struct CreateGoalRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MetricInput {
     pub label: Option<String>,
     pub target_value: i32,

@@ -47,6 +47,10 @@ const TABLES: TableDef[] = [
         name: "journal_entries",
         columns: ["id", "date", "expected_schedule_image", "actual_schedule_image", "reflection_text", "expected_schedule_data", "actual_schedule_data", "created_at", "updated_at"],
     },
+    {
+        name: "deleted_items",
+        columns: ["id", "table_name", "deleted_at"],
+    },
 ];
 
 // ─── PG DDL (mirror SQLite schema) ──────────────────────────────
@@ -110,13 +114,30 @@ const PG_CREATE_TABLES = [
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS deleted_items (
+        id TEXT PRIMARY KEY,
+        table_name TEXT NOT NULL,
+        deleted_at BIGINT NOT NULL
+    )`,
 ];
 
 
 // ─── Core Sync ──────────────────────────────────────────────────
 // ─── Bidirectional Sync: PostgreSQL as Source of Truth ──────────
-async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed: number; pulled: number }> {
-    if (!pgDb) return { pushed: 0, pulled: 0 };
+async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed: number; pulled: number; deleted: number }> {
+    if (!pgDb) return { pushed: 0, pulled: 0, deleted: 0 };
+
+    // Special handling for deleted_items table
+    if (table.name === 'deleted_items') {
+        return await syncDeletions(sqliteDb);
+    }
+
+    // Get local tombstones to filter out deleted items
+    const tombstones = await sqliteDb.select<{ id: string; table_name: string }[]>(
+        'SELECT id, table_name FROM deleted_items WHERE table_name = ?',
+        [table.name]
+    );
+    const deletedIds = new Set(tombstones.map(t => t.id));
 
     // PHASE 1: Pull from PostgreSQL (PostgreSQL is source of truth)
     const pgRows = await pgDb.select<Record<string, unknown>[]>(
@@ -126,6 +147,13 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
     let pulledCount = 0;
     if (pgRows.length > 0) {
         for (const pgRow of pgRows) {
+            const rowId = String(pgRow.id);
+            
+            // Skip if locally deleted
+            if (deletedIds.has(rowId)) {
+                continue;
+            }
+
             const nonNullCols: string[] = [];
             const nonNullValues: unknown[] = [];
 
@@ -133,27 +161,20 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
                 const val = pgRow[col];
                 if (val !== undefined && val !== null) {
                     nonNullCols.push(col);
-                    // Parse JSON strings back to objects if needed
                     if (typeof val === 'string' && (col === 'data' || col === 'source_urls' || col === 'labels' || col.includes('_data'))) {
-                        try {
-                            nonNullValues.push(val); // Keep as string for SQLite TEXT columns
-                        } catch {
-                            nonNullValues.push(val);
-                        }
+                        nonNullValues.push(val);
                     } else {
                         nonNullValues.push(val);
                     }
                 }
             });
 
-            // Upsert into SQLite (replace if exists)
             const placeholders = nonNullCols.map(() => '?').join(", ");
             const updateSet = nonNullCols
                 .filter(col => col !== "id")
                 .map(col => `${col} = excluded.${col}`)
                 .join(", ");
 
-            // Special handling for journal_entries: use date as conflict target
             const conflictTarget = table.name === 'journal_entries' ? 'date' : 'id';
             const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT(${conflictTarget}) DO UPDATE SET ${updateSet}`;
 
@@ -169,7 +190,6 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
 
     let pushedCount = 0;
     if (sqliteRows.length > 0) {
-        // Build map of PG rows for O(1) lookup
         const pgRowMap = new Map<string, Record<string, unknown>>();
         pgRows.forEach(row => {
             const key = table.name === 'journal_entries' ? String(row.date) : String(row.id);
@@ -180,10 +200,9 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
             const key = table.name === 'journal_entries' ? String(sqliteRow.date) : String(sqliteRow.id);
             const pgRow = pgRowMap.get(key);
 
-            // Skip if exists in PG and has same or newer updated_at
             if (pgRow && sqliteRow.updated_at && pgRow.updated_at) {
                 if (Number(pgRow.updated_at) >= Number(sqliteRow.updated_at)) {
-                    continue; // PG version is newer or same, skip push
+                    continue;
                 }
             }
 
@@ -194,7 +213,6 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
                 const val = sqliteRow[col];
                 if (val !== undefined && val !== null) {
                     nonNullCols.push(col);
-                    // Stringify objects/arrays for TEXT columns
                     if (typeof val === 'object') {
                         nonNullValues.push(JSON.stringify(val));
                     } else {
@@ -203,17 +221,15 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
                 }
             });
 
-            // Build upsert with only non-null columns
-            const placeholders = nonNullCols.map((_, i) => `${i + 1}`).join(", ");
+            const placeholders = nonNullCols.map((_, i) => `$${i + 1}`).join(", ");
             const updateSet = nonNullCols
                 .filter(col => col !== "id")
                 .map((col) => {
                     const idx = nonNullCols.indexOf(col) + 1;
-                    return `${col} = ${idx}`;
+                    return `${col} = $${idx}`;
                 })
                 .join(", ");
 
-            // Special handling for journal_entries: use date as conflict target
             const conflictTarget = table.name === 'journal_entries' ? 'date' : 'id';
             const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT (${conflictTarget}) DO UPDATE SET ${updateSet}`;
 
@@ -223,7 +239,62 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
     }
 
     console.log(`[PgSync] ${table.name}: ${pulledCount} pulled, ${pushedCount} pushed`);
-    return { pushed: pushedCount, pulled: pulledCount };
+    return { pushed: pushedCount, pulled: pulledCount, deleted: 0 };
+}
+
+// Sync deletions: push tombstones to PG, then delete from PG tables
+async function syncDeletions(sqliteDb: Database): Promise<{ pushed: number; pulled: number; deleted: number }> {
+    if (!pgDb) return { pushed: 0, pulled: 0, deleted: 0 };
+
+    // PHASE 1: Pull tombstones from PostgreSQL
+    const pgTombstones = await pgDb.select<{ id: string; table_name: string; deleted_at: number }[]>(
+        'SELECT id, table_name, deleted_at FROM deleted_items'
+    );
+
+    let pulledCount = 0;
+    for (const tomb of pgTombstones) {
+        await sqliteDb.execute(
+            'INSERT OR REPLACE INTO deleted_items (id, table_name, deleted_at) VALUES (?, ?, ?)',
+            [tomb.id, tomb.table_name, tomb.deleted_at]
+        );
+        
+        // Delete from local table
+        await sqliteDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = ?`, [tomb.id]);
+        pulledCount++;
+    }
+
+    // PHASE 2: Push local tombstones to PostgreSQL
+    const localTombstones = await sqliteDb.select<{ id: string; table_name: string; deleted_at: number }[]>(
+        'SELECT id, table_name, deleted_at FROM deleted_items'
+    );
+
+    let pushedCount = 0;
+    let deletedCount = 0;
+    
+    for (const tomb of localTombstones) {
+        // Insert tombstone into PG
+        await pgDb.execute(
+            'INSERT INTO deleted_items (id, table_name, deleted_at) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
+            [tomb.id, tomb.table_name, tomb.deleted_at]
+        );
+        pushedCount++;
+
+        // Delete from PG table
+        try {
+            await pgDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = $1`, [tomb.id]);
+            deletedCount++;
+        } catch (e) {
+            // Item may not exist in PG, that's fine
+        }
+    }
+
+    // PHASE 3: Cleanup old tombstones (>30 days)
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    await sqliteDb.execute('DELETE FROM deleted_items WHERE deleted_at < ?', [thirtyDaysAgo]);
+    await pgDb.execute('DELETE FROM deleted_items WHERE deleted_at < $1', [thirtyDaysAgo]);
+
+    console.log(`[PgSync] deleted_items: ${pulledCount} pulled, ${pushedCount} pushed, ${deletedCount} deleted from PG`);
+    return { pushed: pushedCount, pulled: pulledCount, deleted: deletedCount };
 }
 
 export async function syncAllTables(): Promise<void> {
