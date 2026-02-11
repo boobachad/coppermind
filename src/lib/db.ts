@@ -318,6 +318,19 @@ export const initDb = async () => {
     await addCol('sticky_notes', 'rotation', 'REAL');
     await addCol('sticky_notes', 'scale', 'REAL');
 
+    // Journal Entries Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS journal_entries (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL UNIQUE,
+        expected_schedule_image TEXT NOT NULL DEFAULT '',
+        actual_schedule_image TEXT NOT NULL DEFAULT '',
+        reflection_text TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+
     console.log("Database initialized (SQLite)");
     return db;
 

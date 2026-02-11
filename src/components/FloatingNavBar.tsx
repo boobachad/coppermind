@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FileText, CheckSquare, Share2 } from 'lucide-react';
+import { FileText, CheckSquare, Share2, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 import { useEffect, useState, useRef } from 'react';
 
@@ -65,6 +65,14 @@ export function FloatingNavBar() {
         >
           <Share2 className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-medium">Nodes</span>
+        </NavLink>
+
+        <NavLink
+          to="/journal"
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-themed-text-secondary hover:text-themed-text-primary")}
+        >
+          <BookOpen className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px] font-medium">Journal</span>
         </NavLink>
       </div>
     </div>

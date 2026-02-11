@@ -4,17 +4,17 @@ import {
   MiniMap,
   Controls,
   Background,
+  BackgroundVariant,
   useNodesState,
   useEdgesState,
   addEdge,
-  Connection,
-  Edge,
-  Node,
-  NodeTypes,
+  useReactFlow,
   Handle,
   Position,
-  BackgroundVariant,
-  useReactFlow,
+  type Connection,
+  type Edge,
+  type Node,
+  type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
@@ -215,12 +215,12 @@ export function NodesPage() {
   }, [db]);
 
   const onConnect = useCallback((params: Connection | Edge) => {
-    setEdges((eds) => addEdge(params, eds));
+    setEdges((eds: Edge[]) => addEdge(params, eds));
     // Save edge to DB
     if (db) {
       const edge = { ...params, id: uuidv4() };
       db.execute(
-        'INSERT INTO edges (id, source, target, type, created_at) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO edges (id, source, target, type, created_at) VALUES (?, ?, ?, ?)',
         [edge.id, edge.source, edge.target, 'default', Date.now()]
       );
     }
@@ -245,7 +245,7 @@ export function NodesPage() {
         ...data
       },
     };
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds: Node[]) => [...nds, newNode]);
     saveNode(newNode);
   }, [setNodes, saveNode]);
 
@@ -292,8 +292,8 @@ export function NodesPage() {
   );
 
   const updateNodeData = (id: string, data: any) => {
-    setNodes((nds) =>
-      nds.map((node) => {
+    setNodes((nds: Node[]) =>
+      nds.map((node: Node) => {
         if (node.id === id) {
           return { ...node, data: { ...node.data, ...data } };
         }

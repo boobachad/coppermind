@@ -292,6 +292,8 @@ pub fn run() {
             });
             
             log::info!("[POS] Step 4: Async spawn initiated, continuing with app setup");
+
+            log::info!("[JOURNAL] Step 2: Async spawn initiated");
             
             Ok(())
         })

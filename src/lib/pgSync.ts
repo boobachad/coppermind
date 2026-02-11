@@ -43,6 +43,10 @@ const TABLES: TableDef[] = [
         name: "edges",
         columns: ["id", "source", "target", "type", "created_at"],
     },
+    {
+        name: "journal_entries",
+        columns: ["id", "date", "expected_schedule_image", "actual_schedule_image", "reflection_text", "created_at", "updated_at"],
+    },
 ];
 
 // ─── PG DDL (mirror SQLite schema) ──────────────────────────────
@@ -94,6 +98,15 @@ const PG_CREATE_TABLES = [
         target TEXT,
         type TEXT,
         created_at BIGINT
+    )`,
+    `CREATE TABLE IF NOT EXISTS journal_entries (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL UNIQUE,
+        expected_schedule_image TEXT NOT NULL DEFAULT '',
+        actual_schedule_image TEXT NOT NULL DEFAULT '',
+        reflection_text TEXT NOT NULL DEFAULT '',
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL
     )`,
 ];
 

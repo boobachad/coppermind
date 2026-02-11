@@ -12,6 +12,8 @@ import { GoalsPage } from './pos/pages/GoalsPage';
 import { HomePage } from './pos/pages/HomePage';
 import { SheetsPage } from './pos/pages/SheetsPage';
 import { DailyPage } from './pos/pages/DailyPage';
+import JournalPage from './journal/pages/JournalPage';
+import EntryPage from './journal/pages/EntryPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -48,6 +50,8 @@ function App() {
             <Route path="pos/grid/:date" element={<DailyPage />} />
             <Route path="pos/goals" element={<GoalsPage />} />
             <Route path="pos/sheets" element={<SheetsPage />} />
+            <Route path="journal" element={<JournalPage />} />
+            <Route path="journal/:date" element={<EntryPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
