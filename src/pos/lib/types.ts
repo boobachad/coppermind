@@ -27,7 +27,7 @@ export interface Submission {
     platform: string;
     problemId: string;
     problemTitle: string;
-    submittedTime: string;     // ISO 8601 UTC
+    submittedTime: string;     // ISO 8601 UTC (camelCase from Rust serde rename_all)
     verdict: string;
     language: string;
     rating: number | null;
@@ -74,6 +74,7 @@ export interface RecurringGoalMetric {
 
 export interface DebtGoal {
     id: string;
+    goalId: string;            // FK to pos_goals
     originalDate: string;      // YYYY-MM-DD
     description: string;
     problemId: string | null;
@@ -83,9 +84,17 @@ export interface DebtGoal {
 
 // ─── Composite response types ───────────────────────────────────
 
-export interface GoalWithDetails extends Goal {
+export interface GoalWithDetails {
+    id: string;
+    date: string;
+    description: string;
+    problemId: string | null;
+    isVerified: boolean;
+    recurringGoalId: string | null;
+    createdAt: string;
     metrics: GoalMetric[];
     activities: Activity[];
+    recurringGoal: RecurringGoal | null;
 }
 
 export interface ActivityDateMetrics {

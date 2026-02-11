@@ -1,39 +1,29 @@
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
-
-// Get user's timezone
-function getUserTimezone(): string {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function formatDateDDMMYYYY(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
-// Convert UTC timestamp to local timezone
-export function utcToLocal(utcDate: Date): Date {
-    return toZonedTime(utcDate, getUserTimezone());
+export function formatTime(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-// Format UTC date for display in local timezone
-export function formatLocal(
-    utcDate: Date,
-    formatStr: string = 'yyyy-MM-dd HH:mm:ss'
-): string {
-    return formatInTimeZone(utcDate, getUserTimezone(), formatStr);
+export function getLocalDateString(): string {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
 }
 
-// Format date as DD/MM/YYYY (user requirement)
-export function formatDateDDMMYYYY(utcDate: Date): string {
-    return formatInTimeZone(utcDate, getUserTimezone(), 'dd/MM/yyyy');
+export function formatSlotTime(slotIndex: number): string {
+    const totalMinutes = slotIndex * 30;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-// Format time as HH:mm
-export function formatTime(utcDate: Date): string {
-    return formatInTimeZone(utcDate, getUserTimezone(), 'HH:mm');
-}
-
-// Get local date string (YYYY-MM-DD) from user's perspective
-export function getLocalDateString(date: Date = new Date()): string {
-    return formatInTimeZone(date, getUserTimezone(), 'yyyy-MM-dd');
-}
-
-// Parse user input (local time) to UTC for DB storage
-export function localToUTC(localDate: Date): Date {
-    return new Date(localDate.toISOString());
+export function getDayName(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
 }

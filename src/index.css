@@ -53,6 +53,26 @@
   --color-themed-text-primary: var(--text-primary);
   --color-themed-text-secondary: var(--text-secondary);
   --color-themed-border: var(--border-color);
+  
+  /* POS Activity Colors - Register for inline style usage */
+  --color-pos-activity-coding: var(--pos-activity-coding);
+  --color-pos-activity-coding-leetcode: var(--pos-activity-coding-leetcode);
+  --color-pos-activity-coding-codeforces: var(--pos-activity-coding-codeforces);
+  --color-pos-activity-cpp: var(--pos-activity-cpp);
+  --color-pos-activity-sleep: var(--pos-activity-sleep);
+  --color-pos-activity-book: var(--pos-activity-book);
+  --color-pos-activity-real-projects: var(--pos-activity-real-projects);
+  --color-pos-activity-exercise: var(--pos-activity-exercise);
+  --color-pos-activity-college: var(--pos-activity-college);
+  --color-pos-activity-food: var(--pos-activity-food);
+  --color-pos-activity-family: var(--pos-activity-family);
+  --color-pos-activity-entertainment: var(--pos-activity-entertainment);
+  --color-pos-activity-commute: var(--pos-activity-commute);
+  --color-pos-activity-misc: var(--pos-activity-misc);
+  --color-pos-activity-ncc: var(--pos-activity-ncc);
+  --color-pos-activity-side-projects: var(--pos-activity-side-projects);
+  --color-pos-activity-surfing: var(--pos-activity-surfing);
+  --color-pos-activity-fallback: var(--pos-activity-fallback);
 }
 
 :root {
@@ -116,6 +136,130 @@
   --text-primary: #E5E7EB;
   --text-secondary: #9CA3AF;
   --border-color: #2A2D31;
+  
+  /* POS-specific colors */
+  --pos-slot-empty: #1e293b;
+  --pos-segment-empty: #1e293b;
+  --pos-activity-fallback: #334155;
+  --pos-goal-accent: #f59e0b;
+  
+  /* Activity category colors - Dark theme */
+  --pos-activity-coding: #3b82f6;
+  --pos-activity-coding-leetcode: #0ea5e9;
+  --pos-activity-coding-codeforces: #14b8a6;
+  --pos-activity-cpp: #06b6d4;
+  --pos-activity-sleep: #71717a;
+  --pos-activity-book: #d97706;
+  --pos-activity-real-projects: #3b82f6;
+  --pos-activity-exercise: #dc2626;
+  --pos-activity-college: #6366f1;
+  --pos-activity-food: #10b981;
+  --pos-activity-family: #ec4899;
+  --pos-activity-entertainment: #8b5cf6;
+  --pos-activity-commute: #14b8a6;
+  --pos-activity-misc: #94a3b8;
+  --pos-activity-ncc: #f59e0b;
+  --pos-activity-side-projects: #a855f7;
+  --pos-activity-surfing: #64748b;
+  
+  /* Semantic status colors - Dark theme */
+  --pos-success-bg: #14532d;
+  --pos-success-border: #15803d;
+  --pos-success-text: #4ade80;
+  
+  --pos-warning-bg: #78350f;
+  --pos-warning-border: #b45309;
+  --pos-warning-text: #fbbf24;
+  
+  --pos-error-bg: #7f1d1d;
+  --pos-error-border: #991b1b;
+  --pos-error-text: #f87171;
+  
+  --pos-info-bg: #1e3a8a;
+  --pos-info-border: #2563eb;
+  --pos-info-text: #60a5fa;
+  
+  --pos-productive-bg: #14532d;
+  --pos-productive-text: #86efac;
+  
+  --pos-shadow-bg: #1e3a8a;
+  --pos-shadow-text: #93c5fd;
+  
+  --pos-goal-link-bg: #78350f;
+  --pos-goal-link-border: #d97706;
+  --pos-goal-link-text: #fcd34d;
+  
+  --pos-debt-bg: #450a0a;
+  --pos-debt-border: #7f1d1d;
+  --pos-debt-text: #fca5a5;
+  
+  --pos-today-bg: #1e3a8a;
+  --pos-today-border: #3b82f6;
+  --pos-today-text: #60a5fa;
+}
+
+:root,
+[data-theme="solarized-light"],
+[data-theme="blue-light"] {
+  /* POS-specific colors for light themes */
+  --pos-slot-empty: #e2e8f0;
+  --pos-segment-empty: #e2e8f0;
+  --pos-activity-fallback: #94a3b8;
+  --pos-goal-accent: #d97706;
+  
+  /* Activity category colors - Light theme (darker for contrast) */
+  --pos-activity-coding: #1e40af;
+  --pos-activity-coding-leetcode: #0369a1;
+  --pos-activity-coding-codeforces: #0f766e;
+  --pos-activity-cpp: #155e75;
+  --pos-activity-sleep: #52525b;
+  --pos-activity-book: #92400e;
+  --pos-activity-real-projects: #1e40af;
+  --pos-activity-exercise: #991b1b;
+  --pos-activity-college: #3730a3;
+  --pos-activity-food: #065f46;
+  --pos-activity-family: #9d174d;
+  --pos-activity-entertainment: #5b21b6;
+  --pos-activity-commute: #115e59;
+  --pos-activity-misc: #475569;
+  --pos-activity-ncc: #854d0e;
+  --pos-activity-side-projects: #86198f;
+  --pos-activity-surfing: #334155;
+  
+  /* Semantic status colors - Light theme */
+  --pos-success-bg: #dcfce7;
+  --pos-success-border: #16a34a;
+  --pos-success-text: #15803d;
+  
+  --pos-warning-bg: #fef3c7;
+  --pos-warning-border: #d97706;
+  --pos-warning-text: #92400e;
+  
+  --pos-error-bg: #fee2e2;
+  --pos-error-border: #dc2626;
+  --pos-error-text: #991b1b;
+  
+  --pos-info-bg: #dbeafe;
+  --pos-info-border: #2563eb;
+  --pos-info-text: #1e40af;
+  
+  --pos-productive-bg: #dcfce7;
+  --pos-productive-text: #15803d;
+  
+  --pos-shadow-bg: #dbeafe;
+  --pos-shadow-text: #1e40af;
+  
+  --pos-goal-link-bg: #fef3c7;
+  --pos-goal-link-border: #d97706;
+  --pos-goal-link-text: #92400e;
+  
+  --pos-debt-bg: #fee2e2;
+  --pos-debt-border: #dc2626;
+  --pos-debt-text: #991b1b;
+  
+  --pos-today-bg: #dbeafe;
+  --pos-today-border: #2563eb;
+  --pos-today-text: #1e40af;
 }
 
 html,

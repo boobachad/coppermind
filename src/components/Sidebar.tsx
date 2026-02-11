@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, CheckSquare, Settings, Plus, Share2, Trash2 } from 'lucide-react';
+import { FileText, CheckSquare, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { Note } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -78,6 +78,34 @@ export function Sidebar() {
         >
           <Share2 className="mr-3 h-4 w-4" />
           Graph
+        </NavLink>
+        <NavLink
+          to="/pos"
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+        >
+          <Box className="mr-3 h-4 w-4" />
+          POS
+        </NavLink>
+        <NavLink
+          to="/pos/grid"
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+        >
+          <Grid3x3 className="mr-3 h-4 w-4" />
+          POS Grid
+        </NavLink>
+        <NavLink
+          to="/pos/goals"
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+        >
+          <Target className="mr-3 h-4 w-4" />
+          POS Goals
+        </NavLink>
+        <NavLink
+          to="/pos/sheets"
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+        >
+          <FileSpreadsheet className="mr-3 h-4 w-4" />
+          POS Sheets
         </NavLink>
       </div>
 

@@ -6,6 +6,12 @@ import { NewNotePage } from './pages/NewNotePage';
 import { TodosPage } from './pages/TodosPage';
 import { NodesPage } from './pages/NodesPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { NotFoundPage } from './pages/404';
+import { GridPage } from './pos/pages/GridPage';
+import { GoalsPage } from './pos/pages/GoalsPage';
+import { HomePage } from './pos/pages/HomePage';
+import { SheetsPage } from './pos/pages/SheetsPage';
+import { DailyPage } from './pos/pages/DailyPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -37,7 +43,13 @@ function App() {
             <Route path="notes/:id" element={<NotePage />} />
             <Route path="todos" element={<TodosPage />} />
             <Route path="nodes" element={<NodesPage />} />
+            <Route path="pos" element={<HomePage />} />
+            <Route path="pos/grid" element={<GridPage />} />
+            <Route path="pos/grid/:date" element={<DailyPage />} />
+            <Route path="pos/goals" element={<GoalsPage />} />
+            <Route path="pos/sheets" element={<SheetsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,5 +1,6 @@
 // Activity categories
 export const ACTIVITY_CATEGORIES = {
+    CODING: 'coding',
     CODING_LEETCODE: 'coding_leetcode',
     CODING_CODEFORCES: 'coding_codeforces',
     SLEEP: 'sleep',
@@ -10,46 +11,47 @@ export const ACTIVITY_CATEGORIES = {
     COLLEGE: 'college',
     FOOD: 'food',
     FAMILY: 'family',
-    ENTERTAINMENT: 'entertainment', // Movies/Shows/Social Media
+    ENTERTAINMENT: 'entertainment',
     COMMUTE: 'commute',
     MISC: 'misc',
     NCC: 'ncc',
     SIDE_PROJECTS: 'side_projects',
-    SURFING: 'surfing', // Unclassified web browsing
+    SURFING: 'surfing',
 } as const;
 
 export type ActivityCategory = typeof ACTIVITY_CATEGORIES[keyof typeof ACTIVITY_CATEGORIES];
 
-// Color palette for activities (Dark Toned / Muted for Dark Mode)
+// Activity colors - CSS variables for theme-aware rendering
 export const ACTIVITY_COLORS: Record<string, string> = {
-    coding_leetcode: '#0369a1', // Sky-700
-    coding_codeforces: '#0f766e', // Teal-700
-    cpp: '#155e75',            // Cyan-800
-    sleep: '#52525b',          // Zinc-600
-    book: '#92400e',           // Amber-800
-    real_projects: '#1e40af',  // Blue-800
-    exercise: '#991b1b',       // Red-800
-    college: '#3730a3',        // Indigo-800
-    food: '#065f46',           // Emerald-800
-    family: '#9d174d',         // Pink-800
-    entertainment: '#5b21b6',  // Violet-800
-    commute: '#115e59',        // Teal-800
-    misc: '#64748b',           // Slate-500
-    ncc: '#854d0e',            // Yellow-800
-    side_projects: '#86198f',  // Fuchsia-800
-    surfing: '#475569',        // Slate-600
-
-    // Legacy Categories (for backward compatibility)
-    coding: '#1e40af',
-    maintenance: '#334155',
-    learning: '#92400e',
-    browsing: '#475569',
+    coding: 'var(--pos-activity-coding)',
+    coding_leetcode: 'var(--pos-activity-coding-leetcode)',
+    coding_codeforces: 'var(--pos-activity-coding-codeforces)',
+    cpp: 'var(--pos-activity-cpp)',
+    sleep: 'var(--pos-activity-sleep)',
+    book: 'var(--pos-activity-book)',
+    real_projects: 'var(--pos-activity-real-projects)',
+    exercise: 'var(--pos-activity-exercise)',
+    college: 'var(--pos-activity-college)',
+    food: 'var(--pos-activity-food)',
+    family: 'var(--pos-activity-family)',
+    entertainment: 'var(--pos-activity-entertainment)',
+    commute: 'var(--pos-activity-commute)',
+    misc: 'var(--pos-activity-misc)',
+    ncc: 'var(--pos-activity-ncc)',
+    side_projects: 'var(--pos-activity-side-projects)',
+    surfing: 'var(--pos-activity-surfing)',
 };
 
-// Accent color for goal-linked activities
-export const GOAL_ACCENT_COLOR = '#f59e0b'; // Amber-500
+// Helper to get activity color with fallback
+export const getActivityColor = (category: string): string => {
+    const color = ACTIVITY_COLORS[category] || 'var(--pos-activity-fallback)';
+    // Debug: log missing categories
+    if (!ACTIVITY_COLORS[category]) {
+        console.warn(`[POS] Unknown activity category: "${category}", using fallback`);
+    }
+    return color;
+};
 
-// Platforms
 export const PLATFORMS = {
     LEETCODE: 'leetcode',
     CODEFORCES: 'codeforces',
