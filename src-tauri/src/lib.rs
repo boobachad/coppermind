@@ -11,6 +11,9 @@ mod pos;
 /// Wrapper for PG pool stored in Tauri managed state
 pub struct PosDb(pub sqlx::PgPool);
 
+/// Wrapper for POS configuration stored in Tauri managed state
+pub struct PosConfig(pub pos::config::PosConfig);
+
 /// Double-tap threshold in milliseconds
 const DOUBLE_TAP_MS: u64 = 300;
 
@@ -216,30 +219,58 @@ pub fn run() {
             // Start keyboard listener for double-shift detection
             start_keyboard_listener(app.handle().clone());
 
-            // ─── POS: Initialize PostgreSQL connection pool ───────────
-            let db_url = std::env::var("POS_DATABASE_URL")
-                .or_else(|_| std::env::var("VITE_DATABASE_URL"))
-                .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/coppermind".to_string());
+            // ─── POS: Load and validate configuration ─────────────────
+            let pos_config = match pos::config::PosConfig::from_env() {
+                Ok(cfg) => {
+                    log::info!("[POS Config] Loaded successfully");
+                    cfg
+                }
+                Err(e) => {
+                    log::error!("[POS Config] Validation failed: {}", e);
+                    log::error!("[POS] POS features will be unavailable");
+                    return Ok(());
+                }
+            };
 
+            let db_url = pos_config.database_url.clone();
+            let max_connections = pos_config.db_max_connections;
+            let timeout_secs = pos_config.db_connection_timeout_secs;
+            app.handle().manage(PosConfig(pos_config));
+
+            // ─── POS: Initialize PostgreSQL connection pool ───────────
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                match PgPoolOptions::new()
-                    .max_connections(5)
-                    .connect(&db_url)
-                    .await
-                {
+                // Retry connection with exponential backoff
+                let pool_result = pos::retry::retry_db_operation(
+                    || async {
+                        PgPoolOptions::new()
+                            .max_connections(max_connections)
+                            .acquire_timeout(Duration::from_secs(timeout_secs))
+                            .connect(&db_url)
+                            .await
+                    },
+                    3, // Max 3 attempts
+                ).await;
+
+                match pool_result {
                     Ok(pool) => {
-                        // Create POS tables
-                        if let Err(e) = pos::db::init_pos_tables(&pool).await {
-                            log::error!("[POS] Failed to init tables: {e}");
+                        // Create POS tables with retry
+                        let init_result = pos::retry::retry_db_operation(
+                            || pos::db::init_pos_tables(&pool),
+                            3,
+                        ).await;
+
+                        if let Err(e) = init_result {
+                            log::error!("[POS] Failed to init tables after retries: {e}");
                             return;
                         }
+                        
                         // Store pool in managed state
                         handle.manage(PosDb(pool));
                         log::info!("[POS] PostgreSQL pool ready");
                     }
                     Err(e) => {
-                        log::error!("[POS] Failed to connect to PostgreSQL: {e}");
+                        log::error!("[POS] Failed to connect to PostgreSQL after retries: {e}");
                         log::error!("[POS] POS features will be unavailable");
                     }
                 }

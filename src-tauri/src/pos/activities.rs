@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
+use super::error::{PosError, db_context};
 use super::utils::gen_id;
 
 // ─── Row type ───────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ pub struct DateRange {
 pub async fn get_activities(
     db: State<'_, PosDb>,
     date: String,
-) -> Result<ActivityResponse, String> {
+) -> Result<ActivityResponse, PosError> {
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, ActivityRow>(
@@ -78,7 +79,7 @@ pub async fn get_activities(
     .bind(&date)
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("DB error: {e}"))?;
+    .map_err(|e| db_context("get_activities", e))?;
 
     // Compute metrics in O(n) — chrono arithmetic is native, no parsing needed
     let mut total_minutes: i64 = 0;
@@ -110,28 +111,28 @@ pub async fn get_activities(
 pub async fn create_activity(
     db: State<'_, PosDb>,
     req: CreateActivityRequest,
-) -> Result<ActivityRow, String> {
+) -> Result<ActivityRow, PosError> {
     let pool = &db.0;
 
     // Parse ISO 8601 strings from frontend into chrono DateTime<Utc>
     let start: DateTime<Utc> = req.start_time.parse::<DateTime<chrono::FixedOffset>>()
         .map(|d| d.with_timezone(&Utc))
         .or_else(|_| req.start_time.parse::<DateTime<Utc>>())
-        .map_err(|e| format!("Invalid start_time: {e}"))?;
+        .map_err(|e| PosError::InvalidInput(format!("Invalid start_time: {}", e)))?;
     let end: DateTime<Utc> = req.end_time.parse::<DateTime<chrono::FixedOffset>>()
         .map(|d| d.with_timezone(&Utc))
         .or_else(|_| req.end_time.parse::<DateTime<Utc>>())
-        .map_err(|e| format!("Invalid end_time: {e}"))?;
+        .map_err(|e| PosError::InvalidInput(format!("Invalid end_time: {}", e)))?;
 
     if start >= end {
-        return Err("end_time must be after start_time".into());
+        return Err(PosError::InvalidInput("end_time must be after start_time".into()));
     }
 
     let date = start.format("%Y-%m-%d").to_string();
     let activity_id = gen_id();
     let is_productive = req.is_productive.unwrap_or(true);
 
-    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
+    let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
     // 1. Insert activity — sqlx+chrono handles DateTime<Utc> → TIMESTAMPTZ natively
     sqlx::query(
@@ -149,7 +150,7 @@ pub async fn create_activity(
     .bind(&req.goal_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| format!("Insert activity: {e}"))?;
+    .map_err(|e| db_context("insert activity", e))?;
 
     // 2. Handle metric updates
     if let Some(updates) = &req.updates {
@@ -166,7 +167,7 @@ pub async fn create_activity(
             .bind(u.value)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Insert activity_metric: {e}"))?;
+            .map_err(|e| db_context("insert activity_metric", e))?;
 
             // Increment goal metric current_value
             sqlx::query(
@@ -176,7 +177,7 @@ pub async fn create_activity(
             .bind(&u.metric_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Update goal_metric: {e}"))?;
+            .map_err(|e| db_context("update goal_metric", e))?;
         }
     }
 
@@ -186,10 +187,10 @@ pub async fn create_activity(
             .bind(gid)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Verify goal: {e}"))?;
+            .map_err(|e| db_context("verify goal", e))?;
     }
 
-    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
+    tx.commit().await.map_err(|e| db_context("TX commit", e))?;
 
     // Fetch the created activity
     let activity = sqlx::query_as::<_, ActivityRow>(
@@ -200,7 +201,7 @@ pub async fn create_activity(
     .bind(&activity_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| format!("Fetch created: {e}"))?;
+    .map_err(|e| db_context("fetch created activity", e))?;
 
     log::info!(
         "[POS] Created activity {} (goal: {:?}, metrics: {})",
@@ -219,24 +220,24 @@ pub async fn patch_activity(
     db: State<'_, PosDb>,
     id: String,
     goal_id: String,
-) -> Result<ActivityRow, String> {
+) -> Result<ActivityRow, PosError> {
     let pool = &db.0;
-    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
+    let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
     sqlx::query("UPDATE pos_activities SET goal_id = $1 WHERE id = $2")
         .bind(&goal_id)
         .bind(&id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Patch activity: {e}"))?;
+        .map_err(|e| db_context("patch activity", e))?;
 
     sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
         .bind(&goal_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Verify goal: {e}"))?;
+        .map_err(|e| db_context("verify goal", e))?;
 
-    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
+    tx.commit().await.map_err(|e| db_context("TX commit", e))?;
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, description,
@@ -246,7 +247,7 @@ pub async fn patch_activity(
     .bind(&id)
     .fetch_one(pool)
     .await
-    .map_err(|e| format!("Fetch patched: {e}"))?;
+    .map_err(|e| db_context("fetch patched activity", e))?;
 
     log::info!("[POS] Linked activity {} → goal {}", id, goal_id);
     Ok(activity)
@@ -256,7 +257,7 @@ pub async fn patch_activity(
 #[tauri::command]
 pub async fn get_activity_range(
     db: State<'_, PosDb>,
-) -> Result<DateRange, String> {
+) -> Result<DateRange, PosError> {
     let pool = &db.0;
 
     let row: (Option<String>, Option<String>) = sqlx::query_as(
@@ -264,7 +265,7 @@ pub async fn get_activity_range(
     )
     .fetch_one(pool)
     .await
-    .map_err(|e| format!("Range query: {e}"))?;
+    .map_err(|e| db_context("get activity range", e))?;
 
     Ok(DateRange {
         min_date: row.0,

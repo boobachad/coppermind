@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
+use super::error::{PosError, db_context};
 use super::utils::gen_id;
 
 // ─── Row types (native chrono for TIMESTAMPTZ) ──────────────────────
@@ -140,7 +141,7 @@ fn normalize_problem_id(problem_id: &str) -> String {
 pub async fn get_goals(
     db: State<'_, PosDb>,
     date: String,
-) -> Result<Vec<GoalWithDetails>, String> {
+) -> Result<Vec<GoalWithDetails>, PosError> {
     let pool = &db.0;
 
     // 1. Fetch existing goals for this date
@@ -150,7 +151,7 @@ pub async fn get_goals(
     .bind(&date)
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Fetch goals: {e}"))?;
+    .map_err(|e| db_context("fetch goals", e))?;
 
     // 2. Check and generate recurring goals (only if not already generated)
     let active_recurring = sqlx::query_as::<_, RecurringGoalRow>(
@@ -158,7 +159,7 @@ pub async fn get_goals(
     )
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Fetch recurring: {e}"))?;
+    .map_err(|e| db_context("fetch recurring goals", e))?;
 
     let existing_recurring_ids: std::collections::HashSet<String> = goals
         .iter()
@@ -176,7 +177,7 @@ pub async fn get_goals(
             .bind(&template.id)
             .fetch_all(pool)
             .await
-            .map_err(|e| format!("Fetch template metrics: {e}"))?;
+            .map_err(|e| db_context("fetch template metrics", e))?;
 
             // Create goal instance
             let goal_id = gen_id();
@@ -189,7 +190,7 @@ pub async fn get_goals(
             .bind(&template.id)
             .execute(pool)
             .await
-            .map_err(|e| format!("Create recurring instance: {e}"))?;
+            .map_err(|e| db_context("Create recurring instance", e))?;
 
             // Copy metrics from template to goal instance
             for tm in &template_metrics {
@@ -204,7 +205,7 @@ pub async fn get_goals(
                 .bind(&tm.unit)
                 .execute(pool)
                 .await
-                .map_err(|e| format!("Copy metric: {e}"))?;
+                .map_err(|e| db_context("Copy metric", e))?;
             }
 
             created_count += 1;
@@ -219,7 +220,7 @@ pub async fn get_goals(
         .bind(&date)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Refetch goals: {e}"))?;
+        .map_err(|e| db_context("Refetch goals", e))?;
     }
 
     // 4. Enrich each goal with metrics, activities, recurring template
@@ -231,7 +232,7 @@ pub async fn get_goals(
         .bind(&goal.id)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Fetch goal metrics: {e}"))?;
+        .map_err(|e| db_context("Fetch goal metrics", e))?;
 
         let activities = sqlx::query_as::<_, super::activities::ActivityRow>(
             r#"SELECT id, date, start_time, end_time, category, description,
@@ -241,7 +242,7 @@ pub async fn get_goals(
         .bind(&goal.id)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Fetch goal activities: {e}"))?;
+        .map_err(|e| db_context("Fetch goal activities", e))?;
 
         let recurring_goal = if let Some(ref rg_id) = goal.recurring_goal_id {
             sqlx::query_as::<_, RecurringGoalRow>(
@@ -250,7 +251,7 @@ pub async fn get_goals(
             .bind(rg_id)
             .fetch_optional(pool)
             .await
-            .map_err(|e| format!("Fetch recurring template: {e}"))?
+            .map_err(|e| db_context("Fetch recurring template", e))?
         } else {
             None
         };
@@ -273,7 +274,7 @@ pub async fn get_goals(
 pub async fn create_goal(
     db: State<'_, PosDb>,
     req: CreateGoalRequest,
-) -> Result<serde_json::Value, String> {
+) -> Result<serde_json::Value, PosError> {
     let pool = &db.0;
 
     let final_problem_id = req.problem_id.as_deref().map(normalize_problem_id);
@@ -281,7 +282,7 @@ pub async fn create_goal(
     // CASE A: Recurring Goal
     if let Some(ref frequency) = req.frequency {
         if frequency.is_empty() {
-            return Err("Frequency cannot be empty for recurring goals".into());
+            return Err(PosError::InvalidInput("Frequency cannot be empty for recurring goals".into()));
         }
 
         let rg_id = gen_id();
@@ -295,7 +296,7 @@ pub async fn create_goal(
         .bind(frequency)
         .execute(pool)
         .await
-        .map_err(|e| format!("Create recurring: {e}"))?;
+        .map_err(|e| db_context("Create recurring", e))?;
 
         // 2. Create recurring goal metrics
         let mut template_metrics = Vec::new();
@@ -313,7 +314,7 @@ pub async fn create_goal(
                 .bind(&m.unit)
                 .execute(pool)
                 .await
-                .map_err(|e| format!("Create recurring metric: {e}"))?;
+                .map_err(|e| db_context("Create recurring metric", e))?;
 
                 template_metrics.push((label.to_string(), m.target_value, m.unit.clone()));
             }
@@ -333,7 +334,7 @@ pub async fn create_goal(
                 .bind(&rg_id)
                 .execute(pool)
                 .await
-                .map_err(|e| format!("Create recurring instance: {e}"))?;
+                .map_err(|e| db_context("Create recurring instance", e))?;
 
                 for (label, target, unit) in &template_metrics {
                     let gm_id = gen_id();
@@ -347,7 +348,7 @@ pub async fn create_goal(
                     .bind(unit)
                     .execute(pool)
                     .await
-                    .map_err(|e| format!("Copy metric to instance: {e}"))?;
+                    .map_err(|e| db_context("Copy metric to instance", e))?;
                 }
             }
         }
@@ -359,7 +360,7 @@ pub async fn create_goal(
         .bind(&rg_id)
         .fetch_one(pool)
         .await
-        .map_err(|e| format!("Fetch recurring: {e}"))?;
+        .map_err(|e| db_context("Fetch recurring", e))?;
 
         let rg_metrics = sqlx::query_as::<_, RecurringGoalMetricRow>(
             "SELECT id, recurring_goal_id, label, target_value, unit FROM pos_recurring_goal_metrics WHERE recurring_goal_id = $1",
@@ -367,7 +368,7 @@ pub async fn create_goal(
         .bind(&rg_id)
         .fetch_all(pool)
         .await
-        .map_err(|e| format!("Fetch recurring metrics: {e}"))?;
+        .map_err(|e| db_context("Fetch recurring metrics", e))?;
 
         log::info!("[POS] Created recurring goal: {} (freq: {})", req.description, frequency);
         return Ok(serde_json::json!({
@@ -378,7 +379,7 @@ pub async fn create_goal(
     }
 
     // CASE B: One-off Goal
-    let date = req.date.ok_or("Date is required for one-off goals")?;
+    let date = req.date.ok_or_else(|| PosError::InvalidInput("Date is required for one-off goals".into()))?;
     let goal_id = gen_id();
 
     sqlx::query(
@@ -390,7 +391,7 @@ pub async fn create_goal(
     .bind(&final_problem_id)
     .execute(pool)
     .await
-    .map_err(|e| format!("Create goal: {e}"))?;
+    .map_err(|e| db_context("Create goal", e))?;
 
     if let Some(metrics) = &req.metrics {
         for m in metrics {
@@ -406,7 +407,7 @@ pub async fn create_goal(
             .bind(&m.unit)
             .execute(pool)
             .await
-            .map_err(|e| format!("Create goal metric: {e}"))?;
+            .map_err(|e| db_context("Create goal metric", e))?;
         }
     }
 
@@ -416,7 +417,7 @@ pub async fn create_goal(
     .bind(&goal_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| format!("Fetch goal: {e}"))?;
+    .map_err(|e| db_context("Fetch goal", e))?;
 
     let goal_metrics = sqlx::query_as::<_, GoalMetricRow>(
         "SELECT id, goal_id, label, target_value, current_value, unit FROM pos_goal_metrics WHERE goal_id = $1",
@@ -424,7 +425,7 @@ pub async fn create_goal(
     .bind(&goal_id)
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Fetch goal metrics: {e}"))?;
+    .map_err(|e| db_context("Fetch goal metrics", e))?;
 
     log::info!("[POS] Created one-off goal: {} (date: {})", req.description, date);
     Ok(serde_json::json!({
@@ -438,7 +439,7 @@ pub async fn create_goal(
 #[tauri::command]
 pub async fn get_debt_goals(
     db: State<'_, PosDb>,
-) -> Result<Vec<DebtGoalRow>, String> {
+) -> Result<Vec<DebtGoalRow>, PosError> {
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, DebtGoalRow>(
@@ -446,7 +447,7 @@ pub async fn get_debt_goals(
     )
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Fetch debt goals: {e}"))?;
+    .map_err(|e| db_context("Fetch debt goals", e))?;
 
     Ok(rows)
 }
@@ -457,7 +458,7 @@ pub async fn get_debt_goals(
 pub async fn transition_debt_goals(
     db: State<'_, PosDb>,
     before_date: String,
-) -> Result<TransitionResponse, String> {
+) -> Result<TransitionResponse, PosError> {
     let pool = &db.0;
 
     let unverified = sqlx::query_as::<_, GoalRow>(
@@ -466,7 +467,7 @@ pub async fn transition_debt_goals(
     .bind(&before_date)
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Find unverified: {e}"))?;
+    .map_err(|e| db_context("Find unverified", e))?;
 
     if unverified.is_empty() {
         return Ok(TransitionResponse {
@@ -476,7 +477,7 @@ pub async fn transition_debt_goals(
     }
 
     let count = unverified.len() as i32;
-    let mut tx = pool.begin().await.map_err(|e| format!("TX begin: {e}"))?;
+    let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
     for g in &unverified {
         let dg_id = gen_id();
@@ -489,7 +490,7 @@ pub async fn transition_debt_goals(
         .bind(&g.problem_id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Insert debt goal: {e}"))?;
+        .map_err(|e| db_context("Insert debt goal", e))?;
     }
 
     // Delete original goals (CASCADE removes goal_metrics via FK)
@@ -498,10 +499,10 @@ pub async fn transition_debt_goals(
             .bind(&g.id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Delete goal: {e}"))?;
+            .map_err(|e| db_context("Delete goal", e))?;
     }
 
-    tx.commit().await.map_err(|e| format!("TX commit: {e}"))?;
+    tx.commit().await.map_err(|e| db_context("TX commit", e))?;
 
     log::info!("[POS] Transitioned {} goals to DebtGoals (before {})", count, before_date);
     Ok(TransitionResponse {
@@ -515,7 +516,7 @@ pub async fn transition_debt_goals(
 pub async fn resolve_debt_goal(
     db: State<'_, PosDb>,
     id: String,
-) -> Result<bool, String> {
+) -> Result<bool, PosError> {
     let pool = &db.0;
 
     let exists: Option<(String,)> = sqlx::query_as(
@@ -524,17 +525,17 @@ pub async fn resolve_debt_goal(
     .bind(&id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| format!("Check debt goal: {e}"))?;
+    .map_err(|e| db_context("Check debt goal", e))?;
 
     if exists.is_none() {
-        return Err(format!("Debt goal {} not found", id));
+        return Err(PosError::NotFound(format!("Debt goal {} not found", id)));
     }
 
     sqlx::query("UPDATE pos_debt_goals SET resolved_at = NOW() WHERE id = $1")
         .bind(&id)
         .execute(pool)
         .await
-        .map_err(|e| format!("Resolve debt goal: {e}"))?;
+        .map_err(|e| db_context("Resolve debt goal", e))?;
 
     log::info!("[POS] Resolved DebtGoal {}", id);
     Ok(true)

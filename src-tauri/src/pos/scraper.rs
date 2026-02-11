@@ -2,7 +2,8 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::PosDb;
+use crate::{PosDb, PosConfig};
+use super::error::{PosError, db_context};
 use super::shadow::{self, ShadowInput};
 use super::utils::gen_id;
 
@@ -97,10 +98,11 @@ struct CodeforcesProblem {
 #[tauri::command]
 pub async fn scrape_leetcode(
     db: State<'_, PosDb>,
-) -> Result<ScraperResponse, String> {
+    config: State<'_, PosConfig>,
+) -> Result<ScraperResponse, PosError> {
     let pool = &db.0;
-    let username = std::env::var("LEETCODE_USERNAME")
-        .map_err(|_| "LEETCODE_USERNAME not configured in environment")?;
+    let username = config.0.require_leetcode_username()
+        .map_err(|e| PosError::InvalidInput(e))?;
 
     log::info!("[LEETCODE SCRAPER] Starting sync for {}", username);
 
@@ -130,19 +132,17 @@ pub async fn scrape_leetcode(
         .header("Referer", "https://leetcode.com")
         .json(&body)
         .send()
-        .await
-        .map_err(|e| format!("LeetCode request: {e}"))?;
+        .await?;
 
     if !resp.status().is_success() {
-        return Err(format!("LeetCode API returned {}", resp.status()));
+        return Err(PosError::External(format!("LeetCode API returned {}", resp.status())));
     }
 
-    let data: LeetCodeGqlResponse = resp.json().await
-        .map_err(|e| format!("LeetCode parse: {e}"))?;
+    let data: LeetCodeGqlResponse = resp.json().await?;
 
     let submissions = data.data
         .and_then(|d| d.recent_submission_list)
-        .ok_or("Invalid response from LeetCode API")?;
+        .ok_or_else(|| PosError::External("Invalid response from LeetCode API".into()))?;
 
     let total = submissions.len() as i32;
     let mut new_count = 0i32;
@@ -156,9 +156,9 @@ pub async fn scrape_leetcode(
 
         // Parse Unix timestamp
         let ts_secs: i64 = sub.timestamp.parse()
-            .map_err(|_| format!("Invalid timestamp: {}", sub.timestamp))?;
+            .map_err(|_| PosError::InvalidInput(format!("Invalid timestamp: {}", sub.timestamp)))?;
         let submitted_time = DateTime::from_timestamp(ts_secs, 0)
-            .ok_or("Invalid Unix timestamp")?;
+            .ok_or_else(|| PosError::InvalidInput("Invalid Unix timestamp".into()))?;
         let problem_id = format!("leetcode-{}", sub.title_slug);
 
         // Idempotency: check by submitted_time (UNIQUE constraint)
@@ -168,7 +168,7 @@ pub async fn scrape_leetcode(
         .bind(submitted_time)
         .fetch_optional(pool)
         .await
-        .map_err(|e| format!("Check existing: {e}"))?;
+        .map_err(|e| db_context("Check existing", e))?;
 
         // Backfill metadata if needed
         let needs_backfill = existing.as_ref()
@@ -190,7 +190,7 @@ pub async fn scrape_leetcode(
                 .bind(id)
                 .execute(pool)
                 .await
-                .map_err(|e| format!("Backfill: {e}"))?;
+                .map_err(|e| db_context("Backfill", e))?;
             log::info!("[LEETCODE] Backfilled metadata for {}", sub.title);
             continue;
         }
@@ -212,7 +212,7 @@ pub async fn scrape_leetcode(
         .bind(&tags)
         .execute(pool)
         .await
-        .map_err(|e| format!("Insert submission: {e}"))?;
+        .map_err(|e| db_context("Insert submission", e))?;
 
         shadow_inputs.push(ShadowInput {
             submitted_time,
@@ -224,7 +224,7 @@ pub async fn scrape_leetcode(
     }
 
     // 3. Shadow-log new submissions
-    let shadow_count = shadow::process_submissions(pool, &shadow_inputs).await?;
+    let shadow_count = shadow::process_submissions(pool, &shadow_inputs, config.0.shadow_activity_minutes).await?;
 
     log::info!("[LEETCODE SCRAPER] Sync complete: {} new submissions", new_count);
     Ok(ScraperResponse {
@@ -286,31 +286,30 @@ async fn fetch_leetcode_question(client: &reqwest::Client, title_slug: &str) -> 
 #[tauri::command]
 pub async fn scrape_codeforces(
     db: State<'_, PosDb>,
-) -> Result<ScraperResponse, String> {
+    config: State<'_, PosConfig>,
+) -> Result<ScraperResponse, PosError> {
     let pool = &db.0;
-    let handle = std::env::var("CODEFORCES_HANDLE")
-        .map_err(|_| "CODEFORCES_HANDLE not configured in environment")?;
+    let handle = config.0.require_codeforces_handle()
+        .map_err(|e| PosError::InvalidInput(e))?;
 
     log::info!("[CODEFORCES SCRAPER] Starting sync for {}", handle);
 
     let client = reqwest::Client::new();
     let url = format!("https://codeforces.com/api/user.status?handle={}", handle);
 
-    let resp = client.get(&url).send().await
-        .map_err(|e| format!("Codeforces request: {e}"))?;
+    let resp = client.get(&url).send().await?;
 
     if !resp.status().is_success() {
-        return Err(format!("Codeforces API returned {}", resp.status()));
+        return Err(PosError::External(format!("Codeforces API returned {}", resp.status())));
     }
 
-    let data: CodeforcesApiResponse = resp.json().await
-        .map_err(|e| format!("Codeforces parse: {e}"))?;
+    let data: CodeforcesApiResponse = resp.json().await?;
 
     if data.status != "OK" {
-        return Err("Codeforces API returned non-OK status".into());
+        return Err(PosError::External("Codeforces API returned non-OK status".into()));
     }
 
-    let submissions = data.result.ok_or("Invalid response from Codeforces API")?;
+    let submissions = data.result.ok_or_else(|| PosError::External("Invalid response from Codeforces API".into()))?;
     let total = submissions.len() as i32;
     let mut new_count = 0i32;
     let mut shadow_inputs: Vec<ShadowInput> = Vec::new();
@@ -322,7 +321,7 @@ pub async fn scrape_codeforces(
         }
 
         let submitted_time = DateTime::from_timestamp(sub.creation_time_seconds, 0)
-            .ok_or("Invalid Unix timestamp")?;
+            .ok_or_else(|| PosError::InvalidInput("Invalid Unix timestamp".into()))?;
         let contest_id = sub.problem.contest_id.unwrap_or(0);
         let problem_id = format!("cf-{}{}", contest_id, sub.problem.index);
 
@@ -333,7 +332,7 @@ pub async fn scrape_codeforces(
         .bind(submitted_time)
         .fetch_optional(pool)
         .await
-        .map_err(|e| format!("Check existing: {e}"))?;
+        .map_err(|e| db_context("Check existing", e))?;
 
         if let Some((ref id, rating, ref tags)) = existing {
             // Backfill if metadata missing
@@ -344,7 +343,7 @@ pub async fn scrape_codeforces(
                     .bind(id)
                     .execute(pool)
                     .await
-                    .map_err(|e| format!("Backfill: {e}"))?;
+                    .map_err(|e| db_context("Backfill", e))?;
                 log::info!("[CODEFORCES] Backfilled metadata for {}", sub.problem.name);
             }
             continue;
@@ -366,7 +365,7 @@ pub async fn scrape_codeforces(
         .bind(&sub.problem.tags)
         .execute(pool)
         .await
-        .map_err(|e| format!("Insert submission: {e}"))?;
+        .map_err(|e| db_context("Insert submission", e))?;
 
         shadow_inputs.push(ShadowInput {
             submitted_time,
@@ -378,7 +377,7 @@ pub async fn scrape_codeforces(
     }
 
     // Shadow-log new submissions
-    let shadow_count = shadow::process_submissions(pool, &shadow_inputs).await?;
+    let shadow_count = shadow::process_submissions(pool, &shadow_inputs, config.0.shadow_activity_minutes).await?;
 
     log::info!("[CODEFORCES SCRAPER] Sync complete: {} new submissions", new_count);
     Ok(ScraperResponse {

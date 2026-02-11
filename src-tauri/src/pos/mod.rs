@@ -1,6 +1,9 @@
 pub mod activities;
+pub mod config;
 pub mod db;
+pub mod error;
 pub mod goals;
+pub mod retry;
 pub mod scraper;
 pub mod shadow;
 pub mod submissions;

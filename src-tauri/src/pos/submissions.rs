@@ -3,6 +3,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::PosDb;
+use super::error::{PosError, db_context};
 
 // ─── Row type ───────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ pub struct SubmissionRow {
 #[tauri::command]
 pub async fn get_submissions(
     db: State<'_, PosDb>,
-) -> Result<Vec<SubmissionRow>, String> {
+) -> Result<Vec<SubmissionRow>, PosError> {
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, SubmissionRow>(
@@ -39,7 +40,7 @@ pub async fn get_submissions(
     )
     .fetch_all(pool)
     .await
-    .map_err(|e| format!("Fetch submissions: {e}"))?;
+    .map_err(|e| db_context("get submissions", e))?;
 
     Ok(rows)
 }

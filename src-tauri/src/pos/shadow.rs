@@ -1,16 +1,8 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 
+use super::error::{PosError, db_context};
 use super::utils::gen_id;
-
-/// Shadow activity duration in minutes.
-/// Configurable via SHADOW_ACTIVITY_MINUTES env var (default 30).
-fn shadow_duration_minutes() -> i64 {
-    std::env::var("SHADOW_ACTIVITY_MINUTES")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(30)
-}
 
 /// Submission data needed by the shadow logger.
 pub struct ShadowInput {
@@ -25,8 +17,12 @@ pub struct ShadowInput {
 /// with is_shadow = TRUE, then links to any matching unverified goal (same date + problem_id).
 ///
 /// Returns the created activity ID, or None if a shadow activity already exists.
-pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Option<String>, String> {
-    let dur = Duration::minutes(shadow_duration_minutes());
+pub async fn process_shadow_log(
+    pool: &PgPool,
+    sub: &ShadowInput,
+    duration_minutes: i64,
+) -> Result<Option<String>, PosError> {
+    let dur = Duration::minutes(duration_minutes);
     let start_time = sub.submitted_time - dur;
     let end_time = sub.submitted_time;
     let date = start_time.format("%Y-%m-%d").to_string();
@@ -38,7 +34,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     .bind(end_time)
     .fetch_optional(pool)
     .await
-    .map_err(|e| format!("Shadow check: {e}"))?;
+    .map_err(|e| db_context("shadow check", e))?;
 
     if existing.is_some() {
         log::info!("[SHADOW] Activity already exists for {} submission at {}", sub.platform, end_time);
@@ -56,7 +52,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     let activity_id = gen_id();
 
     // Transactional: insert activity + optional goal linking
-    let mut tx = pool.begin().await.map_err(|e| format!("Shadow TX begin: {e}"))?;
+    let mut tx = pool.begin().await.map_err(|e| db_context("shadow TX begin", e))?;
 
     // 1. Create shadow activity
     sqlx::query(
@@ -72,7 +68,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     .bind(&description)
     .execute(&mut *tx)
     .await
-    .map_err(|e| format!("Create shadow activity: {e}"))?;
+    .map_err(|e| db_context("create shadow activity", e))?;
 
     log::info!("[SHADOW] Created activity {} for {}", activity_id, sub.problem_id);
 
@@ -84,7 +80,7 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
     .bind(&sub.problem_id)
     .fetch_optional(&mut *tx)
     .await
-    .map_err(|e| format!("Shadow goal match: {e}"))?;
+    .map_err(|e| db_context("shadow goal match", e))?;
 
     // 3. If matched, link activity to goal and verify
     if let Some((goal_id,)) = matching_goal {
@@ -93,28 +89,32 @@ pub async fn process_shadow_log(pool: &PgPool, sub: &ShadowInput) -> Result<Opti
             .bind(&activity_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Shadow link: {e}"))?;
+            .map_err(|e| db_context("shadow link", e))?;
 
         sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
             .bind(&goal_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| format!("Shadow verify: {e}"))?;
+            .map_err(|e| db_context("shadow verify", e))?;
 
         log::info!("[SHADOW] Linked activity {} to goal {} and marked verified", activity_id, goal_id);
     }
 
-    tx.commit().await.map_err(|e| format!("Shadow TX commit: {e}"))?;
+    tx.commit().await.map_err(|e| db_context("shadow TX commit", e))?;
 
     Ok(Some(activity_id))
 }
 
 /// Batch process submissions → shadow activities.
 /// Returns count of new shadow activities created.
-pub async fn process_submissions(pool: &PgPool, submissions: &[ShadowInput]) -> Result<i32, String> {
+pub async fn process_submissions(
+    pool: &PgPool,
+    submissions: &[ShadowInput],
+    duration_minutes: i64,
+) -> Result<i32, PosError> {
     let mut count = 0;
     for sub in submissions {
-        if let Some(_) = process_shadow_log(pool, sub).await? {
+        if let Some(_) = process_shadow_log(pool, sub, duration_minutes).await? {
             count += 1;
         }
     }
