@@ -139,15 +139,14 @@ export function ActivityHeatmap() {
     return { current: currentStreak, longest: longestStreak, total: totalDays };
   };
 
-  const getColorClass = (level: number): string => {
-    const colors = [
-      'bg-gray-100 dark:bg-gray-800',
-      'bg-green-200 dark:bg-yellow-900',
-      'bg-green-400 dark:bg-yellow-700',
-      'bg-green-600 dark:bg-yellow-500',
-      'bg-green-800 dark:bg-yellow-300',
-    ];
-    return colors[level] || colors[0];
+  const getHeatmapStyle = (level: number): React.CSSProperties => {
+    if (level === 0) {
+      return { 
+        backgroundColor: 'var(--border-color)',
+        border: '1px solid var(--border-color)'
+      };
+    }
+    return { backgroundColor: `var(--pos-heatmap-level-${level})` };
   };
 
   const chunkedDays = (days: HeatmapData[], size: number): HeatmapData[][] => {
@@ -196,19 +195,30 @@ export function ActivityHeatmap() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-fit mx-auto">
               {monthsData.map((month, monthIndex) => {
                 const columns = chunkedDays(month.days, 7);
+                const todayStr = new Date().toISOString().split('T')[0];
                 return (
                   <div key={`${month.name}-${monthIndex}`} className="flex flex-col">
                     <div className="text-sm font-medium mb-2">{month.name}</div>
                     <div className="flex gap-1">
                       {columns.map((column, colIndex) => (
                         <div key={`col-${monthIndex}-${colIndex}`} className="flex flex-col gap-1">
-                          {column.map((day, dayIndex) => (
-                            <div
-                              key={`${day.date}-${dayIndex}`}
-                              className={`w-3 h-3 rounded transition-colors hover:ring-1 hover:ring-gray-400 dark:hover:ring-gray-500 ${getColorClass(day.level)}`}
-                              title={`${day.date}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
-                            />
-                          ))}
+                          {column.map((day, dayIndex) => {
+                            const isToday = day.date === todayStr;
+                            return (
+                              <div
+                                key={`${day.date}-${dayIndex}`}
+                                className="w-3 h-3 rounded transition-colors hover:ring-1"
+                                style={{
+                                  ...getHeatmapStyle(day.level),
+                                  borderColor: 'var(--border-color)',
+                                  ...(isToday && {
+                                    boxShadow: '0 0 0 2px var(--pos-today-border)',
+                                  }),
+                                }}
+                                title={`${day.date}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
+                              />
+                            );
+                          })}
                         </div>
                       ))}
                     </div>
@@ -222,7 +232,7 @@ export function ActivityHeatmap() {
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Less</span>
             {[0, 1, 2, 3, 4].map(level => (
-              <div key={level} className={`w-3 h-3 rounded ${getColorClass(level)}`} />
+              <div key={level} className="w-3 h-3 rounded" style={getHeatmapStyle(level)} />
             ))}
             <span>More</span>
           </div>

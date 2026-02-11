@@ -151,7 +151,7 @@ export function SheetsPage() {
                             <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <SelectValue placeholder="Platform" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                 <SelectItem value="all">All Platforms</SelectItem>
                                 <SelectItem value="leetcode">LeetCode</SelectItem>
                                 <SelectItem value="codeforces">Codeforces</SelectItem>
@@ -162,7 +162,7 @@ export function SheetsPage() {
                             <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <SelectValue placeholder="Verdict" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                 <SelectItem value="all">All Verdicts</SelectItem>
                                 {uniqueVerdicts.map(verdict => (
                                     <SelectItem key={verdict} value={verdict}>{verdict}</SelectItem>
@@ -171,7 +171,7 @@ export function SheetsPage() {
                         </Select>
 
                         <div className="px-3 py-1 rounded border text-sm text-muted-foreground font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
-                            Total: <span className="text-foreground">{submissions.length}</span>
+                            Total: <span className="text-foreground">{filteredSubmissions.length}</span>
                         </div>
                         <Button
                             onClick={fetchSubmissions}
@@ -191,7 +191,11 @@ export function SheetsPage() {
                         <Button
                             onClick={syncAll}
                             disabled={syncing}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90"
+                            style={{
+                                backgroundColor: 'var(--btn-primary-bg)',
+                                color: 'var(--btn-primary-text)'
+                            }}
+                            className="hover:opacity-90"
                         >
                             {syncing ? (
                                 <>
@@ -265,7 +269,15 @@ export function SheetsPage() {
                                             <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
                                                 <div className="flex flex-col gap-1">
                                                     {sub.allTimestamps?.map((t: string, i: number) => (
-                                                        <div key={i} className={i === 0 ? "text-foreground font-medium whitespace-nowrap" : "text-muted-foreground/70 whitespace-nowrap"}>
+                                                        <div 
+                                                            key={i} 
+                                                            className="whitespace-nowrap"
+                                                            style={{
+                                                                color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                                fontWeight: i === 0 ? 500 : 400,
+                                                                opacity: i === 0 ? 1 : 0.5
+                                                            }}
+                                                        >
                                                             {formatDateDDMMYYYY(new Date(t))} {formatTime(new Date(t))}
                                                         </div>
                                                     ))}

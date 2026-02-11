@@ -115,7 +115,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
                         className="border-input"
-                        style={{ backgroundColor: 'var(--bg-primary)' }}
+                        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                         required
                     />
                 </div>
@@ -126,7 +126,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
                         className="border-input"
-                        style={{ backgroundColor: 'var(--bg-primary)' }}
+                        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                         required
                     />
                 </div>
@@ -139,7 +139,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         <SelectTrigger className="border-input" style={{ backgroundColor: 'var(--bg-primary)' }}>
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
+                        <SelectContent className="border max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                             {Object.entries(ACTIVITY_CATEGORIES)
                                 .sort(([, a], [, b]) => a.localeCompare(b))
                                 .map(([key, value]) => (
@@ -157,7 +157,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         <SelectTrigger style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--pos-goal-link-border)' }}>
                             <SelectValue placeholder="Select a goal..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
+                        <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                             <SelectItem value="none">-- No Goal --</SelectItem>
                             {availableGoals.map((g) => (
                                 <SelectItem key={g.id} value={g.id}>
@@ -232,7 +232,15 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                 </label>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button 
+                type="submit" 
+                disabled={loading} 
+                className="w-full hover:opacity-90"
+                style={{
+                    backgroundColor: 'var(--btn-primary-bg)',
+                    color: 'var(--btn-primary-text)'
+                }}
+            >
                 {loading ? 'Creating...' : 'Log Activity'}
             </Button>
         </form>

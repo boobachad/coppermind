@@ -102,7 +102,14 @@ export default function JournalPage() {
             <Calendar className="h-6 w-6" style={{ color: 'var(--text-primary)' }} />
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Journal</h1>
           </div>
-          <Button onClick={handleCreateEntry} className="flex items-center gap-2">
+          <Button 
+            onClick={handleCreateEntry} 
+            className="flex items-center gap-2 hover:opacity-90"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg)',
+              color: 'var(--btn-primary-text)'
+            }}
+          >
             <Plus className="h-4 w-4" />
             New Entry
           </Button>
@@ -111,7 +118,14 @@ export default function JournalPage() {
         {entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>No entries yet</p>
-            <Button onClick={handleCreateEntry} className="flex items-center gap-2">
+            <Button 
+              onClick={handleCreateEntry} 
+              className="flex items-center gap-2 hover:opacity-90"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg)',
+                color: 'var(--btn-primary-text)'
+              }}
+            >
               <Plus className="h-5 w-5" />
               Create First Entry
             </Button>

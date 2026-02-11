@@ -183,7 +183,15 @@ export function DailyPage() {
                     <h1 className="text-2xl font-bold tracking-tight">{formatDateDDMMYYYY(new Date(date!))}</h1>
                     {hasJournalEntry && (
                         <Link to={`/journal/${date}`}>
-                            <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex items-center gap-2 hover:opacity-90"
+                              style={{
+                                backgroundColor: 'var(--btn-primary-bg)',
+                                color: 'var(--btn-primary-text)'
+                              }}
+                            >
                                 <BookOpen className="h-4 w-4" />
                                 View Journal
                             </Button>

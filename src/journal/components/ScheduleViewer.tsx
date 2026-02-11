@@ -140,6 +140,10 @@ export default function ScheduleViewer({
                 onClick={() => setIsModalOpen(true)}
                 variant="outline"
                 className="flex-1 flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)'
+                }}
               >
                 <Edit3 className="h-4 w-4" />
                 Edit Schedule
@@ -147,8 +151,11 @@ export default function ScheduleViewer({
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-2 px-4 rounded-md border flex items-center justify-center"
-              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+              className="flex-1 py-2 px-4 rounded-md flex items-center justify-center hover:opacity-90"
+              style={{ 
+                backgroundColor: 'var(--btn-primary-bg)', 
+                color: 'var(--btn-primary-text)'
+              }}
             >
               <Upload className="mr-2 h-4 w-4" />
               {mode === 'image' ? 'Replace Image' : 'Upload Image Instead'}
@@ -172,6 +179,10 @@ export default function ScheduleViewer({
             onClick={() => setIsModalOpen(true)}
             variant="outline"
             className="w-full flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg)',
+              color: 'var(--btn-primary-text)'
+            }}
           >
             <Edit3 className="h-4 w-4" />
             Create with Editor

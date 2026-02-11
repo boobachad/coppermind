@@ -33,7 +33,7 @@ export function ThemeToggle() {
                     <span className="sr-only">Toggle theme</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                 {(Object.keys(themeConfig) as Theme[]).map((themeKey) => {
                     const { label, icon: Icon } = themeConfig[themeKey];
                     return (

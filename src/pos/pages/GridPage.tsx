@@ -218,7 +218,7 @@ export function GridPage() {
                             <SelectTrigger className="w-[180px] h-8 text-xs border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-popover border-border">
+                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                 {availableMonths.map((m) => (
                                 <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`} className="text-xs">
                                     {m.label}

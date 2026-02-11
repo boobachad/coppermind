@@ -153,7 +153,14 @@ export default function EntryPage() {
             </div>
           </div>
           <Link to={`/pos/grid/${entry.date}`}>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 hover:opacity-90"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg)',
+                color: 'var(--btn-primary-text)'
+              }}
+            >
               <Activity className="h-4 w-4" />
               View Activities
             </Button>
@@ -165,7 +172,11 @@ export default function EntryPage() {
             <Button
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover:opacity-90"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg)',
+                color: 'var(--btn-primary-text)'
+              }}
             >
               {saving ? (
                 <>
