@@ -170,10 +170,10 @@ export function GridPage() {
 
     if (loading) {
         return (
-            <div className="h-full flex flex-col bg-background text-foreground">
+            <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid' }]} />
                 <div className="flex-1 flex items-center justify-center">
-                    <Card className="bg-card border-border">
+                    <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                         <CardContent className="pt-6">
                             <div className="text-center py-12 text-muted-foreground">Loading grid...</div>
                         </CardContent>
@@ -184,20 +184,21 @@ export function GridPage() {
     }
 
     return (
-        <div className="h-full flex flex-col bg-background text-foreground">
+        <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid' }]} />
-            <div className="max-w-[1800px] mx-auto space-y-6 p-8 flex-1 overflow-auto">
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold tracking-tight">Life Grid</h1>
-                    <Select
-                        value={`${currentMonth.year}-${currentMonth.month}`}
-                        onValueChange={handleMonthChange}
-                    >
-                        <SelectTrigger className="w-[180px] h-8 text-xs bg-background border-border">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                            {availableMonths.map((m) => (
+            <div className="flex-1 overflow-auto">
+                <div className="max-w-[1800px] mx-auto space-y-6 p-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h1 className="text-2xl font-bold tracking-tight">Life Grid</h1>
+                        <Select
+                            value={`${currentMonth.year}-${currentMonth.month}`}
+                            onValueChange={handleMonthChange}
+                        >
+                            <SelectTrigger className="w-[180px] h-8 text-xs border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border">
+                                {availableMonths.map((m) => (
                                 <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`} className="text-xs">
                                     {m.label}
                                 </SelectItem>
@@ -206,12 +207,12 @@ export function GridPage() {
                     </Select>
                 </div>
 
-                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                     <div className="overflow-auto max-h-[calc(100vh-140px)]">
                         <table className="w-full border-separate border-spacing-1 text-xs">
-                            <thead className="sticky top-0 bg-background z-20 shadow-md">
+                            <thead className="sticky top-0 z-20 shadow-md" style={{ backgroundColor: 'var(--bg-primary)' }}>
                                 <tr>
-                                    <th className="sticky left-0 bg-background p-2 text-left min-w-[120px] z-30 text-muted-foreground border-b border-border">
+                                    <th className="sticky left-0 p-2 text-left min-w-[120px] z-30 text-muted-foreground border-b border-border" style={{ backgroundColor: 'var(--bg-primary)' }}>
                                         Date
                                     </th>
                                     {Array.from({ length: 48 }, (_, i) => {
@@ -298,7 +299,7 @@ export function GridPage() {
                                                             </div>
                                                         )}
                                                         {slot.activities.length > 0 && (
-                                                            <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 bg-card backdrop-blur border border-border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl">
+                                                            <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 backdrop-blur border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                                                 {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
                                                             </div>
                                                         )}
@@ -314,6 +315,7 @@ export function GridPage() {
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
             </div>
 

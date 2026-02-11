@@ -93,16 +93,16 @@ export function GoalsPage() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-background text-foreground">
+        <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'goals' }]} />
             <div className="max-w-4xl mx-auto p-4 md:p-8 flex-1 overflow-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold text-foreground">Goals Hub</h1>
                 </div>
 
-                <div className="border border-border rounded-lg p-6 bg-card mb-8">
+                <div className="border rounded-lg p-6 mb-8" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--pos-goal-link-text)' }}>
-                        Create Goal <span className="text-xs font-normal text-muted-foreground bg-secondary px-2 py-1 rounded-full uppercase tracking-wider">{selectedDays.length > 0 ? 'Recurring Template' : 'Single Day'}</span>
+                        Create Goal <span className="text-xs font-normal text-muted-foreground px-2 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: 'var(--bg-primary)' }}>{selectedDays.length > 0 ? 'Recurring Template' : 'Single Day'}</span>
                     </h2>
 
                     <div className="space-y-4">
@@ -113,7 +113,8 @@ export function GoalsPage() {
                                     type="date"
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
-                                    className="bg-background border-input text-foreground font-mono text-sm"
+                                    className="border-input text-foreground font-mono text-sm"
+                                    style={{ backgroundColor: 'var(--bg-primary)' }}
                                 />
                             </div>
                             <div>
@@ -122,7 +123,8 @@ export function GoalsPage() {
                                     placeholder="LeetCode/Codeforces URL or ID"
                                     value={problemId}
                                     onChange={(e) => setProblemId(e.target.value)}
-                                    className="bg-background border-input text-foreground text-sm font-mono"
+                                    className="border-input text-foreground text-sm font-mono"
+                                    style={{ backgroundColor: 'var(--bg-primary)' }}
                                 />
                             </div>
                         </div>
@@ -133,18 +135,19 @@ export function GoalsPage() {
                                 placeholder="What do you want to accomplish?"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="bg-background border-input text-foreground"
+                                className="border-input text-foreground"
+                                style={{ backgroundColor: 'var(--bg-primary)' }}
                                 rows={2}
                             />
                         </div>
 
-                        <div className="bg-secondary/30 rounded-md p-4 space-y-4">
+                        <div className="rounded-md p-4 space-y-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                             <div>
                                 <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">Quantitative Tracking (Optional)</label>
 
                                 <div className="space-y-2 mb-2">
                                     {metrics.map((m, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-sm bg-background/50 p-2 rounded border border-border">
+                                        <div key={idx} className="flex items-center gap-2 text-sm p-2 rounded border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
                                             <span className="font-semibold" style={{ color: 'var(--pos-goal-link-text)' }}>{m.label}:</span>
                                             <span>{m.targetValue} {m.unit}</span>
                                             <button onClick={() => removeMetric(idx)} className="ml-auto hover:opacity-80" style={{ color: 'var(--pos-error-text)' }}>×</button>
@@ -155,20 +158,23 @@ export function GoalsPage() {
                                 <div className="flex gap-2">
                                     <Input
                                         placeholder="Label (e.g. Pushups)"
-                                        className="w-1/3 bg-background border-input"
+                                        className="w-1/3 border-input"
+                                        style={{ backgroundColor: 'var(--bg-primary)' }}
                                         value={newMetric.label}
                                         onChange={(e) => setNewMetric({ ...newMetric, label: e.target.value })}
                                     />
                                     <Input
                                         type="number"
                                         placeholder="Target"
-                                        className="w-1/4 bg-background border-input"
+                                        className="w-1/4 border-input"
+                                        style={{ backgroundColor: 'var(--bg-primary)' }}
                                         value={newMetric.targetValue}
                                         onChange={(e) => setNewMetric({ ...newMetric, targetValue: e.target.value })}
                                     />
                                     <Input
                                         placeholder="Unit (e.g. reps)"
-                                        className="w-1/4 bg-background border-input"
+                                        className="w-1/4 border-input"
+                                        style={{ backgroundColor: 'var(--bg-primary)' }}
                                         value={newMetric.unit}
                                         onChange={(e) => setNewMetric({ ...newMetric, unit: e.target.value })}
                                         onKeyDown={(e) => e.key === 'Enter' && addMetric()}
@@ -228,7 +234,7 @@ export function GoalsPage() {
                     </div>
                 </div>
 
-                <div className="border border-border rounded-lg p-6 bg-card mb-8">
+                <div className="border rounded-lg p-6 mb-8" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                     <h2 className="text-xl font-semibold mb-4 text-foreground">
                         Goals for {formatDateDDMMYYYY(new Date(date))}
                     </h2>
@@ -267,7 +273,7 @@ export function GoalsPage() {
                                                                     {metric.currentValue}/{metric.targetValue} {metric.unit}
                                                                 </span>
                                                             </div>
-                                                            <div className="h-1 bg-secondary w-full rounded-full overflow-hidden">
+                                                            <div className="h-1 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                                                                 <div
                                                                     className="h-full transition-all duration-500"
                                                                     style={{
@@ -282,7 +288,7 @@ export function GoalsPage() {
                                             )}
 
                                             {goal.problemId && (
-                                                <p className="text-xs text-muted-foreground font-mono bg-background/50 px-1 rounded border border-border/50 mt-2 inline-block">
+                                                <p className="text-xs text-muted-foreground font-mono px-1 rounded border mt-2 inline-block" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
                                                     {goal.problemId}
                                                 </p>
                                             )}
@@ -298,7 +304,7 @@ export function GoalsPage() {
                                                     Verified
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground border border-border uppercase font-medium">
+                                                <span className="px-2 py-0.5 rounded text-[10px] text-muted-foreground border uppercase font-medium" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                                     Pending
                                                 </span>
                                             )}

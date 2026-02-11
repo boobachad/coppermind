@@ -199,12 +199,11 @@
 }
 
 :root,
-[data-theme="solarized-light"],
-[data-theme="blue-light"] {
+[data-theme="solarized-light"] {
   /* POS-specific colors for light themes */
-  --pos-slot-empty: #e2e8f0;
-  --pos-segment-empty: #e2e8f0;
-  --pos-activity-fallback: #94a3b8;
+  --pos-slot-empty: #D6D0C0;
+  --pos-segment-empty: #D6D0C0;
+  --pos-activity-fallback: #93A1A1;
   --pos-goal-accent: #d97706;
   
   /* Activity category colors - Light theme (darker for contrast) */
@@ -260,6 +259,13 @@
   --pos-today-bg: #dbeafe;
   --pos-today-border: #2563eb;
   --pos-today-text: #1e40af;
+}
+
+[data-theme="blue-light"] {
+  /* POS-specific colors for blue-light theme */
+  --pos-slot-empty: #e2e8f0;
+  --pos-segment-empty: #e2e8f0;
+  --pos-activity-fallback: #94a3b8;
 }
 
 html,

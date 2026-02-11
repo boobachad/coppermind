@@ -124,10 +124,10 @@ export function DailyPage() {
 
     if (loading) {
         return (
-            <div className="h-full flex flex-col bg-background text-foreground">
+            <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid', href: '/pos/grid' }, { label: date || 'loading' }]} />
                 <div className="flex-1 flex items-center justify-center">
-                    <Card className="border-border">
+                    <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                         <CardContent className="pt-6">
                             <div className="text-center py-12 text-muted-foreground">Loading...</div>
                         </CardContent>
@@ -141,7 +141,7 @@ export function DailyPage() {
     const debtTime = 1440 - metrics.totalMinutes;
 
     return (
-        <div className="h-full flex flex-col bg-background text-foreground">
+        <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid', href: '/pos/grid' }, { label: date ? formatDateDDMMYYYY(new Date(date)) : 'loading' }]} />
             <div className="max-w-[1400px] mx-auto space-y-4 p-4 flex-1 overflow-auto">
                 <div className="flex items-center gap-4">
@@ -152,25 +152,25 @@ export function DailyPage() {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
-                    <Card className="bg-secondary border-border">
+                    <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <CardContent className="pt-4 pb-2 px-4">
                             <div className="text-xl font-bold" style={{ color: 'var(--pos-success-text)' }}>{fullyLoggedSlots}</div>
                             <div className="text-[10px] text-muted-foreground uppercase">Logged Slots</div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-secondary border-border">
+                    <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <CardContent className="pt-4 pb-2 px-4">
                             <div className="text-xl font-bold" style={{ color: 'var(--pos-info-text)' }}>{metrics.totalMinutes}m</div>
                             <div className="text-[10px] text-muted-foreground uppercase">Total Time</div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-secondary border-border">
+                    <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <CardContent className="pt-4 pb-2 px-4">
                             <div className="text-xl font-bold" style={{ color: 'var(--pos-warning-text)' }}>{metrics.productiveMinutes}m</div>
                             <div className="text-[10px] text-muted-foreground uppercase">Productive</div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-secondary border-border">
+                    <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <CardContent className="pt-4 pb-2 px-4">
                             <div className="text-xl font-bold" style={{ color: 'var(--pos-error-text)' }}>{debtTime}m</div>
                             <div className="text-[10px] text-muted-foreground uppercase">DebtTime</div>
@@ -178,7 +178,7 @@ export function DailyPage() {
                     </Card>
                 </div>
 
-                <Card className="border-border bg-card overflow-hidden">
+                <Card className="border overflow-hidden" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                     <CardHeader className="py-3 px-4">
                         <CardTitle className="text-sm font-medium">Timeline Overview</CardTitle>
                     </CardHeader>
@@ -208,14 +208,14 @@ export function DailyPage() {
                 </Card>
 
                 <Tabs defaultValue="timeline" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-card border border-border h-8">
+                    <TabsList className="grid w-full grid-cols-3 border h-8" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <TabsTrigger value="timeline" className="text-xs">TIMELINE</TabsTrigger>
                         <TabsTrigger value="goals" className="text-xs">GOALS</TabsTrigger>
                         <TabsTrigger value="metrics" className="text-xs">METRICS</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="timeline" className="space-y-4 mt-4">
-                        <Card className="border-border bg-card/50">
+                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                             <CardHeader className="py-3 px-4">
                                 <CardTitle className="text-sm font-medium">Log Activity</CardTitle>
                             </CardHeader>
@@ -224,7 +224,7 @@ export function DailyPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-border bg-card/50">
+                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                             <CardHeader className="py-3 px-4">
                                 <CardTitle className="text-sm font-medium">Activities</CardTitle>
                             </CardHeader>
@@ -236,7 +236,8 @@ export function DailyPage() {
                                         {activities.map((activity) => (
                                             <div
                                                 key={activity.id}
-                                                className="flex items-center gap-3 p-2 border border-border rounded bg-background/50"
+                                                className="flex items-center gap-3 p-2 border rounded"
+                                                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
                                             >
                                                 <div
                                                     className="w-2.5 h-2.5 rounded"
@@ -261,7 +262,7 @@ export function DailyPage() {
                     </TabsContent>
 
                     <TabsContent value="goals" className="mt-4">
-                        <Card className="border-border bg-secondary">
+                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                             <CardHeader className="py-3 px-4">
                                 <CardTitle className="text-sm font-medium">Goals</CardTitle>
                             </CardHeader>
@@ -308,28 +309,28 @@ export function DailyPage() {
 
                     <TabsContent value="metrics" className="space-y-4 mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                            <Card className="border-border bg-secondary">
+                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <CardContent className="pt-4 pb-2 px-4">
                                     <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Total Logged</p>
                                     <p className="text-xl font-bold" style={{ color: 'var(--pos-info-text)' }}>{metrics.totalMinutes} min</p>
                                     <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((metrics.totalMinutes / 1440) * 100)}% of day</p>
                                 </CardContent>
                             </Card>
-                            <Card className="border-border bg-secondary">
+                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <CardContent className="pt-4 pb-2 px-4">
                                     <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Productive</p>
                                     <p className="text-xl font-bold" style={{ color: 'var(--pos-success-text)' }}>{metrics.productiveMinutes} min</p>
                                     <p className="text-[10px] text-muted-foreground mt-0.5">{metrics.totalMinutes > 0 ? Math.round((metrics.productiveMinutes / metrics.totalMinutes) * 100) : 0}% of logged</p>
                                 </CardContent>
                             </Card>
-                            <Card className="border-border bg-secondary">
+                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <CardContent className="pt-4 pb-2 px-4">
                                     <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Goal-Directed</p>
                                     <p className="text-xl font-bold" style={{ color: 'var(--pos-warning-text)' }}>{metrics.goalDirectedMinutes} min</p>
                                     <p className="text-[10px] text-muted-foreground mt-0.5">{metrics.productiveMinutes > 0 ? Math.round((metrics.goalDirectedMinutes / metrics.productiveMinutes) * 100) : 0}% of productive</p>
                                 </CardContent>
                             </Card>
-                            <Card className="border-border bg-secondary">
+                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                                 <CardContent className="pt-4 pb-2 px-4">
                                     <p className="text-[10px] text-muted-foreground uppercase mb-0.5">DebtTime</p>
                                     <p className="text-xl font-bold" style={{ color: 'var(--pos-error-text)' }}>{debtTime} min</p>
@@ -338,7 +339,7 @@ export function DailyPage() {
                             </Card>
                         </div>
 
-                        <Card className="border-border bg-card/50">
+                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                             <CardHeader className="py-3 px-4">
                                 <CardTitle className="text-sm font-medium">Activity Breakdown</CardTitle>
                             </CardHeader>

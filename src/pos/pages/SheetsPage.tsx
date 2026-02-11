@@ -115,7 +115,7 @@ export function SheetsPage() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-background text-foreground">
+        <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'sheets' }]} />
             <div className="max-w-[1400px] mx-auto space-y-6 p-8 flex-1 overflow-auto">
                 <div className="flex items-center justify-between">
@@ -123,14 +123,17 @@ export function SheetsPage() {
                         <h1 className="text-3xl font-bold tracking-tight">Submission Sheets</h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="px-3 py-1 rounded bg-secondary border border-border text-sm text-muted-foreground font-mono">
+                        <div className="px-3 py-1 rounded border text-sm text-muted-foreground font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                             Total: <span className="text-foreground">{submissions.length}</span>
                         </div>
                         <Button
                             onClick={fetchSubmissions}
                             disabled={loading}
                             variant="outline"
-                            className="border-border text-muted-foreground hover:bg-secondary"
+                            className="border text-muted-foreground transition-colors"
+                            style={{ borderColor: 'var(--border-color)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                             {loading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -155,7 +158,7 @@ export function SheetsPage() {
                     </div>
                 </div>
 
-                <div className="border border-border rounded-lg overflow-hidden bg-card">
+                <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-muted/50 border-b border-border backdrop-blur-sm">
@@ -203,7 +206,7 @@ export function SheetsPage() {
                                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
                                                     {sub.tags && sub.tags.length > 0 ? (
                                                         sub.tags.slice(0, 3).map((tag: string) => (
-                                                            <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-secondary text-secondary-foreground rounded border border-border/50">
+                                                            <span key={tag} className="text-[10px] px-1.5 py-0.5 text-secondary-foreground rounded border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                                                 {tag}
                                                             </span>
                                                         ))

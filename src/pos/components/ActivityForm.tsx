@@ -111,7 +111,8 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className="bg-background border-input"
+                        className="border-input"
+                        style={{ backgroundColor: 'var(--bg-primary)' }}
                         required
                     />
                 </div>
@@ -121,7 +122,8 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className="bg-background border-input"
+                        className="border-input"
+                        style={{ backgroundColor: 'var(--bg-primary)' }}
                         required
                     />
                 </div>
@@ -131,7 +133,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                 <div>
                     <label className="block text-sm font-medium mb-2">Category</label>
                     <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger className="bg-background border-input">
+                        <SelectTrigger className="border-input" style={{ backgroundColor: 'var(--bg-primary)' }}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border">
@@ -149,7 +151,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                 <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
                     <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                        <SelectTrigger className="bg-background" style={{ borderColor: 'var(--pos-goal-link-border)' }}>
+                        <SelectTrigger style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--pos-goal-link-border)' }}>
                             <SelectValue placeholder="Select a goal..." />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border">
@@ -186,7 +188,8 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                                 <Input
                                     type="number"
                                     placeholder="+ Value"
-                                    className="bg-background border-input h-8 text-sm"
+                                    className="border-input h-8 text-sm"
+                                    style={{ backgroundColor: 'var(--bg-primary)' }}
                                     value={metricValues[m.id] || ''}
                                     onChange={(e) => setMetricValues({
                                         ...metricValues,
@@ -204,7 +207,8 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                 <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="bg-background border-input"
+                    className="border-input"
+                    style={{ backgroundColor: 'var(--bg-primary)' }}
                     placeholder="What did you work on?"
                     rows={3}
                     required
@@ -217,7 +221,8 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                     id="isProductive"
                     checked={isProductive}
                     onChange={(e) => setIsProductive(e.target.checked)}
-                    className="w-4 h-4 rounded border-input bg-background"
+                    className="w-4 h-4 rounded border-input"
+                    style={{ backgroundColor: 'var(--bg-primary)' }}
                 />
                 <label htmlFor="isProductive" className="text-sm">
                     Mark as productive

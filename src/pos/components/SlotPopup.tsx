@@ -49,7 +49,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="bg-card border-border">
+            <DialogContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                 <DialogHeader>
                     <DialogTitle className="text-foreground">
                         Slot {slotIndex} ({slotStartTime} - {slotEndTime})
@@ -66,7 +66,8 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                         {activities.map((activity) => (
                             <div
                                 key={activity.id}
-                                className="p-3 border border-border rounded-lg space-y-2 bg-secondary/50"
+                                className="p-3 border rounded-lg space-y-2"
+                                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1">

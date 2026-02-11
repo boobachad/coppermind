@@ -7,7 +7,7 @@ interface NavbarProps {
 
 export function Navbar({ breadcrumbItems }: NavbarProps) {
     return (
-        <div className="h-14 border-b flex items-center justify-between px-6 bg-background shrink-0">
+        <div className="h-14 border-b flex items-center justify-between px-6 shrink-0" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
             <Breadcrumb items={breadcrumbItems} />
             <ThemeToggle />
         </div>

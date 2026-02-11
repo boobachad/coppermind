@@ -24,7 +24,10 @@ export function ThemeToggle() {
                 <Button
                     variant="outline"
                     size="icon"
-                    className="border-border bg-background hover:bg-secondary transition-colors"
+                    className="border transition-colors"
+                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
                 >
                     <CurrentIcon className="h-[1.2rem] w-[1.2rem] transition-all" />
                     <span className="sr-only">Toggle theme</span>
