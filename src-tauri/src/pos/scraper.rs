@@ -321,15 +321,11 @@ pub async fn scrape_codeforces(
     let mut shadow_inputs: Vec<ShadowInput> = Vec::new();
 
     for sub in &submissions {
-        // Only accepted submissions (verdict == "OK")
-        if sub.verdict.as_deref() != Some("OK") {
-            continue;
-        }
-
         let submitted_time = DateTime::from_timestamp(sub.creation_time_seconds, 0)
             .ok_or_else(|| PosError::InvalidInput("Invalid Unix timestamp".into()))?;
         let contest_id = sub.problem.contest_id.unwrap_or(0);
         let problem_id = format!("cf-{}{}", contest_id, sub.problem.index);
+        let verdict = sub.verdict.as_deref().unwrap_or("TESTING");
 
         // Idempotency check
         let existing: Option<(String, Option<i32>, Vec<String>)> = sqlx::query_as(
@@ -355,17 +351,18 @@ pub async fn scrape_codeforces(
             continue;
         }
 
-        // Create new submission
+        // Create new submission with actual verdict
         let sub_id = gen_id();
         sqlx::query(
             r#"INSERT INTO pos_submissions
                (id, platform, problem_id, problem_title, submitted_time, verdict, language, rating, tags)
-               VALUES ($1, 'codeforces', $2, $3, $4, 'Accepted', $5, $6, $7)"#,
+               VALUES ($1, 'codeforces', $2, $3, $4, $5, $6, $7, $8)"#,
         )
         .bind(&sub_id)
         .bind(&problem_id)
         .bind(&sub.problem.name)
         .bind(submitted_time)
+        .bind(verdict)
         .bind(&sub.programming_language)
         .bind(sub.problem.rating)
         .bind(&sub.problem.tags)
@@ -373,12 +370,15 @@ pub async fn scrape_codeforces(
         .await
         .map_err(|e| db_context("Insert submission", e))?;
 
-        shadow_inputs.push(ShadowInput {
-            submitted_time,
-            problem_id,
-            problem_title: sub.problem.name.clone(),
-            platform: "codeforces".into(),
-        });
+        // Only shadow-log accepted submissions
+        if verdict == "OK" {
+            shadow_inputs.push(ShadowInput {
+                submitted_time,
+                problem_id,
+                problem_title: sub.problem.name.clone(),
+                platform: "codeforces".into(),
+            });
+        }
         new_count += 1;
     }
 

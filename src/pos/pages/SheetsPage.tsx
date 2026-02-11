@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '../components/Navbar';
@@ -6,11 +6,20 @@ import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import type { Submission } from '../lib/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 export function SheetsPage() {
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [platformFilter, setPlatformFilter] = useState<string>('all');
+    const [verdictFilter, setVerdictFilter] = useState<string>('Accepted');
 
     useEffect(() => {
         fetchSubmissions();
@@ -114,6 +123,21 @@ export function SheetsPage() {
         return 'text-muted-foreground';
     };
 
+    // Client-side filtering (O(n))
+    const filteredSubmissions = useMemo(() => {
+        return submissions.filter(sub => {
+            const platformMatch = platformFilter === 'all' || sub.platform === platformFilter;
+            const verdictMatch = verdictFilter === 'all' || sub.verdict === verdictFilter;
+            return platformMatch && verdictMatch;
+        });
+    }, [submissions, platformFilter, verdictFilter]);
+
+    // Extract unique verdicts for dropdown
+    const uniqueVerdicts = useMemo(() => {
+        const verdicts = new Set(submissions.map(s => s.verdict).filter(Boolean));
+        return Array.from(verdicts).sort();
+    }, [submissions]);
+
     return (
         <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'sheets' }]} />
@@ -123,6 +147,29 @@ export function SheetsPage() {
                         <h1 className="text-3xl font-bold tracking-tight">Submission Sheets</h1>
                     </div>
                     <div className="flex items-center gap-3">
+                        <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                            <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                                <SelectValue placeholder="Platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Platforms</SelectItem>
+                                <SelectItem value="leetcode">LeetCode</SelectItem>
+                                <SelectItem value="codeforces">Codeforces</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={verdictFilter} onValueChange={setVerdictFilter}>
+                            <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                                <SelectValue placeholder="Verdict" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Verdicts</SelectItem>
+                                {uniqueVerdicts.map(verdict => (
+                                    <SelectItem key={verdict} value={verdict}>{verdict}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
                         <div className="px-3 py-1 rounded border text-sm text-muted-foreground font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                             Total: <span className="text-foreground">{submissions.length}</span>
                         </div>
@@ -174,14 +221,14 @@ export function SheetsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-800/50">
-                                {submissions.length === 0 ? (
+                                {filteredSubmissions.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                                            {loading ? 'Loading submissions...' : 'No submissions found'}
+                                            {loading ? 'Loading submissions...' : submissions.length === 0 ? 'No submissions found' : 'No submissions match filters'}
                                         </td>
                                     </tr>
                                 ) : (
-                                    submissions.map((sub, index) => (
+                                    filteredSubmissions.map((sub, index) => (
                                         <tr key={sub.problemId} className="hover:bg-muted/50 transition-colors border-b border-border/50">
                                             <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
                                                 {index + 1}
@@ -218,8 +265,8 @@ export function SheetsPage() {
                                             <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
                                                 <div className="flex flex-col gap-1">
                                                     {sub.allTimestamps?.map((t: string, i: number) => (
-                                                        <div key={i} className={i === 0 ? "text-foreground font-medium" : "text-muted-foreground/70"}>
-                                                            {formatDateDDMMYYYY(new Date(t))} <span className="text-[10px] ml-1 opacity-70">{formatTime(new Date(t))}</span>
+                                                        <div key={i} className={i === 0 ? "text-foreground font-medium whitespace-nowrap" : "text-muted-foreground/70 whitespace-nowrap"}>
+                                                            {formatDateDDMMYYYY(new Date(t))} {formatTime(new Date(t))}
                                                         </div>
                                                     ))}
                                                 </div>

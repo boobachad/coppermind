@@ -16,7 +16,10 @@ interface ActivityFormProps {
 
 export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
     const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
+    const [endTime, setEndTime] = useState(() => {
+        const now = new Date();
+        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    });
     const [category, setCategory] = useState<string>(ACTIVITY_CATEGORIES.REAL_PROJECTS);
     const [description, setDescription] = useState('');
     const [isProductive, setIsProductive] = useState(true);

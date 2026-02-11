@@ -32,6 +32,7 @@ function getMonthDates(year: number, month: number): string[] {
 
 export function GridPage() {
     const todayRef = useRef<HTMLTableRowElement>(null);
+    const currentSlotRef = useRef<HTMLTableCellElement>(null);
     const [currentMonth, setCurrentMonth] = useState(() => {
         const now = new Date();
         return { year: now.getFullYear(), month: now.getMonth() };
@@ -54,8 +55,10 @@ export function GridPage() {
     }, []);
 
     useEffect(() => {
-        if (!loading && todayRef.current) {
+        if (!loading && todayRef.current && currentSlotRef.current) {
+            // Scroll to center both row and column
             todayRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            currentSlotRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
     }, [loading]);
 
@@ -269,6 +272,7 @@ export function GridPage() {
                                                 return (
                                                     <td
                                                         key={slot.slotIndex}
+                                                        ref={isCurrentTimeSlot ? currentSlotRef : null}
                                                         className="w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px]"
                                                         style={{
                                                             background: slot.segments 

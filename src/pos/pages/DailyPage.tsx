@@ -32,12 +32,23 @@ export function DailyPage() {
     const [loading, setLoading] = useState(true);
     const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
     const [showPopup, setShowPopup] = useState(false);
+    const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
+    const [isToday, setIsToday] = useState(false);
 
     const fetchData = async () => {
         if (!date) return;
         
         setLoading(true);
         try {
+            // Check if viewing today
+            const now = new Date();
+            const localDateStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            setIsToday(date === localDateStr);
+            
+            // Calculate current slot index
+            const currentMinute = now.getHours() * 60 + now.getMinutes();
+            setCurrentSlotIndex(Math.floor(currentMinute / 30));
+
             const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
             const actData = response.activities;
             setActivities(actData);
@@ -184,25 +195,34 @@ export function DailyPage() {
                     </CardHeader>
                     <div className="overflow-x-auto pb-4 px-4">
                         <div className="flex gap-0.5 h-14">
-                            {daySlots.map((slot) => (
-                                <div
-                                    key={slot.slotIndex}
-                                    className="w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border border-border/50 shrink-0 relative group"
-                                    style={{ background: slot.segments ? 'transparent' : slot.color }}
-                                    onClick={() => {
-                                        setSelectedSlot(slot.slotIndex);
-                                        setShowPopup(true);
-                                    }}
-                                >
-                                    {slot.segments && (
-                                        <div className="absolute inset-0 flex h-full w-full overflow-hidden rounded-[2px]">
-                                            {slot.segments.map((seg, idx) => (
-                                                <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                            {daySlots.map((slot) => {
+                                const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
+                                
+                                return (
+                                    <div
+                                        key={slot.slotIndex}
+                                        className="w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group"
+                                        style={{ 
+                                            background: slot.segments ? 'transparent' : slot.color,
+                                            borderColor: isCurrentTimeSlot ? 'var(--pos-today-border)' : 'var(--border-color)',
+                                            borderWidth: isCurrentTimeSlot ? '2px' : '1px',
+                                            boxShadow: isCurrentTimeSlot ? '0 0 0 2px var(--pos-today-bg)' : undefined
+                                        }}
+                                        onClick={() => {
+                                            setSelectedSlot(slot.slotIndex);
+                                            setShowPopup(true);
+                                        }}
+                                    >
+                                        {slot.segments && (
+                                            <div className="absolute inset-0 flex h-full w-full overflow-hidden rounded-[2px]">
+                                                {slot.segments.map((seg, idx) => (
+                                                    <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </Card>

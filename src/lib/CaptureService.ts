@@ -189,20 +189,20 @@ async function handleCapture(payload: CapturePayload): Promise<void> {
         return;
     }
 
-    // STRICT Deduplication: If exact same content as last time, ignore it completely.
-    // This handles the case where the user double-shifts without changing selection/clipboard.
-    if (lastCapturedContent === trimmedContent) {
-        console.log('[CaptureService] Ignoring exact duplicate content');
+    // Deduplication: Only ignore if same content AND same role (same double-shift)
+    // This allows: left-shift (question) -> right-shift (answer) with same content
+    if (lastCapturedContent === trimmedContent && lastCapturedRole === role) {
+        console.log('[CaptureService] Ignoring duplicate: same content + same role');
         toast.info('Duplicate capture ignored');
         return;
     }
 
-    // Deduplicate events (debounce) - this is for rapid, slightly different captures
+    // Deduplicate rapid events (debounce within 1 second)
     const now = Date.now();
     if (
         lastCaptureTimestamp &&
         now - lastCaptureTimestamp < 1000 &&
-        lastCapturedContent === trimmedContent && // Use trimmedContent here too
+        lastCapturedContent === trimmedContent &&
         lastCapturedRole === role
     ) {
         console.log('[CaptureService] Ignoring duplicate capture event (debounced)');
