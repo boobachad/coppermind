@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
-import { JournalEntry } from '../types';
-import ImageUploader from '../components/ImageUploader';
+import { JournalEntry, NapchartData } from '../types';
+import ScheduleViewer from '../components/ScheduleViewer';
 import MarkdownEditor from '../components/MarkdownEditor';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { getDb } from '../../lib/db';
@@ -21,6 +21,8 @@ export default function EntryPage() {
   const [reflectionText, setReflectionText] = useState('');
   const [expectedImage, setExpectedImage] = useState('');
   const [actualImage, setActualImage] = useState('');
+  const [expectedScheduleData, setExpectedScheduleData] = useState<NapchartData | null>(null);
+  const [actualScheduleData, setActualScheduleData] = useState<NapchartData | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function EntryPage() {
     try {
       const db = await getDb();
       const rows = await db.select<any[]>(
-        'SELECT id, date, expected_schedule_image, actual_schedule_image, reflection_text, created_at, updated_at FROM journal_entries WHERE date = $1',
+        'SELECT id, date, expected_schedule_image, actual_schedule_image, reflection_text, expected_schedule_data, actual_schedule_data, created_at, updated_at FROM journal_entries WHERE date = $1',
         [date]
       );
       
@@ -48,6 +50,8 @@ export default function EntryPage() {
           expectedScheduleImage: row.expected_schedule_image || '',
           actualScheduleImage: row.actual_schedule_image || '',
           reflectionText: row.reflection_text || '',
+          expectedScheduleData: row.expected_schedule_data ? JSON.parse(row.expected_schedule_data) : null,
+          actualScheduleData: row.actual_schedule_data ? JSON.parse(row.actual_schedule_data) : null,
           dayX,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
@@ -57,6 +61,8 @@ export default function EntryPage() {
         setReflectionText(entryData.reflectionText);
         setExpectedImage(entryData.expectedScheduleImage);
         setActualImage(entryData.actualScheduleImage);
+        setExpectedScheduleData(entryData.expectedScheduleData);
+        setActualScheduleData(entryData.actualScheduleData);
       } else {
         toast.error('Entry not found');
         navigate('/journal');
@@ -75,10 +81,12 @@ export default function EntryPage() {
     try {
       const db = await getDb();
       const now = Date.now();
+      const expectedScheduleDataJson = expectedScheduleData ? JSON.stringify(expectedScheduleData) : null;
+      const actualScheduleDataJson = actualScheduleData ? JSON.stringify(actualScheduleData) : null;
       
       await db.execute(
-        'UPDATE journal_entries SET expected_schedule_image = $1, actual_schedule_image = $2, reflection_text = $3, updated_at = $4 WHERE date = $5',
-        [expectedImage, actualImage, reflectionText, now, date]
+        'UPDATE journal_entries SET expected_schedule_image = $1, actual_schedule_image = $2, reflection_text = $3, expected_schedule_data = $4, actual_schedule_data = $5, updated_at = $6 WHERE date = $7',
+        [expectedImage, actualImage, reflectionText, expectedScheduleDataJson, actualScheduleDataJson, now, date]
       );
       
       setHasChanges(false);
@@ -103,6 +111,16 @@ export default function EntryPage() {
 
   const handleActualImageChange = (base64: string) => {
     setActualImage(base64);
+    setHasChanges(true);
+  };
+
+  const handleExpectedScheduleChange = (data: NapchartData) => {
+    setExpectedScheduleData(data);
+    setHasChanges(true);
+  };
+
+  const handleActualScheduleChange = (data: NapchartData) => {
+    setActualScheduleData(data);
     setHasChanges(true);
   };
 
@@ -169,10 +187,13 @@ export default function EntryPage() {
                 <Calendar className="h-5 w-5" />
                 Expected Schedule
               </h3>
-              <ImageUploader
-                initialImageUrl={expectedImage}
+              <ScheduleViewer
+                scheduleData={expectedScheduleData}
+                imageUrl={expectedImage}
+                onScheduleChange={handleExpectedScheduleChange}
                 onImageChange={handleExpectedImageChange}
                 isLocked={isPast}
+                title="Expected Schedule"
               />
             </CardContent>
           </Card>
@@ -183,10 +204,13 @@ export default function EntryPage() {
                 <Calendar className="h-5 w-5" />
                 Actual Schedule
               </h3>
-              <ImageUploader
-                initialImageUrl={actualImage}
+              <ScheduleViewer
+                scheduleData={actualScheduleData}
+                imageUrl={actualImage}
+                onScheduleChange={handleActualScheduleChange}
                 onImageChange={handleActualImageChange}
                 isLocked={isPast}
+                title="Actual Schedule"
               />
             </CardContent>
           </Card>

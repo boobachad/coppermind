@@ -45,7 +45,7 @@ const TABLES: TableDef[] = [
     },
     {
         name: "journal_entries",
-        columns: ["id", "date", "expected_schedule_image", "actual_schedule_image", "reflection_text", "created_at", "updated_at"],
+        columns: ["id", "date", "expected_schedule_image", "actual_schedule_image", "reflection_text", "expected_schedule_data", "actual_schedule_data", "created_at", "updated_at"],
     },
 ];
 
@@ -105,6 +105,8 @@ const PG_CREATE_TABLES = [
         expected_schedule_image TEXT NOT NULL DEFAULT '',
         actual_schedule_image TEXT NOT NULL DEFAULT '',
         reflection_text TEXT NOT NULL DEFAULT '',
+        expected_schedule_data TEXT,
+        actual_schedule_data TEXT,
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL
     )`,
@@ -250,6 +252,16 @@ export async function initPgSync(): Promise<void> {
             await pgDb.execute(stmt);
         }
         console.log("[PgSync] Schema ensured");
+
+        // Migration: Add new columns to existing tables
+        try {
+            await pgDb.execute(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS expected_schedule_data TEXT`);
+            await pgDb.execute(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS actual_schedule_data TEXT`);
+            console.log("[PgSync] Migration: Added schedule_data columns");
+        } catch (e) {
+            // PostgreSQL doesn't support IF NOT EXISTS in older versions, ignore if columns exist
+            console.log("[PgSync] Migration: Columns may already exist");
+        }
 
         // Initial sync on startup
         await syncAllTables();

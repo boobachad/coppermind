@@ -26,7 +26,7 @@ export default function JournalPage() {
     try {
       const db = await getDb();
       const rows = await db.select<any[]>(
-        'SELECT id, date, expected_schedule_image, actual_schedule_image, reflection_text, created_at, updated_at FROM journal_entries ORDER BY date DESC'
+        'SELECT id, date, expected_schedule_image, actual_schedule_image, reflection_text, expected_schedule_data, actual_schedule_data, created_at, updated_at FROM journal_entries ORDER BY date DESC'
       );
       
       const entriesWithDayX = rows.map((row, index) => ({
@@ -35,6 +35,8 @@ export default function JournalPage() {
         expectedScheduleImage: row.expected_schedule_image || '',
         actualScheduleImage: row.actual_schedule_image || '',
         reflectionText: row.reflection_text || '',
+        expectedScheduleData: row.expected_schedule_data ? JSON.parse(row.expected_schedule_data) : null,
+        actualScheduleData: row.actual_schedule_data ? JSON.parse(row.actual_schedule_data) : null,
         dayX: rows.length - index,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -69,8 +71,8 @@ export default function JournalPage() {
       const now = Date.now();
       
       await db.execute(
-        'INSERT INTO journal_entries (id, date, expected_schedule_image, actual_schedule_image, reflection_text, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [id, today, '', '', '', now, now]
+        'INSERT INTO journal_entries (id, date, expected_schedule_image, actual_schedule_image, reflection_text, expected_schedule_data, actual_schedule_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+        [id, today, '', '', '', null, null, now, now]
       );
       
       navigate(`/journal/${today}`);

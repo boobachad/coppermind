@@ -331,6 +331,10 @@ export const initDb = async () => {
       )
     `);
 
+    await addCol('journal_entries', 'schedule_data', 'TEXT');
+    await addCol('journal_entries', 'expected_schedule_data', 'TEXT');
+    await addCol('journal_entries', 'actual_schedule_data', 'TEXT');
+
     console.log("Database initialized (SQLite)");
     return db;
 
