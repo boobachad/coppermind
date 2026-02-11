@@ -7,6 +7,7 @@ use rdev::{grab, Event, EventType, Key};
 use sqlx::postgres::PgPoolOptions;
 
 mod pos;
+mod unified_goals;
 
 /// Wrapper for PG pool stored in Tauri managed state
 pub struct PosDb(pub sqlx::PgPool);
@@ -311,6 +312,12 @@ pub fn run() {
             pos::submissions::get_submissions,
             pos::scraper::scrape_leetcode,
             pos::scraper::scrape_codeforces,
+            unified_goals::create_unified_goal,
+            unified_goals::get_unified_goals,
+            unified_goals::update_unified_goal,
+            unified_goals::delete_unified_goal,
+            unified_goals::toggle_unified_goal_completion,
+            unified_goals::link_activity_to_unified_goal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

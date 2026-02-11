@@ -139,7 +139,7 @@ export default function ScheduleViewer({
               <Button
                 onClick={() => setIsModalOpen(true)}
                 variant="outline"
-                className="flex-1 flex items-center justify-center gap-2"
+                className="flex-1 flex items-center justify-center gap-2 h-10"
                 style={{
                   backgroundColor: 'var(--btn-primary-bg)',
                   color: 'var(--btn-primary-text)'
@@ -149,17 +149,18 @@ export default function ScheduleViewer({
                 Edit Schedule
               </Button>
             )}
-            <button
+            <Button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-2 px-4 rounded-md flex items-center justify-center hover:opacity-90"
+              variant="outline"
+              className="flex-1 flex items-center justify-center gap-2 h-10"
               style={{ 
                 backgroundColor: 'var(--btn-primary-bg)', 
                 color: 'var(--btn-primary-text)'
               }}
             >
-              <Upload className="mr-2 h-4 w-4" />
+              <Upload className="h-4 w-4" />
               {mode === 'image' ? 'Replace Image' : 'Upload Image Instead'}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (

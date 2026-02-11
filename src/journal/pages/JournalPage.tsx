@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
+import { Loader } from '@/components/Loader';
 import { JournalEntry } from '../types';
 import { getLocalDateString, formatDateDDMMYYYY } from '../../pos/lib/time';
 import { getDb } from '../../lib/db';
@@ -86,7 +87,7 @@ export default function JournalPage() {
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <Navbar breadcrumbItems={[{ label: 'journal' }]} />
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: 'var(--text-primary)' }}></div>
+          <Loader />
         </div>
       </div>
     );

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Navbar } from '../components/Navbar';
 import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import type { Submission } from '../lib/types';
-import { Loader2 } from 'lucide-react';
+import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
 import {
     Select,
@@ -183,7 +183,7 @@ export function SheetsPage() {
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                             {loading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader />
                             ) : (
                                 'Refresh'
                             )}
@@ -228,7 +228,11 @@ export function SheetsPage() {
                                 {filteredSubmissions.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                                            {loading ? 'Loading submissions...' : submissions.length === 0 ? 'No submissions found' : 'No submissions match filters'}
+                                            {loading ? (
+                                                <div className="flex justify-center">
+                                                    <Loader />
+                                                </div>
+                                            ) : submissions.length === 0 ? 'No submissions found' : 'No submissions match filters'}
                                         </td>
                                     </tr>
                                 ) : (

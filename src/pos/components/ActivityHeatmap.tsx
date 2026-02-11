@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
 import type { Activity } from '../lib/types';
 
@@ -161,7 +162,9 @@ export function ActivityHeatmap() {
     return (
       <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
         <CardContent className="pt-6">
-          <div className="text-center py-12 text-muted-foreground">Loading heatmap...</div>
+          <div className="flex justify-center py-12">
+            <Loader />
+          </div>
         </CardContent>
       </Card>
     );

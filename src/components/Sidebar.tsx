@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, CheckSquare, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen } from 'lucide-react';
+import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -67,11 +67,11 @@ export function Sidebar() {
           Home
         </NavLink>
         <NavLink
-          to="/todos"
+          to="/goals"
           className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
         >
-          <CheckSquare className="mr-3 h-4 w-4" />
-          To-Dos
+          <Target className="mr-3 h-4 w-4" />
+          Goals
         </NavLink>
         <NavLink
           to="/nodes"
@@ -93,13 +93,6 @@ export function Sidebar() {
         >
           <Grid3x3 className="mr-3 h-4 w-4" />
           POS Grid
-        </NavLink>
-        <NavLink
-          to="/pos/goals"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Target className="mr-3 h-4 w-4" />
-          POS Goals
         </NavLink>
         <NavLink
           to="/pos/sheets"

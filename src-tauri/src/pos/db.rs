@@ -116,4 +116,33 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_pos_dg_goal     ON pos_debt_goals (goal_id)",
     "CREATE INDEX IF NOT EXISTS idx_pos_dg_date     ON pos_debt_goals (original_date)",
     "CREATE INDEX IF NOT EXISTS idx_pos_dg_resolved ON pos_debt_goals (resolved_at)",
+
+    // ─── Unified Goals ──────────────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS unified_goals (
+        id                     TEXT PRIMARY KEY,
+        text                   TEXT NOT NULL,
+        description            TEXT,
+        completed              BOOLEAN DEFAULT FALSE,
+        completed_at           TIMESTAMPTZ,
+        verified               BOOLEAN DEFAULT FALSE,
+        due_date               TIMESTAMPTZ,
+        recurring_pattern      TEXT,
+        recurring_template_id  TEXT,
+        priority               TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+        urgent                 BOOLEAN DEFAULT FALSE,
+        metrics                JSONB,
+        problem_id             TEXT,
+        linked_activity_ids    JSONB,
+        labels                 JSONB,
+        created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        original_date          TEXT,
+        is_debt                BOOLEAN DEFAULT FALSE
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_completed ON unified_goals(completed)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_urgent ON unified_goals(urgent)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_is_debt ON unified_goals(is_debt)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_due_date ON unified_goals(due_date)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
 ];

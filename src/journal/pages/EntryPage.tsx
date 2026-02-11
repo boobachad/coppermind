@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
+import { Loader } from '@/components/Loader';
 import { JournalEntry, NapchartData } from '../types';
 import ScheduleViewer from '../components/ScheduleViewer';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -129,7 +130,7 @@ export default function EntryPage() {
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <Navbar breadcrumbItems={[{ label: 'journal' }, { label: date || '' }]} />
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: 'var(--text-primary)' }}></div>
+          <Loader />
         </div>
       </div>
     );

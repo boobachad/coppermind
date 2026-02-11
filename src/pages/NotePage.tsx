@@ -6,6 +6,7 @@ import { StickyNote } from '../components/StickyNote';
 import { StickerLayer, StickerLayerRef } from '../components/StickerLayer';
 import { SourceUrlsDisplay } from '../components/SourceUrlsDisplay';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { Loader } from '../components/Loader';
 import { getDb } from '../lib/db';
 import { setActiveNote } from '../lib/CaptureService';
 import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
@@ -301,7 +302,7 @@ export function NotePage() {
 
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>;
+    return <div className="flex items-center justify-center h-full"><Loader /></div>;
   }
 
   if (!note) {

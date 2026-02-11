@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
+import { Loader } from '@/components/Loader';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
 import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString } from '../lib/time';
@@ -194,11 +194,7 @@ export function GridPage() {
             <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid' }]} />
                 <div className="flex-1 flex items-center justify-center">
-                    <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                        <CardContent className="pt-6">
-                            <div className="text-center py-12 text-muted-foreground">Loading grid...</div>
-                        </CardContent>
-                    </Card>
+                    <Loader />
                 </div>
             </div>
         );

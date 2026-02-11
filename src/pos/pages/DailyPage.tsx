@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ActivityForm } from '../components/ActivityForm';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
+import { Loader } from '@/components/Loader';
 import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, GoalWithDetails } from '../lib/types';
@@ -159,11 +160,7 @@ export function DailyPage() {
             <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid', href: '/pos/grid' }, { label: date || 'loading' }]} />
                 <div className="flex-1 flex items-center justify-center">
-                    <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                        <CardContent className="pt-6">
-                            <div className="text-center py-12 text-muted-foreground">Loading...</div>
-                        </CardContent>
-                    </Card>
+                    <Loader />
                 </div>
             </div>
         );

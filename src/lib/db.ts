@@ -279,7 +279,8 @@ export const initDb = async () => {
         labels TEXT,
         urgent INTEGER,
         due_date INTEGER,
-        created_at INTEGER
+        created_at INTEGER,
+        updated_at INTEGER
       )
     `);
 
@@ -288,6 +289,7 @@ export const initDb = async () => {
     await addCol('todos', 'labels', 'TEXT');
     await addCol('todos', 'urgent', 'INTEGER');
     await addCol('todos', 'due_date', 'INTEGER');
+    await addCol('todos', 'updated_at', 'INTEGER');
     await addCol('todos', 'created_at', 'INTEGER');
 
     // Nodes Table
@@ -341,6 +343,31 @@ export const initDb = async () => {
         id TEXT PRIMARY KEY,
         table_name TEXT NOT NULL,
         deleted_at INTEGER NOT NULL
+      )
+    `);
+
+    // Unified Goals Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS unified_goals (
+        id TEXT PRIMARY KEY,
+        text TEXT NOT NULL,
+        description TEXT,
+        completed INTEGER DEFAULT 0,
+        completed_at INTEGER,
+        verified INTEGER DEFAULT 0,
+        due_date INTEGER,
+        recurring_pattern TEXT,
+        recurring_template_id TEXT,
+        priority TEXT DEFAULT 'medium',
+        urgent INTEGER DEFAULT 0,
+        metrics TEXT,
+        problem_id TEXT,
+        linked_activity_ids TEXT,
+        labels TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        original_date TEXT,
+        is_debt INTEGER DEFAULT 0
       )
     `);
 

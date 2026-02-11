@@ -29,7 +29,7 @@ const TABLES: TableDef[] = [
     },
     {
         name: "todos",
-        columns: ["id", "text", "completed", "description", "priority", "labels", "urgent", "due_date", "created_at"],
+        columns: ["id", "text", "completed", "description", "priority", "labels", "urgent", "due_date", "created_at", "updated_at"],
     },
     {
         name: "sticky_notes",
@@ -74,7 +74,8 @@ const PG_CREATE_TABLES = [
         labels TEXT,
         urgent INTEGER,
         due_date BIGINT,
-        created_at BIGINT
+        created_at BIGINT,
+        updated_at BIGINT
     )`,
     `CREATE TABLE IF NOT EXISTS sticky_notes (
         id TEXT PRIMARY KEY,
@@ -123,7 +124,7 @@ const PG_CREATE_TABLES = [
 
 
 // ─── Core Sync ──────────────────────────────────────────────────
-// ─── Bidirectional Sync: PostgreSQL as Source of Truth ──────────
+// ─── Bidirectional Sync: Timestamp-based merge (Last-Write-Wins) ──────────
 async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed: number; pulled: number; deleted: number }> {
     if (!pgDb) return { pushed: 0, pulled: 0, deleted: 0 };
 
@@ -139,21 +140,55 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
     );
     const deletedIds = new Set(tombstones.map(t => t.id));
 
-    // PHASE 1: Pull from PostgreSQL (PostgreSQL is source of truth)
+    // Fetch both datasets
     const pgRows = await pgDb.select<Record<string, unknown>[]>(
         `SELECT ${table.columns.join(", ")} FROM ${table.name}`
     );
+    const sqliteRows = await sqliteDb.select<Record<string, unknown>[]>(
+        `SELECT ${table.columns.join(", ")} FROM ${table.name}`
+    );
+
+    // Build maps for O(1) lookup
+    const pgRowMap = new Map<string, Record<string, unknown>>();
+    pgRows.forEach(row => {
+        const key = table.name === 'journal_entries' ? String(row.date) : String(row.id);
+        pgRowMap.set(key, row);
+    });
+
+    const sqliteRowMap = new Map<string, Record<string, unknown>>();
+    sqliteRows.forEach(row => {
+        const key = table.name === 'journal_entries' ? String(row.date) : String(row.id);
+        sqliteRowMap.set(key, row);
+    });
 
     let pulledCount = 0;
-    if (pgRows.length > 0) {
-        for (const pgRow of pgRows) {
-            const rowId = String(pgRow.id);
-            
-            // Skip if locally deleted
-            if (deletedIds.has(rowId)) {
-                continue;
-            }
+    let pushedCount = 0;
 
+    // PHASE 1: Process PG rows (pull if newer or missing locally)
+    for (const pgRow of pgRows) {
+        const key = table.name === 'journal_entries' ? String(pgRow.date) : String(pgRow.id);
+        const rowId = String(pgRow.id);
+        
+        // Skip if locally deleted
+        if (deletedIds.has(rowId)) {
+            continue;
+        }
+
+        const sqliteRow = sqliteRowMap.get(key);
+
+        // Determine if we should pull this row
+        let shouldPull = false;
+        if (!sqliteRow) {
+            // Row doesn't exist locally, pull it
+            shouldPull = true;
+        } else if (pgRow.updated_at && sqliteRow.updated_at) {
+            // Both have timestamps, compare them (PG wins if newer)
+            if (Number(pgRow.updated_at) > Number(sqliteRow.updated_at)) {
+                shouldPull = true;
+            }
+        }
+
+        if (shouldPull) {
             const nonNullCols: string[] = [];
             const nonNullValues: unknown[] = [];
 
@@ -183,29 +218,24 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
         }
     }
 
-    // PHASE 2: Push to PostgreSQL (only new/updated rows)
-    const sqliteRows = await sqliteDb.select<Record<string, unknown>[]>(
-        `SELECT ${table.columns.join(", ")} FROM ${table.name}`
-    );
+    // PHASE 2: Process SQLite rows (push if newer or missing in PG)
+    for (const sqliteRow of sqliteRows) {
+        const key = table.name === 'journal_entries' ? String(sqliteRow.date) : String(sqliteRow.id);
+        const pgRow = pgRowMap.get(key);
 
-    let pushedCount = 0;
-    if (sqliteRows.length > 0) {
-        const pgRowMap = new Map<string, Record<string, unknown>>();
-        pgRows.forEach(row => {
-            const key = table.name === 'journal_entries' ? String(row.date) : String(row.id);
-            pgRowMap.set(key, row);
-        });
-
-        for (const sqliteRow of sqliteRows) {
-            const key = table.name === 'journal_entries' ? String(sqliteRow.date) : String(sqliteRow.id);
-            const pgRow = pgRowMap.get(key);
-
-            if (pgRow && sqliteRow.updated_at && pgRow.updated_at) {
-                if (Number(pgRow.updated_at) >= Number(sqliteRow.updated_at)) {
-                    continue;
-                }
+        // Determine if we should push this row
+        let shouldPush = false;
+        if (!pgRow) {
+            // Row doesn't exist in PG, push it
+            shouldPush = true;
+        } else if (sqliteRow.updated_at && pgRow.updated_at) {
+            // Both have timestamps, compare them (SQLite wins if newer)
+            if (Number(sqliteRow.updated_at) > Number(pgRow.updated_at)) {
+                shouldPush = true;
             }
+        }
 
+        if (shouldPush) {
             const nonNullCols: string[] = [];
             const nonNullValues: unknown[] = [];
 
@@ -242,49 +272,111 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
     return { pushed: pushedCount, pulled: pulledCount, deleted: 0 };
 }
 
-// Sync deletions: push tombstones to PG, then delete from PG tables
+// Sync deletions: merge tombstones bidirectionally with timestamp checks
 async function syncDeletions(sqliteDb: Database): Promise<{ pushed: number; pulled: number; deleted: number }> {
     if (!pgDb) return { pushed: 0, pulled: 0, deleted: 0 };
 
-    // PHASE 1: Pull tombstones from PostgreSQL
+    // Fetch tombstones from both sides
     const pgTombstones = await pgDb.select<{ id: string; table_name: string; deleted_at: number }[]>(
         'SELECT id, table_name, deleted_at FROM deleted_items'
     );
 
-    let pulledCount = 0;
-    for (const tomb of pgTombstones) {
-        await sqliteDb.execute(
-            'INSERT OR REPLACE INTO deleted_items (id, table_name, deleted_at) VALUES (?, ?, ?)',
-            [tomb.id, tomb.table_name, tomb.deleted_at]
-        );
-        
-        // Delete from local table
-        await sqliteDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = ?`, [tomb.id]);
-        pulledCount++;
-    }
-
-    // PHASE 2: Push local tombstones to PostgreSQL
     const localTombstones = await sqliteDb.select<{ id: string; table_name: string; deleted_at: number }[]>(
         'SELECT id, table_name, deleted_at FROM deleted_items'
     );
 
+    // Build maps for O(1) lookup
+    const pgTombMap = new Map<string, { table_name: string; deleted_at: number }>();
+    pgTombstones.forEach(t => pgTombMap.set(t.id, { table_name: t.table_name, deleted_at: t.deleted_at }));
+
+    const localTombMap = new Map<string, { table_name: string; deleted_at: number }>();
+    localTombstones.forEach(t => localTombMap.set(t.id, { table_name: t.table_name, deleted_at: t.deleted_at }));
+
+    let pulledCount = 0;
     let pushedCount = 0;
     let deletedCount = 0;
-    
-    for (const tomb of localTombstones) {
-        // Insert tombstone into PG
-        await pgDb.execute(
-            'INSERT INTO deleted_items (id, table_name, deleted_at) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
-            [tomb.id, tomb.table_name, tomb.deleted_at]
-        );
-        pushedCount++;
 
-        // Delete from PG table
-        try {
-            await pgDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = $1`, [tomb.id]);
-            deletedCount++;
-        } catch (e) {
-            // Item may not exist in PG, that's fine
+    // PHASE 1: Process PG tombstones (pull if newer or missing locally)
+    for (const tomb of pgTombstones) {
+        const localTomb = localTombMap.get(tomb.id);
+        
+        let shouldPull = false;
+        if (!localTomb) {
+            // Check if item exists locally with updated_at timestamp
+            const localItem = await sqliteDb.select<{ id: string; updated_at?: number }[]>(
+                `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = ?`,
+                [tomb.id]
+            );
+
+            if (localItem.length > 0 && localItem[0].updated_at) {
+                // Item exists locally, check if deletion is newer
+                if (tomb.deleted_at > localItem[0].updated_at) {
+                    shouldPull = true;
+                }
+                // else: local item is newer than deletion, keep it
+            } else {
+                // Item doesn't exist locally or has no timestamp, accept tombstone
+                shouldPull = true;
+            }
+        } else if (tomb.deleted_at > localTomb.deleted_at) {
+            // Tombstone exists locally but PG version is newer
+            shouldPull = true;
+        }
+
+        if (shouldPull) {
+            await sqliteDb.execute(
+                'INSERT OR REPLACE INTO deleted_items (id, table_name, deleted_at) VALUES (?, ?, ?)',
+                [tomb.id, tomb.table_name, tomb.deleted_at]
+            );
+            
+            // Delete from local table
+            await sqliteDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = ?`, [tomb.id]);
+            pulledCount++;
+        }
+    }
+
+    // PHASE 2: Process local tombstones (push if newer or missing in PG)
+    for (const tomb of localTombstones) {
+        const pgTomb = pgTombMap.get(tomb.id);
+        
+        let shouldPush = false;
+        if (!pgTomb) {
+            // Check if item exists in PG with updated_at timestamp
+            const pgItem = await pgDb.select<{ id: string; updated_at?: number }[]>(
+                `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = $1`,
+                [tomb.id]
+            );
+
+            if (pgItem.length > 0 && pgItem[0].updated_at) {
+                // Item exists in PG, check if deletion is newer
+                if (tomb.deleted_at > pgItem[0].updated_at) {
+                    shouldPush = true;
+                }
+                // else: PG item is newer than deletion, keep it
+            } else {
+                // Item doesn't exist in PG or has no timestamp, push tombstone
+                shouldPush = true;
+            }
+        } else if (tomb.deleted_at > pgTomb.deleted_at) {
+            // Tombstone exists in PG but local version is newer
+            shouldPush = true;
+        }
+
+        if (shouldPush) {
+            // Insert tombstone into PG
+            await pgDb.execute(
+                'INSERT INTO deleted_items (id, table_name, deleted_at) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET deleted_at = $3',
+                [tomb.id, tomb.table_name, tomb.deleted_at]
+            );
+            pushedCount++;
+
+            // Delete from PG table
+            try {
+                await pgDb.execute(`DELETE FROM ${tomb.table_name} WHERE id = $1`, [tomb.id]);
+                deletedCount++;
+            } catch (e) {
+                // Item may not exist in PG, that's fine
+            }
         }
     }
 
@@ -392,14 +484,15 @@ export async function initPgSync(): Promise<void> {
         try {
             await pgDb.execute(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS expected_schedule_data TEXT`);
             await pgDb.execute(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS actual_schedule_data TEXT`);
-            console.log("[PgSync] Migration: Added schedule_data columns");
+            await pgDb.execute(`ALTER TABLE todos ADD COLUMN IF NOT EXISTS updated_at BIGINT`);
+            console.log("[PgSync] Migration: Added schedule_data and updated_at columns");
         } catch (e) {
             // PostgreSQL doesn't support IF NOT EXISTS in older versions, ignore if columns exist
             console.log("[PgSync] Migration: Columns may already exist");
         }
 
-        // Initial bidirectional sync on startup (PostgreSQL takes priority)
-        console.log("[PgSync] Starting initial bidirectional sync (PostgreSQL as source of truth)");
+        // Initial bidirectional sync on startup (Last-Write-Wins based on updated_at)
+        console.log("[PgSync] Starting initial bidirectional sync (timestamp-based merge)");
         await syncAllTables();
 
         // Schedule periodic sync every 1 hour

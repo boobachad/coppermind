@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
-import type { GoalWithDetails, GoalMetric, DebtGoal } from '../lib/types';
+import type { UnifiedGoal } from '@/lib/types';
 import { toast } from 'sonner';
-import { formatDateDDMMYYYY } from '../lib/time';
 
 interface ActivityFormProps {
     date: string;
@@ -24,19 +23,18 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
     const [description, setDescription] = useState('');
     const [isProductive, setIsProductive] = useState(true);
     const [loading, setLoading] = useState(false);
-    const [availableGoals, setAvailableGoals] = useState<GoalWithDetails[]>([]);
-    const [debtGoals, setDebtGoals] = useState<DebtGoal[]>([]);
+    const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
     const [selectedGoalId, setSelectedGoalId] = useState<string>('none');
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const fetchGoals = async () => {
             try {
-                const goals = await invoke<GoalWithDetails[]>('get_goals', { date });
+                // Fetch all active goals
+                const goals = await invoke<UnifiedGoal[]>('get_unified_goals', {
+                    filters: { completed: false }
+                });
                 setAvailableGoals(goals);
-                
-                const debts = await invoke<DebtGoal[]>('get_debt_goals');
-                setDebtGoals(debts);
             } catch (error) {
                 toast.error('Failed to fetch goals', { description: String(error) });
             }
@@ -47,10 +45,11 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
     const handleGoalChange = (value: string) => {
         setSelectedGoalId(value);
         setMetricValues({});
+        
         if (value !== 'none') {
             const goal = availableGoals.find(g => g.id === value);
             if (goal) {
-                setDescription(prev => prev || `Worked on: ${goal.description}`);
+                setDescription(prev => prev || `Worked on: ${goal.text}`);
             }
         }
     };
@@ -69,27 +68,38 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
             const start = new Date(`${date}T${startTime}:00`);
             const end = new Date(`${date}T${endTime}:00`);
 
-            await invoke('create_activity', {
+            const activityResult = await invoke<{ id: string }>('create_activity', {
                 req: {
                     startTime: start.toISOString(),
                     endTime: end.toISOString(),
                     category,
                     description,
                     isProductive,
-                    goalId: selectedGoalId === 'none' ? null : selectedGoalId,
+                    goalId: null, // Activities don't link via goal_id anymore
                 }
             });
 
-            // Update metrics if any
-            if (selectedGoalId !== 'none' && Object.keys(metricValues).length > 0) {
-                for (const [metricId, value] of Object.entries(metricValues)) {
-                    const numValue = parseInt(value);
-                    if (numValue > 0) {
-                        await invoke('update_goal_metric', {
-                            metricId,
-                            increment: numValue,
-                        });
-                    }
+            // Link to goal if selected
+            if (selectedGoalId !== 'none') {
+                await invoke('link_activity_to_unified_goal', {
+                    goalId: selectedGoalId,
+                    activityId: activityResult.id,
+                });
+
+                // Update metrics if any
+                if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
+                    const updatedMetrics = selectedGoal.metrics.map(m => {
+                        const increment = parseInt(metricValues[m.id] || '0');
+                        return {
+                            ...m,
+                            current: m.current + increment
+                        };
+                    });
+
+                    await invoke('update_unified_goal', {
+                        id: selectedGoalId,
+                        req: { metrics: updatedMetrics }
+                    });
                 }
             }
 
@@ -163,29 +173,21 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                             <SelectItem value="none">-- No Goal --</SelectItem>
                             {availableGoals.map((g) => (
                                 <SelectItem key={g.id} value={g.id}>
-                                    {g.description.substring(0, 30)}{g.description.length > 30 ? '...' : ''}
+                                    {g.text.substring(0, 40)}{g.text.length > 40 ? '...' : ''}
+                                    {g.urgent && ' 🔥'}
+                                    {g.isDebt && ' ⚠️'}
                                 </SelectItem>
                             ))}
-                            {debtGoals.length > 0 && (
-                                <>
-                                    <div className="px-2 py-1.5 text-xs font-semibold uppercase" style={{ color: 'var(--pos-debt-text)' }}>Debt Goals</div>
-                                    {debtGoals.map((d) => (
-                                        <SelectItem key={d.goalId} value={d.goalId} style={{ color: 'var(--pos-debt-text)' }}>
-                                            {d.description.substring(0, 25)}{d.description.length > 25 ? '...' : ''} (from {formatDateDDMMYYYY(new Date(d.originalDate))})
-                                        </SelectItem>
-                                    ))}
-                                </>
-                            )}
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (
+            {(selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0) && (
                 <div className="p-3 rounded-md" style={{ backgroundColor: 'var(--pos-goal-link-bg)', borderColor: 'var(--pos-goal-link-border)', borderWidth: '1px' }}>
                     <p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--pos-goal-link-text)' }}>Log Progress</p>
                     <div className="grid grid-cols-2 gap-3">
-                        {selectedGoal.metrics.map((m: GoalMetric) => (
+                        {selectedGoal.metrics.map((m) => (
                             <div key={m.id}>
                                 <label className="block text-xs text-muted-foreground mb-1">
                                     {m.label} ({m.unit})

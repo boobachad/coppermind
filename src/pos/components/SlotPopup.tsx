@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Star } from 'lucide-react';
+import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
 import { formatSlotTime, formatTime } from '../lib/time';
 import type { Activity } from '../lib/types';
@@ -60,7 +61,9 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                 </DialogHeader>
 
                 {loading ? (
-                    <div className="py-8 text-center text-muted-foreground">Loading...</div>
+                    <div className="py-8 flex justify-center">
+                        <Loader />
+                    </div>
                 ) : activities && activities.length > 0 ? (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                         {activities.map((activity) => (
