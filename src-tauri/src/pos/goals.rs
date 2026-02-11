@@ -9,6 +9,7 @@ use super::utils::gen_id;
 // ─── Row types (native chrono for TIMESTAMPTZ) ──────────────────────
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct GoalRow {
     pub id: String,
     pub date: String,
@@ -20,6 +21,7 @@ pub struct GoalRow {
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct GoalMetricRow {
     pub id: String,
     pub goal_id: String,
@@ -30,6 +32,7 @@ pub struct GoalMetricRow {
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct RecurringGoalRow {
     pub id: String,
     pub description: String,
@@ -40,6 +43,7 @@ pub struct RecurringGoalRow {
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct RecurringGoalMetricRow {
     pub id: String,
     pub recurring_goal_id: String,
@@ -49,8 +53,10 @@ pub struct RecurringGoalMetricRow {
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct DebtGoalRow {
     pub id: String,
+    pub goal_id: String,
     pub original_date: String,
     pub description: String,
     pub problem_id: Option<String>,
@@ -61,6 +67,7 @@ pub struct DebtGoalRow {
 // ─── Composite response ─────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GoalWithDetails {
     #[serde(flatten)]
     pub goal: GoalRow,
@@ -88,6 +95,7 @@ pub struct MetricInput {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TransitionResponse {
     pub transitioned: i32,
     pub message: String,
@@ -136,13 +144,47 @@ fn normalize_problem_id(problem_id: &str) -> String {
 // ─── Commands ───────────────────────────────────────────────────────
 
 /// Fetch goals for a date. Auto-generates from active recurring templates if needed.
+/// Auto-transitions old unverified goals to debt.
 /// Returns goals with their metrics, linked activities, and recurring template info.
 #[tauri::command]
 pub async fn get_goals(
     db: State<'_, PosDb>,
     date: String,
 ) -> Result<Vec<GoalWithDetails>, PosError> {
+    log::info!("[CMD] get_goals called for date: {}", date);
     let pool = &db.0;
+
+    // 0. Auto-transition old unverified goals to debt (lazy cleanup)
+    log::info!("[CMD] get_goals: checking for old unverified goals");
+    let unverified = sqlx::query_as::<_, GoalRow>(
+        "SELECT id, date, description, problem_id, is_verified, recurring_goal_id, created_at FROM pos_goals WHERE date < $1 AND is_verified = FALSE",
+    )
+    .bind(&date)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        log::error!("[CMD] get_goals: DB error finding old unverified: {}", e);
+        db_context("find old unverified", e)
+    })?;
+
+    if !unverified.is_empty() {
+        log::info!("[CMD] get_goals: transitioning {} old goals to debt", unverified.len());
+        for goal in &unverified {
+            let debt_id = gen_id();
+            sqlx::query(
+                "INSERT INTO pos_debt_goals (id, goal_id, original_date, description, problem_id) VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(&debt_id)
+            .bind(&goal.id)
+            .bind(&goal.date)
+            .bind(&goal.description)
+            .bind(&goal.problem_id)
+            .execute(pool)
+            .await
+            .map_err(|e| db_context("insert debt goal", e))?;
+        }
+        log::info!("[POS] Auto-transitioned {} old unverified goals to debt", unverified.len());
+    }
 
     // 1. Fetch existing goals for this date
     let mut goals = sqlx::query_as::<_, GoalRow>(
@@ -322,6 +364,12 @@ pub async fn create_goal(
 
         // 3. If date provided and matches frequency, create today's instance
         if let Some(ref date) = req.date {
+            // Validate: Cannot create goals for past dates
+            let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+            if date < &today {
+                return Err(PosError::InvalidInput(format!("Cannot create goals for past dates. Goal date: {}, Today: {}", date, today)));
+            }
+            
             if is_recurring_day(frequency, date) {
                 let goal_id = gen_id();
                 sqlx::query(
@@ -380,6 +428,13 @@ pub async fn create_goal(
 
     // CASE B: One-off Goal
     let date = req.date.ok_or_else(|| PosError::InvalidInput("Date is required for one-off goals".into()))?;
+    
+    // Validate: Cannot create goals for past dates
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    if date < today {
+        return Err(PosError::InvalidInput(format!("Cannot create goals for past dates. Goal date: {}, Today: {}", date, today)));
+    }
+    
     let goal_id = gen_id();
 
     sqlx::query(
@@ -440,103 +495,56 @@ pub async fn create_goal(
 pub async fn get_debt_goals(
     db: State<'_, PosDb>,
 ) -> Result<Vec<DebtGoalRow>, PosError> {
+    log::info!("[CMD] get_debt_goals called");
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, DebtGoalRow>(
-        "SELECT id, original_date, description, problem_id, transitioned_at, resolved_at FROM pos_debt_goals WHERE resolved_at IS NULL ORDER BY original_date ASC",
+        "SELECT id, goal_id, original_date, description, problem_id, transitioned_at, resolved_at FROM pos_debt_goals WHERE resolved_at IS NULL ORDER BY original_date ASC",
     )
     .fetch_all(pool)
     .await
-    .map_err(|e| db_context("Fetch debt goals", e))?;
+    .map_err(|e| {
+        log::error!("[CMD] get_debt_goals: DB error: {}", e);
+        db_context("Fetch debt goals", e)
+    })?;
 
+    log::info!("[CMD] get_debt_goals: returning {} debt goals", rows.len());
     Ok(rows)
 }
 
-/// Transition unverified goals before a cutoff date into debt goals.
-/// Transactional: insert debt goals + delete originals atomically.
+/// Update a goal metric by incrementing its current_value.
+/// Used when logging activities that contribute to goal progress.
 #[tauri::command]
-pub async fn transition_debt_goals(
+pub async fn update_goal_metric(
     db: State<'_, PosDb>,
-    before_date: String,
-) -> Result<TransitionResponse, PosError> {
+    metric_id: String,
+    increment: i32,
+) -> Result<(), PosError> {
     let pool = &db.0;
 
-    let unverified = sqlx::query_as::<_, GoalRow>(
-        "SELECT id, date, description, problem_id, is_verified, recurring_goal_id, created_at FROM pos_goals WHERE date < $1 AND is_verified = FALSE",
-    )
-    .bind(&before_date)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| db_context("Find unverified", e))?;
-
-    if unverified.is_empty() {
-        return Ok(TransitionResponse {
-            transitioned: 0,
-            message: "No unverified goals to transition".into(),
-        });
-    }
-
-    let count = unverified.len() as i32;
-    let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
-
-    for g in &unverified {
-        let dg_id = gen_id();
-        sqlx::query(
-            "INSERT INTO pos_debt_goals (id, original_date, description, problem_id) VALUES ($1, $2, $3, $4)",
-        )
-        .bind(&dg_id)
-        .bind(&g.date)
-        .bind(&g.description)
-        .bind(&g.problem_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| db_context("Insert debt goal", e))?;
-    }
-
-    // Delete original goals (CASCADE removes goal_metrics via FK)
-    for g in &unverified {
-        sqlx::query("DELETE FROM pos_goals WHERE id = $1")
-            .bind(&g.id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| db_context("Delete goal", e))?;
-    }
-
-    tx.commit().await.map_err(|e| db_context("TX commit", e))?;
-
-    log::info!("[POS] Transitioned {} goals to DebtGoals (before {})", count, before_date);
-    Ok(TransitionResponse {
-        transitioned: count,
-        message: format!("{} goals moved to DebtGoals", count),
-    })
-}
-
-/// Resolve a debt goal by setting resolved_at = NOW().
-#[tauri::command]
-pub async fn resolve_debt_goal(
-    db: State<'_, PosDb>,
-    id: String,
-) -> Result<bool, PosError> {
-    let pool = &db.0;
-
+    // Verify metric exists
     let exists: Option<(String,)> = sqlx::query_as(
-        "SELECT id FROM pos_debt_goals WHERE id = $1",
+        "SELECT id FROM pos_goal_metrics WHERE id = $1",
     )
-    .bind(&id)
+    .bind(&metric_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| db_context("Check debt goal", e))?;
+    .map_err(|e| db_context("Check goal metric", e))?;
 
     if exists.is_none() {
-        return Err(PosError::NotFound(format!("Debt goal {} not found", id)));
+        return Err(PosError::NotFound(format!("Goal metric {} not found", metric_id)));
     }
 
-    sqlx::query("UPDATE pos_debt_goals SET resolved_at = NOW() WHERE id = $1")
-        .bind(&id)
-        .execute(pool)
-        .await
-        .map_err(|e| db_context("Resolve debt goal", e))?;
+    // Update current_value
+    sqlx::query(
+        "UPDATE pos_goal_metrics SET current_value = current_value + $1 WHERE id = $2",
+    )
+    .bind(increment)
+    .bind(&metric_id)
+    .execute(pool)
+    .await
+    .map_err(|e| db_context("Update goal metric", e))?;
 
-    log::info!("[POS] Resolved DebtGoal {}", id);
-    Ok(true)
+    log::info!("[POS] Updated metric {} by {}", metric_id, increment);
+    Ok(())
 }

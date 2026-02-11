@@ -104,12 +104,16 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     // ─── Debt Goals ─────────────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS pos_debt_goals (
         id              TEXT PRIMARY KEY,
+        goal_id         TEXT NOT NULL REFERENCES pos_goals(id) ON DELETE CASCADE,
         original_date   TEXT NOT NULL,
         description     TEXT NOT NULL,
         problem_id      TEXT,
         transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         resolved_at     TIMESTAMPTZ
     )",
+    // Migration: Add goal_id column if it doesn't exist (for existing tables)
+    "ALTER TABLE pos_debt_goals ADD COLUMN IF NOT EXISTS goal_id TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_pos_dg_goal     ON pos_debt_goals (goal_id)",
     "CREATE INDEX IF NOT EXISTS idx_pos_dg_date     ON pos_debt_goals (original_date)",
     "CREATE INDEX IF NOT EXISTS idx_pos_dg_resolved ON pos_debt_goals (resolved_at)",
 ];

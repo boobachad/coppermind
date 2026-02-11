@@ -7,9 +7,16 @@ use super::error::{PosError, db_context};
 use super::shadow::{self, ShadowInput};
 use super::utils::gen_id;
 
+// ─── Common HTTP client setup ───────────────────────────────────────
+
+fn build_http_client() -> reqwest::Client {
+    reqwest::Client::new()
+}
+
 // ─── Response types ─────────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScraperResponse {
     pub platform: String,
     pub new_submissions: i32,
@@ -106,7 +113,7 @@ pub async fn scrape_leetcode(
 
     log::info!("[LEETCODE SCRAPER] Starting sync for {}", username);
 
-    let client = reqwest::Client::new();
+    let client = build_http_client();
 
     // 1. Fetch recent submissions via GraphQL
     let gql_query = r#"
@@ -251,15 +258,14 @@ async fn fetch_leetcode_question(client: &reqwest::Client, title_slug: &str) -> 
         "variables": { "titleSlug": title_slug }
     });
 
-    let result = client
+    match client
         .post("https://leetcode.com/graphql")
         .header("Content-Type", "application/json")
         .header("Referer", "https://leetcode.com")
         .json(&body)
         .send()
-        .await;
-
-    match result {
+        .await
+    {
         Ok(resp) => {
             if let Ok(data) = resp.json::<LeetCodeQuestionResponse>().await {
                 if let Some(q) = data.data.and_then(|d| d.question) {
@@ -294,7 +300,7 @@ pub async fn scrape_codeforces(
 
     log::info!("[CODEFORCES SCRAPER] Starting sync for {}", handle);
 
-    let client = reqwest::Client::new();
+    let client = build_http_client();
     let url = format!("https://codeforces.com/api/user.status?handle={}", handle);
 
     let resp = client.get(&url).send().await?;

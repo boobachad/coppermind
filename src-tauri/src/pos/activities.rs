@@ -11,6 +11,7 @@ use super::utils::gen_id;
 // sqlx decodes natively; serde serializes to ISO 8601 "2026-02-10T22:16:23.092025Z".
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityRow {
     pub id: String,
     pub date: String,
@@ -44,6 +45,7 @@ pub struct MetricUpdate {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityResponse {
     pub activities: Vec<ActivityRow>,
     pub total_minutes: i64,
@@ -52,6 +54,7 @@ pub struct ActivityResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DateRange {
     pub min_date: Option<String>,
     pub max_date: Option<String>,
@@ -181,13 +184,20 @@ pub async fn create_activity(
         }
     }
 
-    // 3. If linked to a goal, mark as verified
+    // 3. If linked to a goal, mark as verified + auto-resolve debt
     if let Some(ref gid) = req.goal_id {
         sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
             .bind(gid)
             .execute(&mut *tx)
             .await
             .map_err(|e| db_context("verify goal", e))?;
+
+        // Auto-resolve debt: delete debt row if exists (CASCADE safe, goal remains)
+        sqlx::query("DELETE FROM pos_debt_goals WHERE goal_id = $1")
+            .bind(gid)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| db_context("auto-resolve debt", e))?;
     }
 
     tx.commit().await.map_err(|e| db_context("TX commit", e))?;
@@ -271,4 +281,78 @@ pub async fn get_activity_range(
         min_date: row.0,
         max_date: row.1,
     })
+}
+
+/// GET activities for multiple dates in a single query (batch optimization).
+/// Returns a map of date -> ActivityResponse.
+#[tauri::command]
+pub async fn get_activities_batch(
+    db: State<'_, PosDb>,
+    dates: Vec<String>,
+) -> Result<std::collections::HashMap<String, ActivityResponse>, PosError> {
+    log::info!("[CMD] get_activities_batch called with {} dates", dates.len());
+    let pool = &db.0;
+
+    if dates.is_empty() {
+        log::info!("[CMD] get_activities_batch: empty dates, returning empty map");
+        return Ok(std::collections::HashMap::new());
+    }
+
+    log::info!("[CMD] get_activities_batch: querying database...");
+    // Fetch all activities for all dates in one query
+    let rows = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, start_time, end_time, category, description,
+                  is_productive, is_shadow, goal_id, created_at
+           FROM pos_activities
+           WHERE date = ANY($1)
+           ORDER BY date ASC, start_time ASC"#,
+    )
+    .bind(&dates)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        log::error!("[CMD] get_activities_batch: DB error: {}", e);
+        db_context("get_activities_batch", e)
+    })?;
+
+    log::info!("[CMD] get_activities_batch: fetched {} rows, computing metrics", rows.len());
+
+    // Group by date and compute metrics
+    let mut result = std::collections::HashMap::new();
+
+    for date in &dates {
+        let date_activities: Vec<ActivityRow> = rows
+            .iter()
+            .filter(|a| &a.date == date)
+            .cloned()
+            .collect();
+
+        let mut total_minutes: i64 = 0;
+        let mut productive_minutes: i64 = 0;
+        let mut goal_directed_minutes: i64 = 0;
+
+        for a in &date_activities {
+            let dur = (a.end_time - a.start_time).num_minutes();
+            total_minutes += dur;
+            if a.is_productive {
+                productive_minutes += dur;
+            }
+            if a.goal_id.is_some() {
+                goal_directed_minutes += dur;
+            }
+        }
+
+        result.insert(
+            date.clone(),
+            ActivityResponse {
+                activities: date_activities,
+                total_minutes,
+                productive_minutes,
+                goal_directed_minutes,
+            },
+        );
+    }
+
+    log::info!("[CMD] get_activities_batch: returning {} date entries", result.len());
+    Ok(result)
 }

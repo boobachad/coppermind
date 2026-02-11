@@ -220,9 +220,11 @@ pub fn run() {
             start_keyboard_listener(app.handle().clone());
 
             // ─── POS: Load and validate configuration ─────────────────
+            log::info!("[POS] Step 1: Loading configuration from .env");
             let pos_config = match pos::config::PosConfig::from_env() {
                 Ok(cfg) => {
                     log::info!("[POS Config] Loaded successfully");
+                    log::info!("[POS Config] DB URL prefix: {}", &cfg.database_url[..20]);
                     cfg
                 }
                 Err(e) => {
@@ -235,14 +237,21 @@ pub fn run() {
             let db_url = pos_config.database_url.clone();
             let max_connections = pos_config.db_max_connections;
             let timeout_secs = pos_config.db_connection_timeout_secs;
+            
+            log::info!("[POS] Step 2: Managing PosConfig state");
             app.handle().manage(PosConfig(pos_config));
+            log::info!("[POS] Step 2: PosConfig state managed successfully");
 
             // ─── POS: Initialize PostgreSQL connection pool ───────────
+            log::info!("[POS] Step 3: Spawning async task for DB connection");
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                log::info!("[POS] Step 3a: Inside async spawn, attempting DB connection");
+                
                 // Retry connection with exponential backoff
                 let pool_result = pos::retry::retry_db_operation(
                     || async {
+                        log::info!("[POS] Attempting to connect to PostgreSQL...");
                         PgPoolOptions::new()
                             .max_connections(max_connections)
                             .acquire_timeout(Duration::from_secs(timeout_secs))
@@ -254,6 +263,8 @@ pub fn run() {
 
                 match pool_result {
                     Ok(pool) => {
+                        log::info!("[POS] Step 3b: PostgreSQL connected, initializing tables");
+                        
                         // Create POS tables with retry
                         let init_result = pos::retry::retry_db_operation(
                             || pos::db::init_pos_tables(&pool),
@@ -265,9 +276,13 @@ pub fn run() {
                             return;
                         }
                         
+                        log::info!("[POS] Step 3c: Tables initialized, managing PosDb state");
+                        
                         // Store pool in managed state
                         handle.manage(PosDb(pool));
-                        log::info!("[POS] PostgreSQL pool ready");
+                        
+                        log::info!("[POS] Step 3d: PosDb state managed successfully");
+                        log::info!("[POS] ✓ PostgreSQL pool ready - all commands should work now");
                     }
                     Err(e) => {
                         log::error!("[POS] Failed to connect to PostgreSQL after retries: {e}");
@@ -276,19 +291,21 @@ pub fn run() {
                 }
             });
             
+            log::info!("[POS] Step 4: Async spawn initiated, continuing with app setup");
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             read_primary_selection,
             pos::activities::get_activities,
+            pos::activities::get_activities_batch,
             pos::activities::create_activity,
             pos::activities::patch_activity,
             pos::activities::get_activity_range,
             pos::goals::get_goals,
             pos::goals::create_goal,
             pos::goals::get_debt_goals,
-            pos::goals::transition_debt_goals,
-            pos::goals::resolve_debt_goal,
+            pos::goals::update_goal_metric,
             pos::submissions::get_submissions,
             pos::scraper::scrape_leetcode,
             pos::scraper::scrape_codeforces,

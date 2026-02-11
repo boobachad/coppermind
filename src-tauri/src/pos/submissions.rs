@@ -8,6 +8,7 @@ use super::error::{PosError, db_context};
 // ─── Row type ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct SubmissionRow {
     pub id: String,
     pub platform: String,
