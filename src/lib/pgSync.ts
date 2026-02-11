@@ -97,17 +97,6 @@ const PG_CREATE_TABLES = [
     )`,
 ];
 
-// ─── Upsert Builder ─────────────────────────────────────────────
-function buildUpsert(table: TableDef): string {
-    const cols = table.columns.join(", ");
-    const placeholders = table.columns.map((_, i) => `$${i + 1}`).join(", ");
-    const updateSet = table.columns
-        .map((col, i) => (col === "id" ? null : `${col} = $${i + 1}`))
-        .filter(Boolean)
-        .join(", ");
-
-    return `INSERT INTO ${table.name} (${cols}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${updateSet}`;
-}
 
 // ─── Core Sync ──────────────────────────────────────────────────
 async function syncTable(sqliteDb: Database, table: TableDef): Promise<number> {
@@ -122,11 +111,39 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<number> {
         return 0;
     }
 
-    const upsertSql = buildUpsert(table);
-
     for (const row of rows) {
-        const values = table.columns.map((col) => row[col] ?? null);
-        await pgDb.execute(upsertSql, values);
+        // Build dynamic SQL to handle nulls properly
+        // Tauri SQL plugin serializes params as JSON, so null becomes JSONB null
+        // Workaround: only include non-null columns in the query
+        const nonNullCols: string[] = [];
+        const nonNullValues: unknown[] = [];
+        
+        table.columns.forEach((col) => {
+            const val = row[col];
+            if (val !== undefined && val !== null) {
+                nonNullCols.push(col);
+                // Stringify objects/arrays for TEXT columns
+                if (typeof val === 'object') {
+                    nonNullValues.push(JSON.stringify(val));
+                } else {
+                    nonNullValues.push(val);
+                }
+            }
+        });
+
+        // Build upsert with only non-null columns
+        const placeholders = nonNullCols.map((_, i) => `$${i + 1}`).join(", ");
+        const updateSet = nonNullCols
+            .filter(col => col !== "id")
+            .map((col) => {
+                const idx = nonNullCols.indexOf(col) + 1;
+                return `${col} = $${idx}`;
+            })
+            .join(", ");
+
+        const upsertSql = `INSERT INTO ${table.name} (${nonNullCols.join(", ")}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${updateSet}`;
+        
+        await pgDb.execute(upsertSql, nonNullValues);
     }
 
     console.log(`[PgSync] ${table.name}: ${rows.length} rows synced`);
