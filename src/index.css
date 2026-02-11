@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 @config "../tailwind.config.js";
 
+/* Import Design System */
+@import "./design-system.css";
+
 /* Theme Configuration - Moved to top for availability */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -143,6 +146,12 @@
   --pos-activity-fallback: #334155;
   --pos-goal-accent: #f59e0b;
   
+  /* Heatmap colors - Dark theme (GitHub-style green) */
+  --pos-heatmap-level-1: #0e4429;
+  --pos-heatmap-level-2: #006d32;
+  --pos-heatmap-level-3: #26a641;
+  --pos-heatmap-level-4: #39d353;
+  
   /* Activity category colors - Dark theme */
   --pos-activity-coding: #3b82f6;
   --pos-activity-coding-leetcode: #0ea5e9;
@@ -206,6 +215,12 @@
   --pos-activity-fallback: #93A1A1;
   --pos-goal-accent: #d97706;
   
+  /* Heatmap colors - Light theme (darker for contrast on light background) */
+  --pos-heatmap-level-1: #c6e48b;
+  --pos-heatmap-level-2: #7bc96f;
+  --pos-heatmap-level-3: #239a3b;
+  --pos-heatmap-level-4: #196127;
+  
   /* Activity category colors - Light theme (darker for contrast) */
   --pos-activity-coding: #1e40af;
   --pos-activity-coding-leetcode: #0369a1;
@@ -266,6 +281,12 @@
   --pos-slot-empty: #e2e8f0;
   --pos-segment-empty: #e2e8f0;
   --pos-activity-fallback: #94a3b8;
+  
+  /* Heatmap colors - Blue-light theme (darker for contrast) */
+  --pos-heatmap-level-1: #c6e48b;
+  --pos-heatmap-level-2: #7bc96f;
+  --pos-heatmap-level-3: #239a3b;
+  --pos-heatmap-level-4: #196127;
 }
 
 html,

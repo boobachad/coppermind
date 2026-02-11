@@ -9,6 +9,7 @@ import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
 import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString } from '../lib/time';
 import { toast } from 'sonner';
+import { getDb } from '../../lib/db';
 
 interface GridSlot {
     slotIndex: number;
@@ -46,6 +47,7 @@ export function GridPage() {
     const [todayStr, setTodayStr] = useState('');
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
     const [availableMonths, setAvailableMonths] = useState<{ year: number; month: number; label: string }[]>([]);
+    const [journalEntries, setJournalEntries] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         setTodayStr(getLocalDateString());
@@ -91,6 +93,22 @@ export function GridPage() {
         const dataMap = new Map<string, GridSlot[]>();
 
         try {
+            // Batch fetch journal entries (O(1) query)
+            // Entry counts only if it has: (expected OR actual schedule) AND reflection text
+            const db = await getDb();
+            const journalRows = await db.select<any[]>(
+                `SELECT date FROM journal_entries 
+                 WHERE date IN (${dates.map(() => '?').join(',')})
+                 AND reflection_text != ''
+                 AND (
+                     (expected_schedule_image != '' OR expected_schedule_data IS NOT NULL)
+                     OR (actual_schedule_image != '' OR actual_schedule_data IS NOT NULL)
+                 )`,
+                dates
+            );
+            const journalDates = new Set(journalRows.map(r => r.date));
+            setJournalEntries(journalDates);
+
             // Batch fetch all activities in one query (O(1) round trips instead of O(n))
             const batchResponse = await invoke<Record<string, { activities: Activity[] }>>('get_activities_batch', { dates });
 
@@ -260,9 +278,20 @@ export function GridPage() {
                                                     style={{ color: isToday ? 'var(--pos-today-text)' : 'inherit', fontWeight: isToday ? 'bold' : 'normal' }}
                                                     title="Click to view day details"
                                                 >
-                                                    <div className="font-medium">{formatDateDDMMYYYY(new Date(date))}</div>
-                                                    <div className="text-[10px]" style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-secondary)' }}>
-                                                        {getDayName(date)}
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div>
+                                                            <div className="font-medium">{formatDateDDMMYYYY(new Date(date))}</div>
+                                                            <div className="text-[10px]" style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-secondary)' }}>
+                                                                {getDayName(date)}
+                                                            </div>
+                                                        </div>
+                                                        {journalEntries.has(date) && (
+                                                            <div 
+                                                                className="w-2 h-2 rounded-full shrink-0" 
+                                                                style={{ backgroundColor: 'var(--pos-success-text)' }}
+                                                                title="Journal entry exists"
+                                                            />
+                                                        )}
                                                     </div>
                                                 </Link>
                                             </td>

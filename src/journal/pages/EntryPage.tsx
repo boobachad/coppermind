@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Save, ArrowLeft } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Calendar, Save, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -152,10 +152,12 @@ export default function EntryPage() {
               <p className="text-lg">{formatDateDDMMYYYY(new Date(entry.date))}</p>
             </div>
           </div>
-          <Button onClick={() => navigate('/journal')} variant="outline" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+          <Link to={`/pos/grid/${entry.date}`}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              View Activities
+            </Button>
+          </Link>
         </div>
 
         {!isPast && (

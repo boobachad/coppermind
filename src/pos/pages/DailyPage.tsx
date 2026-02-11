@@ -9,8 +9,10 @@ import { Navbar } from '../components/Navbar';
 import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, GoalWithDetails } from '../lib/types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { getDb } from '../../lib/db';
 
 interface GridSlot {
     slotIndex: number;
@@ -34,6 +36,7 @@ export function DailyPage() {
     const [showPopup, setShowPopup] = useState(false);
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
     const [isToday, setIsToday] = useState(false);
+    const [hasJournalEntry, setHasJournalEntry] = useState(false);
 
     const fetchData = async () => {
         if (!date) return;
@@ -48,6 +51,24 @@ export function DailyPage() {
             // Calculate current slot index
             const currentMinute = now.getHours() * 60 + now.getMinutes();
             setCurrentSlotIndex(Math.floor(currentMinute / 30));
+
+            // Check if journal entry exists (counts only if has schedule + reflection)
+            try {
+                const db = await getDb();
+                const journalRows = await db.select<any[]>(
+                    `SELECT id FROM journal_entries 
+                     WHERE date = $1
+                     AND reflection_text != ''
+                     AND (
+                         (expected_schedule_image != '' OR expected_schedule_data IS NOT NULL)
+                         OR (actual_schedule_image != '' OR actual_schedule_data IS NOT NULL)
+                     )`,
+                    [date]
+                );
+                setHasJournalEntry(journalRows.length > 0);
+            } catch (err) {
+                console.error('Failed to check journal entry:', err);
+            }
 
             const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
             const actData = response.activities;
@@ -160,6 +181,14 @@ export function DailyPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                     <h1 className="text-2xl font-bold tracking-tight">{formatDateDDMMYYYY(new Date(date!))}</h1>
+                    {hasJournalEntry && (
+                        <Link to={`/journal/${date}`}>
+                            <Button variant="outline" size="sm" className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4" />
+                                View Journal
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
