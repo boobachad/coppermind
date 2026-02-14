@@ -7,7 +7,7 @@ import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
-import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString } from '../lib/time';
+import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot } from '../lib/time';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -123,11 +123,9 @@ export function GridPage() {
                     const slotEnd = new Date(slotStart);
                     slotEnd.setMinutes(slotEnd.getMinutes() + 30);
 
-                    const overlapping = activities.filter((activity: Activity) => {
-                        const actStart = new Date(activity.startTime);
-                        const actEnd = new Date(activity.endTime);
-                        return actStart < slotEnd && actEnd > slotStart;
-                    });
+                    const overlapping = activities.filter((activity: Activity) =>
+                        activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)
+                    );
 
                     let slotBackground = 'var(--pos-slot-empty)';
                     let segments: { width: number; color: string }[] | undefined;

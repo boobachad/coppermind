@@ -35,12 +35,36 @@ export function getLocalDateString(): string {
 // Always use these functions for consistency across Grid/DailyPage
 
 /**
+ * Convert local Date to UTC ISO string for backend storage
+ * Input: Local time Date object (e.g., 00:00 in UTC+5:30)
+ * Output: UTC ISO string (e.g., "2026-02-11T18:30:00.000Z")
+ * 
+ * The Date object is already in local time, .toISOString() converts to UTC
+ */
+export function formatLocalAsUTC(localDate: Date): string {
+    const iso = localDate.toISOString();
+    console.log('[formatLocalAsUTC]', {
+        localTime: `${localDate.getHours()}:${localDate.getMinutes()}`,
+        localString: localDate.toString(),
+        utcISO: iso,
+        utcTime: `${localDate.getUTCHours()}:${localDate.getUTCMinutes()}`
+    });
+    return iso;
+}
+
+/**
  * Parse activity ISO timestamp to local Date object
- * Backend sends UTC strings like "2026-02-12T00:00:00Z"
- * This converts to local timezone for display/calculations
+ * Backend sends UTC strings like "2026-02-11T18:30:00Z"
+ * This converts to local timezone: 18:30 UTC → 00:00 UTC+5:30
  */
 export function parseActivityTime(isoString: string): Date {
-    return new Date(isoString);
+    const date = new Date(isoString);
+    console.log('[parseActivityTime]', {
+        utcISO: isoString,
+        localTime: `${date.getHours()}:${date.getMinutes()}`,
+        localString: date.toString()
+    });
+    return date;
 }
 
 /**

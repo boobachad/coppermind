@@ -39,6 +39,7 @@ pub struct CreateActivityRequest {
     pub is_productive: Option<bool>,
     pub goal_id: Option<String>,
     pub updates: Option<Vec<MetricUpdate>>,
+    pub date: Option<String>,     // Optional: local date YYYY-MM-DD for correct filtering
 }
 
 #[derive(Debug, Deserialize)]
@@ -135,7 +136,8 @@ pub async fn create_activity(
         return Err(PosError::InvalidInput("end_time must be after start_time".into()));
     }
 
-    let date = start.format("%Y-%m-%d").to_string();
+    // Use provided date or derive from start_time UTC
+    let date = req.date.unwrap_or_else(|| start.format("%Y-%m-%d").to_string());
     let activity_id = gen_id();
     let is_productive = req.is_productive.unwrap_or(true);
 
@@ -250,7 +252,7 @@ pub async fn update_activity(
         return Err(PosError::InvalidInput("end_time must be after start_time".into()));
     }
 
-    let date = start.format("%Y-%m-%d").to_string();
+    let date = req.date.unwrap_or_else(|| start.format("%Y-%m-%d").to_string());
     let is_productive = req.is_productive.unwrap_or(true);
 
     sqlx::query(

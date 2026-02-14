@@ -9,6 +9,7 @@ import { Flame, AlertTriangle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal } from '@/lib/types';
 import type { Activity } from '../lib/types';
+import { formatLocalAsUTC } from '../lib/time';
 import { toast } from 'sonner';
 
 interface ActivityFormProps {
@@ -99,19 +100,8 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
             return;
         }
 
-        // Format dates to preserve local time (avoid timezone shift)
-        const formatLocalAsISO = (d: Date) => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            const hours = String(d.getHours()).padStart(2, '0');
-            const minutes = String(d.getMinutes()).padStart(2, '0');
-            const seconds = String(d.getSeconds()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
-        };
-
-        const startTimeISO = formatLocalAsISO(startDate);
-        const endTimeISO = formatLocalAsISO(endDate);
+        const startTimeISO = formatLocalAsUTC(startDate);
+        const endTimeISO = formatLocalAsUTC(endDate);
 
         setLoading(true);
         try {
@@ -125,6 +115,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                         title,
                         description,
                         isProductive,
+                        date, // Pass the local date for correct filtering
                     }
                 });
                 toast.success('Activity updated successfully');
@@ -139,6 +130,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                         description,
                         isProductive,
                         goalId: null,
+                        date, // Pass the local date for correct filtering
                     }
                 });
 
