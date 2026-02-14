@@ -18,6 +18,7 @@ pub struct ActivityRow {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub category: String,
+    pub title: String,
     pub description: String,
     pub is_productive: bool,
     pub is_shadow: bool,
@@ -33,6 +34,7 @@ pub struct CreateActivityRequest {
     pub start_time: String,       // ISO 8601 from frontend
     pub end_time: String,         // ISO 8601 from frontend
     pub category: String,
+    pub title: String,
     pub description: String,
     pub is_productive: Option<bool>,
     pub goal_id: Option<String>,
@@ -75,7 +77,7 @@ pub async fn get_activities(
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, ActivityRow>(
-        r#"SELECT id, date, start_time, end_time, category, description,
+        r#"SELECT id, date, start_time, end_time, category, title, description,
                   is_productive, is_shadow, goal_id, created_at
            FROM pos_activities
            WHERE date = $1
@@ -142,14 +144,15 @@ pub async fn create_activity(
     // 1. Insert activity — sqlx+chrono handles DateTime<Utc> → TIMESTAMPTZ natively
     sqlx::query(
         r#"INSERT INTO pos_activities
-           (id, date, start_time, end_time, category, description, is_productive, is_shadow, goal_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8)"#,
+           (id, date, start_time, end_time, category, title, description, is_productive, is_shadow, goal_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9)"#,
     )
     .bind(&activity_id)
     .bind(&date)
     .bind(start)
     .bind(end)
     .bind(&req.category)
+    .bind(&req.title)
     .bind(&req.description)
     .bind(is_productive)
     .bind(&req.goal_id)
@@ -206,7 +209,7 @@ pub async fn create_activity(
 
     // Fetch the created activity
     let activity = sqlx::query_as::<_, ActivityRow>(
-        r#"SELECT id, date, start_time, end_time, category, description,
+        r#"SELECT id, date, start_time, end_time, category, title, description,
                   is_productive, is_shadow, goal_id, created_at
            FROM pos_activities WHERE id = $1"#,
     )
@@ -222,6 +225,63 @@ pub async fn create_activity(
         req.updates.as_ref().map_or(0, |u| u.len())
     );
 
+    Ok(activity)
+}
+
+/// UPDATE: Modify activity details (time, category, description, productive flag).
+#[tauri::command]
+pub async fn update_activity(
+    db: State<'_, PosDb>,
+    id: String,
+    req: CreateActivityRequest,
+) -> Result<ActivityRow, PosError> {
+    let pool = &db.0;
+
+    let start: DateTime<Utc> = req.start_time.parse::<DateTime<chrono::FixedOffset>>()
+        .map(|d| d.with_timezone(&Utc))
+        .or_else(|_| req.start_time.parse::<DateTime<Utc>>())
+        .map_err(|e| PosError::InvalidInput(format!("Invalid start_time: {}", e)))?;
+    let end: DateTime<Utc> = req.end_time.parse::<DateTime<chrono::FixedOffset>>()
+        .map(|d| d.with_timezone(&Utc))
+        .or_else(|_| req.end_time.parse::<DateTime<Utc>>())
+        .map_err(|e| PosError::InvalidInput(format!("Invalid end_time: {}", e)))?;
+
+    if start >= end {
+        return Err(PosError::InvalidInput("end_time must be after start_time".into()));
+    }
+
+    let date = start.format("%Y-%m-%d").to_string();
+    let is_productive = req.is_productive.unwrap_or(true);
+
+    sqlx::query(
+        r#"UPDATE pos_activities SET
+           date = $1, start_time = $2, end_time = $3, category = $4,
+           title = $5, description = $6, is_productive = $7
+           WHERE id = $8"#,
+    )
+    .bind(&date)
+    .bind(start)
+    .bind(end)
+    .bind(&req.category)
+    .bind(&req.title)
+    .bind(&req.description)
+    .bind(is_productive)
+    .bind(&id)
+    .execute(pool)
+    .await
+    .map_err(|e| db_context("update activity", e))?;
+
+    let activity = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, start_time, end_time, category, title, description,
+                  is_productive, is_shadow, goal_id, created_at
+           FROM pos_activities WHERE id = $1"#,
+    )
+    .bind(&id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("fetch updated activity", e))?;
+
+    log::info!("[POS] Updated activity {}", id);
     Ok(activity)
 }
 
@@ -252,7 +312,7 @@ pub async fn patch_activity(
     tx.commit().await.map_err(|e| db_context("TX commit", e))?;
 
     let activity = sqlx::query_as::<_, ActivityRow>(
-        r#"SELECT id, date, start_time, end_time, category, description,
+        r#"SELECT id, date, start_time, end_time, category, title, description,
                   is_productive, is_shadow, goal_id, created_at
            FROM pos_activities WHERE id = $1"#,
     )
@@ -303,7 +363,7 @@ pub async fn get_activities_batch(
     log::info!("[CMD] get_activities_batch: querying database...");
     // Fetch all activities for all dates in one query
     let rows = sqlx::query_as::<_, ActivityRow>(
-        r#"SELECT id, date, start_time, end_time, category, description,
+        r#"SELECT id, date, start_time, end_time, category, title, description,
                   is_productive, is_shadow, goal_id, created_at
            FROM pos_activities
            WHERE date = ANY($1)

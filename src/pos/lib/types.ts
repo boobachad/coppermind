@@ -8,6 +8,7 @@ export interface Activity {
     startTime: string;         // ISO 8601 UTC (camelCase for TS convention, mapped from snake_case in Rust)
     endTime: string;
     category: string;
+    title: string;
     description: string;
     isProductive: boolean;
     isShadow: boolean;
@@ -147,4 +148,51 @@ export interface CodeforcesSubmission {
 export interface CodeforcesResponse {
     status: string;
     result: CodeforcesSubmission[];
+}
+
+// ─── GitHub Types ───────────────────────────────────────────────
+
+export interface GitHubRepository {
+    id: string;
+    username: string;
+    repoName: string;
+    repoOwner: string;
+    fullName: string;
+    description: string | null;
+    languages: any | null;
+    primaryLanguage: string | null;
+    totalCommits: number;
+    totalPrs: number;
+    totalIssues: number;
+    totalReviews: number;
+    stars: number;
+    forks: number;
+    watchers: number;
+    sizeKb: number;
+    isPrivate: boolean;
+    isFork: boolean;
+    firstCommitDate: string | null;
+    lastCommitDate: string | null;
+    repoCreatedAt: string | null;
+    repoUpdatedAt: string | null;
+    repoUrl: string | null;
+    homepageUrl: string | null;
+    topics: any | null;
+    syncedAt: string;
+}
+
+export interface GitHubUserStats {
+    username: string;
+    totalRepos: number;
+    totalCommits: number;
+    totalPrs: number;
+    totalIssues: number;
+    totalReviews: number;
+    totalStarsReceived: number;
+    languagesBreakdown: any | null;
+    currentStreakDays: number;
+    longestStreakDays: number;
+    contributionsByYear: any | null;
+    topRepos: any | null;
+    syncedAt: string;
 }

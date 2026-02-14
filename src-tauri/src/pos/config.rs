@@ -9,6 +9,10 @@ pub struct PosConfig {
     pub leetcode_username: Option<String>,
     /// Codeforces handle for scraping
     pub codeforces_handle: Option<String>,
+    /// GitHub username for scraping
+    pub github_username: Option<String>,
+    /// GitHub personal access token for API access
+    pub github_token: Option<String>,
     /// Shadow activity duration in minutes (default: 30)
     pub shadow_activity_minutes: i64,
     /// Database connection timeout in seconds (default: 10)
@@ -43,6 +47,26 @@ impl PosConfig {
         let codeforces_handle = env::var("CODEFORCES_HANDLE").ok();
         if codeforces_handle.is_none() {
             log::warn!("[POS Config] CODEFORCES_HANDLE not set - Codeforces scraper will be unavailable");
+        }
+
+        // GitHub username (optional)
+        let github_username = env::var("GITHUB_USERNAME").ok();
+        if github_username.is_none() {
+            log::warn!("[POS Config] GITHUB_USERNAME not set - GitHub scraper will be unavailable");
+        }
+
+        // GitHub token (optional)
+        let github_token = env::var("GITHUB_TOKEN").ok();
+        if github_token.is_none() {
+            log::warn!("[POS Config] GITHUB_TOKEN not set - GitHub API access will be limited");
+        }
+
+        // Validate GitHub config consistency
+        if github_username.is_some() && github_token.is_none() {
+            log::warn!("[POS Config] GITHUB_USERNAME set but GITHUB_TOKEN missing - API rate limits will apply");
+        }
+        if github_token.is_some() && github_username.is_none() {
+            log::warn!("[POS Config] GITHUB_TOKEN set but GITHUB_USERNAME missing - scraper will be unavailable");
         }
 
         // Shadow activity duration (optional, default 30)
@@ -88,6 +112,8 @@ impl PosConfig {
             database_url,
             leetcode_username,
             codeforces_handle,
+            github_username,
+            github_token,
             shadow_activity_minutes,
             db_connection_timeout_secs,
             db_max_connections,
@@ -107,6 +133,25 @@ impl PosConfig {
             .as_deref()
             .ok_or_else(|| "CODEFORCES_HANDLE not configured".to_string())
     }
+
+    /// Get GitHub username or return error
+    pub fn require_github_username(&self) -> Result<&str, String> {
+        self.github_username
+            .as_deref()
+            .ok_or_else(|| "GITHUB_USERNAME not configured".to_string())
+    }
+
+    /// Get GitHub token or return error
+    pub fn require_github_token(&self) -> Result<&str, String> {
+        self.github_token
+            .as_deref()
+            .ok_or_else(|| "GITHUB_TOKEN not configured".to_string())
+    }
+
+    /// Check if GitHub is fully configured (both username and token)
+    pub fn has_github_config(&self) -> bool {
+        self.github_username.is_some() && self.github_token.is_some()
+    }
 }
 
 #[cfg(test)]
@@ -123,5 +168,30 @@ mod tests {
 
         env::set_var("SHADOW_ACTIVITY_MINUTES", "30");
         assert!(PosConfig::from_env().is_ok());
+    }
+}
+
+// ─── Tauri Commands ─────────────────────────────────────────────────
+
+use serde::Serialize;
+use tauri::State;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PosConfigResponse {
+    pub leetcode_username: Option<String>,
+    pub codeforces_handle: Option<String>,
+    pub github_username: Option<String>,
+    pub has_github_token: bool,
+}
+
+/// Get POS configuration (without exposing sensitive tokens)
+#[tauri::command]
+pub fn get_pos_config(config: State<'_, crate::PosConfig>) -> PosConfigResponse {
+    PosConfigResponse {
+        leetcode_username: config.0.leetcode_username.clone(),
+        codeforces_handle: config.0.codeforces_handle.clone(),
+        github_username: config.0.github_username.clone(),
+        has_github_token: config.0.github_token.is_some(),
     }
 }

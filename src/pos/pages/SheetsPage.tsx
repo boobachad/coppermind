@@ -5,6 +5,7 @@ import { Navbar } from '../components/Navbar';
 import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import type { Submission } from '../lib/types';
 import { Loader } from '@/components/Loader';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Select,
@@ -92,7 +93,7 @@ export function SheetsPage() {
             
             if (totalNew > 0) {
                 toast.success('Sync complete', {
-                    description: `LC: ${lcData.newSubmissions ?? 0} new, CF: ${cfData.newSubmissions ?? 0} new`
+                    description: `LC: ${lcData.newSubmissions ?? 0}, CF: ${cfData.newSubmissions ?? 0}`
                 });
             } else {
                 toast.info('No new submissions found');
@@ -155,6 +156,7 @@ export function SheetsPage() {
                                 <SelectItem value="all">All Platforms</SelectItem>
                                 <SelectItem value="leetcode">LeetCode</SelectItem>
                                 <SelectItem value="codeforces">Codeforces</SelectItem>
+                                <SelectItem value="github">GitHub</SelectItem>
                             </SelectContent>
                         </Select>
 
@@ -243,11 +245,11 @@ export function SheetsPage() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono border" style={{
-                                                    backgroundColor: sub.platform === 'leetcode' ? 'var(--pos-warning-bg)' : 'var(--pos-info-bg)',
-                                                    color: sub.platform === 'leetcode' ? 'var(--pos-warning-text)' : 'var(--pos-info-text)',
-                                                    borderColor: sub.platform === 'leetcode' ? 'var(--pos-warning-border)' : 'var(--pos-info-border)'
+                                                    backgroundColor: sub.platform === 'leetcode' ? 'var(--pos-warning-bg)' : sub.platform === 'github' ? 'var(--pos-success-bg)' : 'var(--pos-info-bg)',
+                                                    color: sub.platform === 'leetcode' ? 'var(--pos-warning-text)' : sub.platform === 'github' ? 'var(--pos-success-text)' : 'var(--pos-info-text)',
+                                                    borderColor: sub.platform === 'leetcode' ? 'var(--pos-warning-border)' : sub.platform === 'github' ? 'var(--pos-success-border)' : 'var(--pos-info-border)'
                                                 }}>
-                                                    {sub.platform === 'leetcode' ? 'LC' : 'CF'}
+                                                    {sub.platform === 'leetcode' ? 'LC' : sub.platform === 'github' ? 'GH' : 'CF'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen } from 'lucide-react';
+import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -100,6 +100,13 @@ export function Sidebar() {
         >
           <FileSpreadsheet className="mr-3 h-4 w-4" />
           POS Sheets
+        </NavLink>
+        <NavLink
+          to="/pos/github"
+          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+        >
+          <Github className="mr-3 h-4 w-4" />
+          GitHub
         </NavLink>
         <NavLink
           to="/journal"

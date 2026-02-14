@@ -3,16 +3,16 @@ import { useParams, Link } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ActivityForm } from '../components/ActivityForm';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
-import { formatDateDDMMYYYY, formatTime } from '../lib/time';
+import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, GoalWithDetails } from '../lib/types';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { getDb } from '../../lib/db';
 
 interface GridSlot {
@@ -38,22 +38,20 @@ export function DailyPage() {
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
     const [isToday, setIsToday] = useState(false);
     const [hasJournalEntry, setHasJournalEntry] = useState(false);
+    const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
     const fetchData = async () => {
         if (!date) return;
         
         setLoading(true);
         try {
-            // Check if viewing today
             const now = new Date();
             const localDateStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
             setIsToday(date === localDateStr);
             
-            // Calculate current slot index
             const currentMinute = now.getHours() * 60 + now.getMinutes();
             setCurrentSlotIndex(Math.floor(currentMinute / 30));
 
-            // Check if journal entry exists (counts only if has schedule + reflection)
             try {
                 const db = await getDb();
                 const journalRows = await db.select<any[]>(
@@ -75,21 +73,48 @@ export function DailyPage() {
             const actData = response.activities;
             setActivities(actData);
 
-            // Calculate metrics
+            const sortedActivities = [...actData].sort((a, b) => 
+                parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
+            );
+
+            const mergedIntervals: Array<{ start: number; end: number; productive: boolean; goalDirected: boolean }> = [];
+            
+            for (const act of sortedActivities) {
+                const start = parseActivityTime(act.startTime).getTime();
+                const end = parseActivityTime(act.endTime).getTime();
+                
+                if (mergedIntervals.length === 0 || mergedIntervals[mergedIntervals.length - 1].end < start) {
+                    mergedIntervals.push({
+                        start,
+                        end,
+                        productive: act.isProductive,
+                        goalDirected: !!act.goalId
+                    });
+                } else {
+                    const last = mergedIntervals[mergedIntervals.length - 1];
+                    last.end = Math.max(last.end, end);
+                    last.productive = last.productive || act.isProductive;
+                    last.goalDirected = last.goalDirected || !!act.goalId;
+                }
+            }
+
             let total = 0;
             let productive = 0;
             let goalDirected = 0;
 
-            actData.forEach(act => {
-                const duration = (new Date(act.endTime).getTime() - new Date(act.startTime).getTime()) / 60000;
+            mergedIntervals.forEach(interval => {
+                const duration = (interval.end - interval.start) / 60000;
                 total += duration;
-                if (act.isProductive) productive += duration;
-                if (act.goalId) goalDirected += duration;
+                if (interval.productive) productive += duration;
+                if (interval.goalDirected) goalDirected += duration;
             });
 
-            setMetrics({ totalMinutes: total, productiveMinutes: productive, goalDirectedMinutes: goalDirected });
+            setMetrics({ 
+                totalMinutes: Math.round(total), 
+                productiveMinutes: Math.round(productive), 
+                goalDirectedMinutes: Math.round(goalDirected) 
+            });
 
-            // Generate slots
             const [year, month, day] = date.split('-').map(Number);
             const slots: GridSlot[] = Array.from({ length: 48 }, (_, i) => {
                 const slotStart = new Date(year, month - 1, day);
@@ -97,11 +122,9 @@ export function DailyPage() {
                 const slotEnd = new Date(slotStart);
                 slotEnd.setMinutes(slotEnd.getMinutes() + 30);
 
-                const overlapping = actData.filter((activity) => {
-                    const actStart = new Date(activity.startTime);
-                    const actEnd = new Date(activity.endTime);
-                    return actStart < slotEnd && actEnd > slotStart;
-                });
+                const overlapping = actData.filter((activity) => 
+                    activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)
+                );
 
                 let slotBackground = 'var(--pos-slot-empty)';
                 let segments: { width: number; color: string }[] | undefined;
@@ -110,7 +133,7 @@ export function DailyPage() {
                     slotBackground = getActivityColor(overlapping[0].category);
                 } else if (overlapping.length > 1) {
                     const sorted = [...overlapping].sort((a, b) => 
-                        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+                        parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
                     );
                     const localSegments: { width: number; color: string }[] = [];
                     let lastPct = 0;
@@ -118,8 +141,8 @@ export function DailyPage() {
                     const slotDuration = 30 * 60 * 1000;
 
                     sorted.forEach((act) => {
-                        const startMs = Math.max(new Date(act.startTime).getTime(), slotMs);
-                        const endMs = Math.min(new Date(act.endTime).getTime(), slotMs + slotDuration);
+                        const startMs = Math.max(parseActivityTime(act.startTime).getTime(), slotMs);
+                        const endMs = Math.min(parseActivityTime(act.endTime).getTime(), slotMs + slotDuration);
                         const startPct = ((startMs - slotMs) / slotDuration) * 100;
                         const endPct = ((endMs - slotMs) / slotDuration) * 100;
 
@@ -271,10 +294,20 @@ export function DailyPage() {
                     <TabsContent value="timeline" className="space-y-4 mt-4">
                         <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                             <CardHeader className="py-3 px-4">
-                                <CardTitle className="text-sm font-medium">Log Activity</CardTitle>
+                                <CardTitle className="text-sm font-medium">
+                                    {editingActivity ? 'Edit Activity' : 'Log Activity'}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent className="pb-4 px-4">
-                                <ActivityForm date={date!} onSuccess={fetchData} />
+                                <ActivityForm 
+                                    date={date!} 
+                                    onSuccess={() => {
+                                        fetchData();
+                                        setEditingActivity(null);
+                                    }}
+                                    editingActivity={editingActivity}
+                                    onCancelEdit={() => setEditingActivity(null)}
+                                />
                             </CardContent>
                         </Card>
 
@@ -294,19 +327,27 @@ export function DailyPage() {
                                                 style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
                                             >
                                                 <div
-                                                    className="w-2.5 h-2.5 rounded"
+                                                    className="w-2.5 h-2.5 rounded shrink-0"
                                                     style={{
                                                         backgroundColor: getActivityColor(activity.category),
                                                         border: activity.goalId ? '2px solid var(--pos-goal-accent)' : 'none',
                                                     }}
                                                 />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium leading-none">{activity.description}</p>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium leading-none truncate">{activity.title}</p>
                                                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                                                        {formatTime(new Date(activity.startTime))} - {formatTime(new Date(activity.endTime))}
+                                                        {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
                                                         {activity.isShadow && <span className="ml-2 font-bold" style={{ color: 'var(--pos-shadow-text)' }}>(Shadow)</span>}
                                                     </p>
                                                 </div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 w-7 p-0 shrink-0"
+                                                    onClick={() => setEditingActivity(activity)}
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </Button>
                                             </div>
                                         ))}
                                     </div>
@@ -401,7 +442,7 @@ export function DailyPage() {
                                 <div className="space-y-2">
                                     {Object.entries(
                                         activities.reduce((acc, activity) => {
-                                            const duration = Math.round((new Date(activity.endTime).getTime() - new Date(activity.startTime).getTime()) / 60000);
+                                            const duration = getActivityDuration(activity.startTime, activity.endTime);
                                             acc[activity.category] = (acc[activity.category] || 0) + duration;
                                             return acc;
                                         }, {} as Record<string, number>)

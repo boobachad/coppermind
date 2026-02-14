@@ -226,10 +226,6 @@ export function UnifiedGoalsPage() {
     );
   }
 
-  function toggleGoal(): void {
-    throw new Error('Function not implemented.');
-  }
-
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Header with Stats */}

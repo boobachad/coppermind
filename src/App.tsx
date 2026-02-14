@@ -9,6 +9,7 @@ import { NotFoundPage } from './pages/404';
 import { GridPage } from './pos/pages/GridPage';
 import { HomePage } from './pos/pages/HomePage';
 import { SheetsPage } from './pos/pages/SheetsPage';
+import GitHubPage from './pos/pages/GitHubPage';
 import { DailyPage } from './pos/pages/DailyPage';
 import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
@@ -50,6 +51,7 @@ function App() {
             <Route path="pos/grid/:date" element={<DailyPage />} />
             {/* <Route path="pos/goals" element={<GoalsPage />} /> */}
             <Route path="pos/sheets" element={<SheetsPage />} />
+            <Route path="pos/github" element={<GitHubPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="journal/:date" element={<EntryPage />} />
             <Route path="settings" element={<SettingsPage />} />

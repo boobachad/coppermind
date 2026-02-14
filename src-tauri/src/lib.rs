@@ -9,6 +9,10 @@ use sqlx::postgres::PgPoolOptions;
 mod pos;
 mod unified_goals;
 
+pub mod github {
+    pub use crate::pos::github::*;
+}
+
 /// Wrapper for PG pool stored in Tauri managed state
 pub struct PosDb(pub sqlx::PgPool);
 
@@ -303,6 +307,7 @@ pub fn run() {
             pos::activities::get_activities,
             pos::activities::get_activities_batch,
             pos::activities::create_activity,
+            pos::activities::update_activity,
             pos::activities::patch_activity,
             pos::activities::get_activity_range,
             pos::goals::get_goals,
@@ -310,8 +315,12 @@ pub fn run() {
             pos::goals::get_debt_goals,
             pos::goals::update_goal_metric,
             pos::submissions::get_submissions,
-            pos::scraper::scrape_leetcode,
-            pos::scraper::scrape_codeforces,
+            pos::scrapers::leetcode::scrape_leetcode,
+            pos::scrapers::codeforces::scrape_codeforces,
+            pos::scrapers::github::scrape_github,
+            pos::github::get_github_repositories,
+            pos::github::get_github_user_stats,
+            pos::config::get_pos_config,
             unified_goals::create_unified_goal,
             unified_goals::get_unified_goals,
             unified_goals::update_unified_goal,

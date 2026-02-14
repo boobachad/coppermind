@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Star } from 'lucide-react';
 import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
-import { formatSlotTime, formatTime } from '../lib/time';
+import { formatSlotTime, activityOverlapsSlot, formatActivityTime } from '../lib/time';
 import type { Activity } from '../lib/types';
 
 interface SlotPopupProps {
@@ -30,11 +30,9 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                     const slotEnd = new Date(slotStart);
                     slotEnd.setMinutes(slotEnd.getMinutes() + 30);
 
-                    const overlapping = allActivities.filter((activity) => {
-                        const actStart = new Date(activity.startTime);
-                        const actEnd = new Date(activity.endTime);
-                        return actStart < slotEnd && actEnd > slotStart;
-                    });
+                    const overlapping = allActivities.filter((activity) =>
+                        activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)
+                    );
 
                     setActivities(overlapping);
                     setLoading(false);
@@ -74,9 +72,12 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1">
-                                        <div className="font-medium text-foreground">{activity.description}</div>
-                                        <div className="text-sm text-muted-foreground">
-                                            {formatTime(new Date(activity.startTime))} - {formatTime(new Date(activity.endTime))}
+                                        <div className="font-medium text-foreground">{activity.title}</div>
+                                        {activity.description && (
+                                            <div className="text-xs text-muted-foreground mt-1">{activity.description}</div>
+                                        )}
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                            {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
                                         </div>
                                     </div>
                                     <div className="flex gap-2 items-center">

@@ -1,42 +1,73 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TimePickerInput } from '@/components/ui/time-picker-input';
+import { Flame, AlertTriangle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal } from '@/lib/types';
+import type { Activity } from '../lib/types';
 import { toast } from 'sonner';
 
 interface ActivityFormProps {
     date: string;
     onSuccess?: () => void;
+    editingActivity?: Activity | null;
+    onCancelEdit?: () => void;
 }
 
-export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState(() => {
-        const now = new Date();
-        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }: ActivityFormProps) {
+    const [startDate, setStartDate] = useState<Date | undefined>(() => {
+        if (editingActivity) {
+            return new Date(editingActivity.startTime);
+        }
+        const [year, month, day] = date.split('-').map(Number);
+        return new Date(year, month - 1, day, 9, 0);
     });
-    const [category, setCategory] = useState<string>(ACTIVITY_CATEGORIES.REAL_PROJECTS);
-    const [description, setDescription] = useState('');
-    const [isProductive, setIsProductive] = useState(true);
+    const [endDate, setEndDate] = useState<Date | undefined>(() => {
+        if (editingActivity) {
+            return new Date(editingActivity.endTime);
+        }
+        const now = new Date();
+        const [year, month, day] = date.split('-').map(Number);
+        return new Date(year, month - 1, day, now.getHours(), now.getMinutes());
+    });
+    const [category, setCategory] = useState<string>(editingActivity?.category || ACTIVITY_CATEGORIES.REAL_PROJECTS);
+    const [title, setTitle] = useState(editingActivity?.title || '');
+    const [description, setDescription] = useState(editingActivity?.description || '');
+    const [isProductive, setIsProductive] = useState(editingActivity?.isProductive ?? true);
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
     const [selectedGoalId, setSelectedGoalId] = useState<string>('none');
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
 
     useEffect(() => {
+        if (editingActivity) {
+            setStartDate(new Date(editingActivity.startTime));
+            setEndDate(new Date(editingActivity.endTime));
+            setCategory(editingActivity.category);
+            setTitle(editingActivity.title);
+            setDescription(editingActivity.description);
+            setIsProductive(editingActivity.isProductive);
+        } else {
+            const [year, month, day] = date.split('-').map(Number);
+            setStartDate(new Date(year, month - 1, day, 9, 0));
+            const now = new Date();
+            setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
+        }
+    }, [editingActivity, date]);
+
+    useEffect(() => {
         const fetchGoals = async () => {
             try {
-                // Fetch all active goals
                 const goals = await invoke<UnifiedGoal[]>('get_unified_goals', {
                     filters: { completed: false }
                 });
                 setAvailableGoals(goals);
             } catch (error) {
-                toast.error('Failed to fetch goals', { description: String(error) });
+                console.error('Failed to fetch goals:', error);
             }
         };
         fetchGoals();
@@ -49,7 +80,7 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
         if (value !== 'none') {
             const goal = availableGoals.find(g => g.id === value);
             if (goal) {
-                setDescription(prev => prev || `Worked on: ${goal.text}`);
+                setTitle(prev => prev || `Worked on: ${goal.text}`);
             }
         }
     };
@@ -58,60 +89,99 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!startTime || !endTime || !description) {
+        if (!startDate || !endDate || !title) {
             toast.error('Please fill all required fields');
             return;
         }
 
+        if (startDate >= endDate) {
+            toast.error('End time must be after start time');
+            return;
+        }
+
+        // Format dates to preserve local time (avoid timezone shift)
+        const formatLocalAsISO = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const seconds = String(d.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+        };
+
+        const startTimeISO = formatLocalAsISO(startDate);
+        const endTimeISO = formatLocalAsISO(endDate);
+
         setLoading(true);
         try {
-            const start = new Date(`${date}T${startTime}:00`);
-            const end = new Date(`${date}T${endTime}:00`);
-
-            const activityResult = await invoke<{ id: string }>('create_activity', {
-                req: {
-                    startTime: start.toISOString(),
-                    endTime: end.toISOString(),
-                    category,
-                    description,
-                    isProductive,
-                    goalId: null, // Activities don't link via goal_id anymore
-                }
-            });
-
-            // Link to goal if selected
-            if (selectedGoalId !== 'none') {
-                await invoke('link_activity_to_unified_goal', {
-                    goalId: selectedGoalId,
-                    activityId: activityResult.id,
+            if (editingActivity) {
+                await invoke('update_activity', {
+                    id: editingActivity.id,
+                    req: {
+                        startTime: startTimeISO,
+                        endTime: endTimeISO,
+                        category,
+                        title,
+                        description,
+                        isProductive,
+                    }
+                });
+                toast.success('Activity updated successfully');
+                onCancelEdit?.();
+            } else {
+                const activityResult = await invoke<{ id: string }>('create_activity', {
+                    req: {
+                        startTime: startTimeISO,
+                        endTime: endTimeISO,
+                        category,
+                        title,
+                        description,
+                        isProductive,
+                        goalId: null,
+                    }
                 });
 
-                // Update metrics if any
-                if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
-                    const updatedMetrics = selectedGoal.metrics.map(m => {
-                        const increment = parseInt(metricValues[m.id] || '0');
-                        return {
-                            ...m,
-                            current: m.current + increment
-                        };
+                if (selectedGoalId !== 'none') {
+                    await invoke('link_activity_to_unified_goal', {
+                        goalId: selectedGoalId,
+                        activityId: activityResult.id,
                     });
 
-                    await invoke('update_unified_goal', {
-                        id: selectedGoalId,
-                        req: { metrics: updatedMetrics }
-                    });
+                    if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
+                        const updatedMetrics = selectedGoal.metrics.map(m => {
+                            const increment = parseInt(metricValues[m.id] || '0');
+                            return {
+                                ...m,
+                                current: m.current + increment
+                            };
+                        });
+
+                        await invoke('update_unified_goal', {
+                            id: selectedGoalId,
+                            req: { metrics: updatedMetrics }
+                        });
+                    }
                 }
-            }
 
-            toast.success('Activity logged successfully');
-            setStartTime('');
-            setEndTime('');
+                toast.success('Activity logged successfully');
+            }
+            
+            const [year, month, day] = date.split('-').map(Number);
+            setStartDate(new Date(year, month - 1, day, 9, 0));
+            const now = new Date();
+            setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
+            setTitle('');
             setDescription('');
             setSelectedGoalId('none');
             setMetricValues({});
             onSuccess?.();
         } catch (error) {
-            toast.error('Failed to create activity', { description: String(error) });
+            const errorMsg = error && typeof error === 'object' && 'message' in error 
+                ? String(error.message) 
+                : String(error);
+            toast.error(editingActivity ? 'Failed to update activity' : 'Failed to create activity', { description: errorMsg });
+            console.error('Activity error:', error);
         } finally {
             setLoading(false);
         }
@@ -122,25 +192,19 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium mb-2">Start Time</label>
-                    <Input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="border-input"
-                        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                        required
-                    />
+                    <div className="flex items-center gap-2">
+                        <TimePickerInput date={startDate} setDate={setStartDate} type="hours" />
+                        <span>:</span>
+                        <TimePickerInput date={startDate} setDate={setStartDate} type="minutes" />
+                    </div>
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-2">End Time</label>
-                    <Input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="border-input"
-                        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                        required
-                    />
+                    <div className="flex items-center gap-2">
+                        <TimePickerInput date={endDate} setDate={setEndDate} type="hours" />
+                        <span>:</span>
+                        <TimePickerInput date={endDate} setDate={setEndDate} type="minutes" />
+                    </div>
                 </div>
             </div>
 
@@ -163,27 +227,31 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                     </Select>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
-                    <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                        <SelectTrigger style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--pos-goal-link-border)' }}>
-                            <SelectValue placeholder="Select a goal..." />
-                        </SelectTrigger>
-                        <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
-                            <SelectItem value="none">-- No Goal --</SelectItem>
-                            {availableGoals.map((g) => (
-                                <SelectItem key={g.id} value={g.id}>
-                                    {g.text.substring(0, 40)}{g.text.length > 40 ? '...' : ''}
-                                    {g.urgent && ' 🔥'}
-                                    {g.isDebt && ' ⚠️'}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                {!editingActivity && (
+                    <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
+                        <Select value={selectedGoalId} onValueChange={handleGoalChange}>
+                            <SelectTrigger style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--pos-goal-link-border)' }}>
+                                <SelectValue placeholder="Select a goal..." />
+                            </SelectTrigger>
+                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                                <SelectItem value="none">-- No Goal --</SelectItem>
+                                {availableGoals.map((g) => (
+                                    <SelectItem key={g.id} value={g.id}>
+                                        <span className="flex items-center gap-1">
+                                            {g.text.substring(0, 40)}{g.text.length > 40 ? '...' : ''}
+                                            {g.urgent && <Flame className="w-3 h-3 text-orange-500" />}
+                                            {g.isDebt && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
+                                        </span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
 
-            {(selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0) && (
+            {!editingActivity && selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (
                 <div className="p-3 rounded-md" style={{ backgroundColor: 'var(--pos-goal-link-bg)', borderColor: 'var(--pos-goal-link-border)', borderWidth: '1px' }}>
                     <p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--pos-goal-link-text)' }}>Log Progress</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -210,15 +278,26 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
             )}
 
             <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
+                <label className="block text-sm font-medium mb-2">Title</label>
+                <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="border-input"
+                    style={{ backgroundColor: 'var(--bg-primary)' }}
+                    placeholder="Brief summary of activity"
+                    required
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium mb-2">Description (Optional)</label>
                 <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="border-input"
                     style={{ backgroundColor: 'var(--bg-primary)' }}
-                    placeholder="What did you work on?"
+                    placeholder="Additional details..."
                     rows={3}
-                    required
                 />
             </div>
 
@@ -236,17 +315,29 @@ export function ActivityForm({ date, onSuccess }: ActivityFormProps) {
                 </label>
             </div>
 
-            <Button 
-                type="submit" 
-                disabled={loading} 
-                className="w-full hover:opacity-90"
-                style={{
-                    backgroundColor: 'var(--btn-primary-bg)',
-                    color: 'var(--btn-primary-text)'
-                }}
-            >
-                {loading ? 'Creating...' : 'Log Activity'}
-            </Button>
+            <div className="flex gap-2">
+                {editingActivity && (
+                    <Button 
+                        type="button"
+                        onClick={onCancelEdit}
+                        variant="outline"
+                        className="flex-1"
+                    >
+                        Cancel
+                    </Button>
+                )}
+                <Button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="flex-1 hover:opacity-90"
+                    style={{
+                        backgroundColor: 'var(--btn-primary-bg)',
+                        color: 'var(--btn-primary-text)'
+                    }}
+                >
+                    {loading ? (editingActivity ? 'Saving...' : 'Creating...') : (editingActivity ? 'Save Edits' : 'Log Activity')}
+                </Button>
+            </div>
         </form>
     );
 }
