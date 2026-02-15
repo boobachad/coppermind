@@ -12,19 +12,19 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ items }: BreadcrumbProps) {
     return (
-        <nav className="flex items-center text-sm text-muted-foreground">
+        <nav className="flex items-center text-sm text-(--text-secondary)">
             {items.map((item, index) => (
                 <Fragment key={index}>
-                    {index > 0 && <span className="mx-2 text-muted-foreground/50">//</span>}
+                    {index > 0 && <span className="mx-2 text-(--text-tertiary)">/</span>}
                     {item.href ? (
                         <Link
                             to={item.href}
-                            className="hover:text-foreground transition-colors font-medium lowercase"
+                            className="hover:text-(--text-primary) transition-colors font-medium lowercase"
                         >
                             {item.label}
                         </Link>
                     ) : (
-                        <span className="font-semibold text-foreground lowercase">
+                        <span className="font-semibold text-(--text-primary) lowercase">
                             {item.label}
                         </span>
                     )}

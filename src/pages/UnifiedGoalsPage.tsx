@@ -9,6 +9,7 @@ import { UnifiedGoal, UnifiedGoalMetric } from '../lib/types';
 import { Loader } from '../components/Loader';
 import { DatePicker } from '../components/DatePicker';
 import { PieChart, Pie, Tooltip, ResponsiveContainer } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -317,13 +318,13 @@ export function UnifiedGoalsPage() {
 
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-secondary)' }}>Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm font-mono"
-              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-            />
+            <div className="w-[180px]">
+              <DatePicker
+                date={selectedDate ? new Date(selectedDate) : undefined}
+                setDate={(date) => setSelectedDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                placeholder="Filter by date"
+              />
+            </div>
           </div>
         </div>
 
@@ -347,16 +348,16 @@ export function UnifiedGoalsPage() {
             ))}
           </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'newest' | 'priority' | 'due')}
-            className="px-3 py-2 rounded-lg text-sm font-medium border-none focus:ring-2 focus:ring-blue-500"
-            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
-          >
-            <option value="newest">Newest First</option>
-            <option value="priority">Priority</option>
-            <option value="due">Due Date</option>
-          </select>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'newest' | 'priority' | 'due')}>
+            <SelectTrigger className="w-[160px] border-none material-glass-subtle text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="material-glass">
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
+              <SelectItem value="due">Due Date</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -366,189 +367,189 @@ export function UnifiedGoalsPage() {
           {/* Regular Goals */}
           <div className="space-y-3">
             {regularGoals.map((goal) => (
-            <div
-              key={goal.id}
-              className="group relative overflow-hidden transition-all hover:shadow-lg"
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-              }}
-            >
-              <div className="flex items-start gap-4 p-4">
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {/* Title and badges */}
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3
-                      className={clsx(
-                        'text-base font-semibold leading-tight',
-                        goal.completed && 'line-through opacity-60'
-                      )}
-                      style={{ color: 'var(--text-primary)' }}
-                    >
-                      {goal.text}
-                    </h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {goal.verified && (
-                        <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: 'var(--pos-success-bg)' }}
-                          title="Verified"
+              <div
+                key={goal.id}
+                className="group relative overflow-hidden transition-all hover:shadow-lg"
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                }}
+              >
+                <div className="flex items-start gap-4 p-4">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title and badges */}
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h3
+                        className={clsx(
+                          'text-base font-semibold leading-tight',
+                          goal.completed && 'line-through opacity-60'
+                        )}
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {goal.text}
+                      </h3>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {goal.verified && (
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: 'var(--pos-success-bg)' }}
+                            title="Verified"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--pos-success-text)' }} />
+                          </div>
+                        )}
+                        {goal.recurringPattern && (
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: 'var(--pos-info-bg)' }}
+                            title={`Repeats: ${goal.recurringPattern}`}
+                          >
+                            <Repeat className="w-3.5 h-3.5" style={{ color: 'var(--pos-info-text)' }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status badges row */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      {goal.urgent && (
+                        <span
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+                          style={{ backgroundColor: 'var(--pos-error-bg)', color: 'var(--pos-error-text)' }}
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--pos-success-text)' }} />
-                        </div>
+                          Urgent
+                        </span>
                       )}
-                      {goal.recurringPattern && (
-                        <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: 'var(--pos-info-bg)' }}
-                          title={`Repeats: ${goal.recurringPattern}`}
+                      {goal.priority === 'high' && !goal.urgent && (
+                        <span
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+                          style={{ backgroundColor: 'var(--pos-warning-bg)', color: 'var(--pos-warning-text)' }}
                         >
-                          <Repeat className="w-3.5 h-3.5" style={{ color: 'var(--pos-info-text)' }} />
-                        </div>
+                          High Priority
+                        </span>
+                      )}
+                      {goal.isDebt && (
+                        <span
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+                          style={{ backgroundColor: 'var(--pos-debt-bg)', color: 'var(--pos-debt-text)' }}
+                        >
+                          Overdue
+                        </span>
+                      )}
+                      {goal.dueDate && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(goal.dueDate), 'MMM d, HH:mm')}
+                        </span>
                       )}
                     </div>
-                  </div>
 
-                  {/* Status badges row */}
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {goal.urgent && (
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-                        style={{ backgroundColor: 'var(--pos-error-bg)', color: 'var(--pos-error-text)' }}
-                      >
-                        Urgent
-                      </span>
+                    {/* Description */}
+                    {goal.description && (
+                      <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--text-secondary)' }}>
+                        {goal.description}
+                      </p>
                     )}
-                    {goal.priority === 'high' && !goal.urgent && (
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-                        style={{ backgroundColor: 'var(--pos-warning-bg)', color: 'var(--pos-warning-text)' }}
-                      >
-                        High Priority
-                      </span>
-                    )}
-                    {goal.isDebt && (
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-                        style={{ backgroundColor: 'var(--pos-debt-bg)', color: 'var(--pos-debt-text)' }}
-                      >
-                        Overdue
-                      </span>
-                    )}
-                    {goal.dueDate && (
-                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(goal.dueDate), 'MMM d, HH:mm')}
-                      </span>
-                    )}
-                  </div>
 
-                  {/* Description */}
-                  {goal.description && (
-                    <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      {goal.description}
-                    </p>
-                  )}
+                    {/* Problem ID */}
+                    {goal.problemId && (
+                      <div className="mb-3">
+                        <code
+                          className="text-xs px-2 py-1 rounded"
+                          style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}
+                        >
+                          {goal.problemId}
+                        </code>
+                      </div>
+                    )}
 
-                  {/* Problem ID */}
-                  {goal.problemId && (
-                    <div className="mb-3">
-                      <code
-                        className="text-xs px-2 py-1 rounded"
-                        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}
-                      >
-                        {goal.problemId}
-                      </code>
-                    </div>
-                  )}
-
-                  {/* Metrics */}
-                  {goal.metrics && goal.metrics.length > 0 && (
-                    <div className="space-y-2.5 mb-3">
-                      {goal.metrics.map((metric) => {
-                        const progress = Math.min((metric.current / metric.target) * 100, 100);
-                        return (
-                          <div key={metric.id} className="space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                {metric.label}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  value={metric.current}
-                                  onChange={(e) =>
-                                    updateMetric(goal.id, metric.id, parseFloat(e.target.value) || 0, goal.metrics!)
-                                  }
-                                  className="w-14 px-1.5 py-0.5 text-xs text-center font-mono border rounded"
+                    {/* Metrics */}
+                    {goal.metrics && goal.metrics.length > 0 && (
+                      <div className="space-y-2.5 mb-3">
+                        {goal.metrics.map((metric) => {
+                          const progress = Math.min((metric.current / metric.target) * 100, 100);
+                          return (
+                            <div key={metric.id} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                  {metric.label}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    value={metric.current}
+                                    onChange={(e) =>
+                                      updateMetric(goal.id, metric.id, parseFloat(e.target.value) || 0, goal.metrics!)
+                                    }
+                                    className="w-14 px-1.5 py-0.5 text-xs text-center font-mono border rounded"
+                                    style={{
+                                      backgroundColor: 'var(--bg-primary)',
+                                      borderColor: 'var(--border-color)',
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  />
+                                  <span className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                    / {metric.target} {metric.unit}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                                <div
+                                  className="h-full transition-all duration-300 rounded-full"
                                   style={{
-                                    backgroundColor: 'var(--bg-primary)',
-                                    borderColor: 'var(--border-color)',
-                                    color: 'var(--text-primary)',
+                                    width: `${progress}%`,
+                                    backgroundColor:
+                                      progress === 100
+                                        ? 'var(--pos-success-text)'
+                                        : progress >= 75
+                                          ? 'var(--pos-info-text)'
+                                          : 'var(--pos-warning-text)',
                                   }}
                                 />
-                                <span className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                  / {metric.target} {metric.unit}
-                                </span>
                               </div>
                             </div>
-                            <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                              <div
-                                className="h-full transition-all duration-300 rounded-full"
-                                style={{
-                                  width: `${progress}%`,
-                                  backgroundColor:
-                                    progress === 100
-                                      ? 'var(--pos-success-text)'
-                                      : progress >= 75
-                                      ? 'var(--pos-info-text)'
-                                      : 'var(--pos-warning-text)',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Footer metadata */}
-                  <div className="flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                    <span>Created {format(new Date(goal.createdAt), 'MMM d')}</span>
-                    {goal.originalDate && (
-                      <>
-                        <span>•</span>
-                        <span style={{ color: 'var(--pos-debt-text)' }}>From {goal.originalDate}</span>
-                      </>
+                          );
+                        })}
+                      </div>
                     )}
+
+                    {/* Footer metadata */}
+                    <div className="flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                      <span>Created {format(new Date(goal.createdAt), 'MMM d')}</span>
+                      {goal.originalDate && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: 'var(--pos-debt-text)' }}>From {goal.originalDate}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={() => deleteGoal(goal.id)}
+                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--pos-error-text)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    title="Delete goal"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-
-                {/* Delete button */}
-                <button
-                  onClick={() => deleteGoal(goal.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
-                  style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--pos-error-text)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                  title="Delete goal"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {regularGoals.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                <Target className="w-8 h-8" style={{ color: 'var(--text-secondary)' }} />
+            {regularGoals.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <Target className="w-8 h-8" style={{ color: 'var(--text-secondary)' }} />
+                </div>
+                <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>No goals found</p>
               </div>
-              <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>No goals found</p>
-            </div>
-          )}
+            )}
           </div>
 
           {/* Debt Locker Section */}
@@ -658,16 +659,16 @@ export function UnifiedGoalsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
-                  <select
-                    value={formPriority}
-                    onChange={(e) => setFormPriority(e.target.value as 'low' | 'medium' | 'high')}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
+                  <Select value={formPriority} onValueChange={(value) => setFormPriority(value as 'low' | 'medium' | 'high')}>
+                    <SelectTrigger className="w-full border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="material-glass">
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-end">
                   <label className="flex items-center space-x-2 cursor-pointer p-2 border rounded-lg w-full transition-colors" style={{ borderColor: 'var(--border-color)' }}>

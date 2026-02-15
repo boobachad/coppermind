@@ -22,30 +22,27 @@ export function ThemeToggle() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
-                    className="border transition-colors"
-                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                    className="h-9 w-9 border border-transparent hover:bg-glass-border/30 hover:border-glass-border text-glass-text-secondary hover:text-glass-text transition-all duration-300"
                 >
-                    <CurrentIcon className="h-[1.2rem] w-[1.2rem] transition-all" />
+                    <CurrentIcon className="h-[1.2rem] w-[1.2rem]" />
                     <span className="sr-only">Toggle theme</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+            <DropdownMenuContent align="end" className="glass-panel border-glass-border bg-glass-bg backdrop-blur-xl">
                 {(Object.keys(themeConfig) as Theme[]).map((themeKey) => {
                     const { label, icon: Icon } = themeConfig[themeKey];
                     return (
                         <DropdownMenuItem
                             key={themeKey}
                             onClick={() => setTheme(themeKey)}
-                            className="cursor-pointer"
+                            className="flex items-center cursor-pointer text-glass-text focus:bg-glass-border/30 focus:text-glass-text"
                         >
                             <Icon className="mr-2 h-4 w-4" />
                             <span>{label}</span>
                             {theme === themeKey && (
-                                <span className="ml-auto text-xs">✓</span>
+                                <span className="ml-auto text-xs text-glass-text-secondary">✓</span>
                             )}
                         </DropdownMenuItem>
                     );

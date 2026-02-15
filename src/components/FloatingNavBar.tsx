@@ -9,20 +9,13 @@ export function FloatingNavBar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show immediately on scroll
       setIsVisible(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-      // Clear existing timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Check if at top or bottom
       const isAtTop = window.scrollY < 50;
       const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
 
       if (!isAtTop && !isAtBottom) {
-        // Hide after 2 seconds if not at ends
         timeoutRef.current = setTimeout(() => {
           setIsVisible(false);
         }, 2000);
@@ -41,37 +34,37 @@ export function FloatingNavBar() {
       "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-500",
       isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
     )}>
-      <div className="flex items-center bg-themed-surface/80 backdrop-blur-md border border-themed-border shadow-lg rounded-full px-4 py-2 space-x-6">
+      <div className="flex items-center material-glass-subtle rounded-full px-5 py-2 space-x-6">
         <NavLink
           to="/"
           end
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-themed-text-secondary hover:text-themed-text-primary")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
         >
-          <FileText className="w-5 h-5 mb-0.5" />
+          <FileText className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Notes</span>
         </NavLink>
 
         <NavLink
           to="/todos"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-themed-text-secondary hover:text-themed-text-primary")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
         >
-          <CheckSquare className="w-5 h-5 mb-0.5" />
+          <CheckSquare className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">To-Dos</span>
         </NavLink>
 
         <NavLink
           to="/nodes"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-themed-text-secondary hover:text-themed-text-primary")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
         >
-          <Share2 className="w-5 h-5 mb-0.5" />
+          <Share2 className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Nodes</span>
         </NavLink>
 
         <NavLink
           to="/journal"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-themed-text-secondary hover:text-themed-text-primary")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
         >
-          <BookOpen className="w-5 h-5 mb-0.5" />
+          <BookOpen className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Journal</span>
         </NavLink>
       </div>

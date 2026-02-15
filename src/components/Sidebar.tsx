@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github } from 'lucide-react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -12,6 +12,7 @@ export function Sidebar() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { confirm } = useConfirmDialog();
 
   useEffect(() => {
@@ -23,7 +24,6 @@ export function Sidebar() {
   const loadNotes = async () => {
     try {
       const db = await getDb();
-      // Filter for top-level notes only
       const result = await db.select<Note[]>('SELECT * FROM notes WHERE parent_id IS NULL ORDER BY updated_at DESC');
       setNotes(result);
     } catch (err) {
@@ -38,11 +38,7 @@ export function Sidebar() {
       const now = Date.now();
       const initialContent = JSON.stringify([]);
       await db.execute('INSERT INTO notes (id, title, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [
-        id,
-        'Untitled',
-        initialContent,
-        now,
-        now
+        id, 'Untitled', initialContent, now, now
       ]);
       window.dispatchEvent(new Event('notes-updated'));
       navigate(`/notes/${id}`);
@@ -55,164 +51,152 @@ export function Sidebar() {
     (note.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const mainNavItems = [
+    { to: "/", icon: FileText, label: "Home" },
+    { to: "/goals", icon: Target, label: "Goals" },
+    { to: "/nodes", icon: Share2, label: "Graph" },
+    { to: "/pos", icon: Box, label: "POS" },
+    { to: "/pos/grid", icon: Grid3x3, label: "Grid" },
+    { to: "/pos/sheets", icon: FileSpreadsheet, label: "Sheets" },
+    { to: "/pos/github", icon: Github, label: "GitHub" },
+    { to: "/journal", icon: BookOpen, label: "Journal" },
+  ];
+
+  const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => (
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => clsx(
+        "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group relative",
+        isActive
+          ? "shadow-[0_0_15px_rgba(255,255,255,0.1)] border"
+          : "hover:bg-white/5 dark:hover:bg-white/5"
+      )}
+      style={({ isActive }) => ({
+        backgroundColor: isActive ? 'var(--glass-bg-subtle)' : 'transparent',
+        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        borderColor: isActive ? 'var(--glass-border)' : 'transparent'
+      })}
+    >
+      <Icon className="mr-3 h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+      <span className="truncate">{label}</span>
+      {/* Active Indicator Dot - Removed for cleaner look, relying on background */}
+    </NavLink>
+  );
+
   return (
-    <div className="w-64 bg-themed-surface h-full flex flex-col flex-shrink-0 border-r border-themed-border">
-      <div className="p-3 border-b border-themed-border space-y-1">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <FileText className="mr-3 h-4 w-4" />
-          Home
-        </NavLink>
-        <NavLink
-          to="/goals"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Target className="mr-3 h-4 w-4" />
-          Goals
-        </NavLink>
-        <NavLink
-          to="/nodes"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Share2 className="mr-3 h-4 w-4" />
-          Graph
-        </NavLink>
-        <NavLink
-          to="/pos"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Box className="mr-3 h-4 w-4" />
-          POS
-        </NavLink>
-        <NavLink
-          to="/pos/grid"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Grid3x3 className="mr-3 h-4 w-4" />
-          POS Grid
-        </NavLink>
-        <NavLink
-          to="/pos/sheets"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <FileSpreadsheet className="mr-3 h-4 w-4" />
-          POS Sheets
-        </NavLink>
-        <NavLink
-          to="/pos/github"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <Github className="mr-3 h-4 w-4" />
-          GitHub
-        </NavLink>
-        <NavLink
-          to="/journal"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
-        >
-          <BookOpen className="mr-3 h-4 w-4" />
-          Journal
-        </NavLink>
-      </div>
+    <div className="flex flex-col h-full w-full">
+      {/* Scrollable Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
 
-      <div className="p-4 flex-1 overflow-hidden flex flex-col">
-        {/* Search Bar */}
-        <div className="mb-6 relative">
-          <input
-            type="text"
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-themed-bg border-none rounded-lg py-2 pl-9 pr-4 text-sm text-themed-text-primary placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:bg-themed-bg transition-colors"
-          />
-          <svg
-            className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+        {/* Main Navigation */}
+        <div className="space-y-1">
+          <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Menu</div>
+          {mainNavItems.map(item => <NavItem key={item.to} {...item} />)}
         </div>
 
-        {/* Section Header */}
-        <div className="flex items-center justify-between px-2 mb-2">
-          <span className="text-xs font-semibold text-themed-text-secondary uppercase tracking-wider">Notes</span>
-          <button
-            onClick={createNote}
-            className="text-gray-400 hover:text-themed-text-primary transition-colors"
-            title="Create New Note"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
+        {/* Notes Section */}
+        <div className="space-y-3">
+          <div className="px-3 flex items-center justify-between group">
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Notes</span>
+            <button
+              onClick={createNote}
+              className="p-1.5 rounded-md transition-all shadow-sm border"
+              style={{
+                backgroundColor: 'var(--glass-bg-subtle)',
+                color: 'var(--text-secondary)',
+                borderColor: 'var(--glass-border)'
+              }}
+              title="Create New Note"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
 
-        {/* Notes List */}
-        <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-0.5">
-          {filteredNotes.map(note => (
-            <div key={note.id} className="group relative flex items-center">
-              <NavLink
-                to={`/notes/${note.id}`}
-                className={({ isActive }) => clsx(
-                  "flex-1 block px-3 py-2 text-sm rounded-md truncate pr-8 transition-colors",
-                  isActive
-                    ? "bg-themed-bg text-themed-text-primary font-medium"
-                    : "text-themed-text-secondary hover:bg-themed-bg/50"
-                )}
-              >
-                {note.title || 'Untitled'}
-              </NavLink>
+          {/* Search */}
+          <div className="relative px-1">
+            <Search className="absolute left-4 top-2.5 h-3.5 w-3.5" style={{ color: 'var(--text-tertiary)' }} />
+            <input
+              type="text"
+              placeholder="Filter notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border rounded-lg py-1.5 pl-9 pr-3 text-xs transition-colors outline-none"
+              style={{
+                backgroundColor: 'var(--glass-bg-subtle)',
+                borderColor: 'var(--glass-border)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
 
-              <button
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const confirmed = await confirm({
-                    title: 'Delete Note',
-                    description: 'Are you sure you want to delete this note? This action cannot be undone.',
-                    confirmText: 'Delete',
-                    variant: 'destructive'
-                  });
-                  if (confirmed) {
-                    try {
+          <div className="space-y-1 mt-1">
+            {filteredNotes.map(note => (
+              <div key={note.id} className="group/note relative flex items-center pr-2">
+                <NavLink
+                  to={`/notes/${note.id}`}
+                  className={() => clsx(
+                    "flex-1 flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 truncate border",
+                  )}
+                  style={({ isActive }) => ({
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    backgroundColor: isActive ? 'var(--glass-bg-subtle)' : 'transparent',
+                    borderColor: isActive ? 'var(--glass-border)' : 'transparent',
+                    fontWeight: isActive ? 500 : 400
+                  })}
+                >
+                  <FileText className={clsx(
+                    "mr-3 h-4 w-4 shrink-0 transition-opacity",
+                    location.pathname.includes(note.id) ? "opacity-100" : "opacity-50"
+                  )} style={{ color: 'currentColor' }} />
+                  <span className="truncate">{note.title || 'Untitled'}</span>
+                </NavLink>
+
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (await confirm({ title: 'Delete Note', description: 'This action cannot be undone.', confirmText: 'Delete', variant: 'destructive' })) {
                       await softDelete('notes', note.id);
                       window.dispatchEvent(new Event('notes-updated'));
-                      if (window.location.pathname.includes(note.id)) {
-                        navigate('/');
-                      }
-                    } catch (err) {
-                      console.error("Failed to delete note", err);
+                      if (window.location.pathname.includes(note.id)) navigate('/');
                     }
-                  }
-                }}
-                className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded hover:bg-themed-bg transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
+                  }}
+                  className="absolute right-2 opacity-0 group-hover/note:opacity-100 p-1.5 hover:text-red-400 transition-opacity rounded-md backdrop-blur-sm"
+                  style={{
+                    color: 'var(--text-tertiary)',
+                    backgroundColor: 'var(--glass-bg-subtle)'
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
 
-          {filteredNotes.length === 0 && (
-            <div className="px-3 py-4 text-sm text-gray-400 text-center italic">
-              {searchQuery ? 'No notes found' : 'No notes yet'}
-            </div>
-          )}
+            {filteredNotes.length === 0 && (
+              <div className="px-3 py-2 text-xs italic" style={{ color: 'var(--text-tertiary)' }}>
+                {searchQuery ? 'No matches' : 'Empty'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Footer Navigation */}
-      <div className="p-3 border-t border-gray-200 dark:border-dark-border">
+      {/* Footer Settings */}
+      <div className="p-3 border-t backdrop-blur-xl" style={{ borderColor: 'var(--glass-border)', backgroundColor: 'var(--glass-bg-subtle)' }}>
         <NavLink
           to="/settings"
-          className={({ isActive }) => clsx("flex items-center px-3 py-2 text-sm font-medium rounded-md", isActive ? "bg-themed-bg text-themed-text-primary" : "text-themed-text-secondary hover:bg-themed-bg/50")}
+          className={() => clsx(
+            "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+          )}
+          style={({ isActive }) => ({
+            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+            backgroundColor: isActive ? 'var(--glass-bg-subtle)' : 'transparent'
+          })}
         >
           <Settings className="mr-3 h-4 w-4" />
           Settings
         </NavLink>
       </div>
-
     </div>
   );
 }

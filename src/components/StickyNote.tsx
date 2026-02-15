@@ -18,6 +18,8 @@ const COLORS: Record<string, string> = {
   darkBlue: 'bg-blue-300',
 };
 
+import { createPortal } from 'react-dom';
+
 export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,8 +69,11 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
     };
   }, [isDragging, data.id, onUpdate]);
 
+  const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
     setShowMenu(true);
   };
 
@@ -79,93 +84,106 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
   }, [showMenu]);
 
   return (
-    <div
-      ref={noteRef}
-      style={{ left: data.x, top: data.y }}
-      className={clsx(
-        "absolute w-64 h-64 rounded-xl shadow-xl transition-shadow duration-300",
-        COLORS[data.color] || COLORS.yellow,
-        isDragging ? "cursor-grabbing z-50 shadow-2xl scale-105" : "cursor-grab z-10",
-        "flex flex-col overflow-hidden"
-      )}
-      onMouseDown={handleMouseDown}
-      onContextMenu={handleContextMenu}
-    >
-      {/* Pin Icon */}
-      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
-        <div>
-          <Pin className="w-6 h-6 text-red-500 drop-shadow-md fill-current" />
-        </div>
-      </div>
-
-      {/* Content Area with Notebook Lines */}
+    <>
       <div
-        ref={contentRef}
-        className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting text-gray-800 leading-8"
-        style={{
-          backgroundImage: 'linear-gradient(transparent 31px, rgba(0,0,0,0.05) 32px)',
-          backgroundSize: '100% 32px',
-          backgroundAttachment: 'local'
-        }}
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          setIsEditing(false);
-          onUpdate(data.id, { content: e.currentTarget.textContent || '' });
-        }}
-        onFocus={() => setIsEditing(true)}
+        ref={noteRef}
+        style={{ left: data.x, top: data.y }}
+        className={clsx(
+          "absolute w-64 h-64 rounded-xl shadow-xl transition-shadow duration-300",
+          COLORS[data.color] || COLORS.yellow,
+          isDragging ? "cursor-grabbing z-50 shadow-2xl scale-105" : "cursor-grab z-10",
+          "flex flex-col overflow-hidden"
+        )}
+        onMouseDown={handleMouseDown}
+        onContextMenu={handleContextMenu}
       >
-        {data.content}
+        {/* Pin Icon */}
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
+          <div>
+            <Pin className="w-6 h-6 text-red-500 drop-shadow-md fill-current" />
+          </div>
+        </div>
+
+        {/* Content Area with Notebook Lines */}
+        <div
+          ref={contentRef}
+          className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting text-gray-800 leading-8"
+          style={{
+            backgroundImage: 'linear-gradient(transparent 31px, rgba(0,0,0,0.05) 32px)',
+            backgroundSize: '100% 32px',
+            backgroundAttachment: 'local'
+          }}
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) => {
+            setIsEditing(false);
+            onUpdate(data.id, { content: e.currentTarget.textContent || '' });
+          }}
+          onFocus={() => setIsEditing(true)}
+        >
+          {data.content}
+        </div>
       </div>
 
-      {/* Context Menu */}
-      {showMenu && (
-        <div className="absolute top-2 right-2 bg-themed-surface rounded-lg shadow-xl border border-themed-border p-2 z-50 flex flex-col gap-1 min-w-[140px]">
-          <div className="flex gap-1 p-1 mb-1 border-b border-themed-border">
-            {Object.keys(COLORS).map(color => (
-              <button
-                key={color}
-                className={clsx("w-4 h-4 rounded-full border border-themed-border", COLORS[color])}
-                onClick={() => onUpdate(data.id, { color })}
-              />
-            ))}
+      {/* Context Menu via Portal */}
+      {showMenu && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9999]"
+            onClick={() => setShowMenu(false)}
+            onContextMenu={(e) => { e.preventDefault(); setShowMenu(false); }}
+          />
+          <div
+            className="fixed material-glass-subtle rounded-lg shadow-xl border border-white/10 p-2 z-[9999] flex flex-col gap-1 min-w-[140px]"
+            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+          >
+            <div className="flex gap-1 p-1 mb-1 border-b border-white/10">
+              {Object.keys(COLORS).map(color => (
+                <button
+                  key={color}
+                  className={clsx("w-4 h-4 rounded-full border border-black/10", COLORS[color])}
+                  onClick={() => onUpdate(data.id, { color })}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setIsEditing(true);
+                setTimeout(() => contentRef.current?.focus(), 10);
+                setShowMenu(false);
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white hover:bg-white/10 rounded"
+            >
+              <Edit className="w-3 h-3" /> Edit
+            </button>
+
+            <button
+              onClick={() => onReorder(data.id, 'front')}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white/80 hover:bg-white/10 rounded"
+            >
+              <ArrowUp className="w-3 h-3" /> Bring to front
+            </button>
+
+            <button
+              onClick={() => onReorder(data.id, 'back')}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white/80 hover:bg-white/10 rounded"
+            >
+              <ArrowDown className="w-3 h-3" /> Send to back
+            </button>
+
+            <div className="h-px bg-white/10 my-1" />
+
+            <button
+              onClick={() => onDelete(data.id)}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-300 hover:bg-red-500/20 rounded"
+            >
+              <Trash2 className="w-3 h-3" /> Delete
+            </button>
           </div>
-
-          <button
-            onClick={() => {
-              setIsEditing(true);
-              setTimeout(() => contentRef.current?.focus(), 10);
-              setShowMenu(false);
-            }}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-themed-text-primary hover:bg-themed-bg rounded"
-          >
-            <Edit className="w-3 h-3" /> Edit
-          </button>
-
-          <button
-            onClick={() => onReorder(data.id, 'front')}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
-          >
-            <ArrowUp className="w-3 h-3" /> Bring to front
-          </button>
-
-          <button
-            onClick={() => onReorder(data.id, 'back')}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 dark:text-dark-text-primary hover:bg-gray-50 dark:hover:bg-dark-border rounded"
-          >
-            <ArrowDown className="w-3 h-3" /> Send to back
-          </button>
-
-          <div className="h-px bg-themed-border my-1" />
-
-          <button
-            onClick={() => onDelete(data.id)}
-            className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-          >
-            <Trash2 className="w-3 h-3" /> Delete
-          </button>
-        </div>
+        </>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

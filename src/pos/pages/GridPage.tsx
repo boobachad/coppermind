@@ -212,136 +212,134 @@ export function GridPage() {
                             <SelectTrigger className="w-[180px] h-8 text-xs border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                            <SelectContent className="material-glass border-(--glass-border)">
                                 {availableMonths.map((m) => (
-                                <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`} className="text-xs">
-                                    {m.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                                    <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`} className="text-xs text-(--text-primary)">
+                                        {m.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                    <div className="overflow-auto max-h-[calc(100vh-140px)]">
-                        <table className="w-full border-separate border-spacing-1 text-xs">
-                            <thead className="sticky top-0 z-20 shadow-md" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                                <tr>
-                                    <th className="sticky left-0 p-2 text-left min-w-[120px] z-30 text-muted-foreground border-b border-border" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                                        Date
-                                    </th>
-                                    {Array.from({ length: 48 }, (_, i) => {
-                                        const isCurrentSlot = i === currentSlotIndex;
+                    <div className="rounded-lg border overflow-hidden border-(--glass-border) bg-(--glass-bg-subtle)">
+                        <div className="overflow-auto max-h-[calc(100vh-140px)]">
+                            <table className="w-full border-separate border-spacing-1 text-xs">
+                                <thead className="sticky top-0 z-20 shadow-md">
+                                    <tr>
+                                        <th className="sticky left-0 p-2 text-left min-w-[120px] z-30 font-bold border-b material-glass border-(--glass-border)" >
+                                            Date
+                                        </th>
+                                        {Array.from({ length: 48 }, (_, i) => {
+                                            const isCurrentSlot = i === currentSlotIndex;
+                                            return (
+                                                <th
+                                                    key={i}
+                                                    className={`p-1 text-center min-w-[32px] text-[10px] font-mono border-b border-(--glass-border) ${isCurrentSlot ? '' : 'material-glass'}`}
+                                                    style={{
+                                                        color: isCurrentSlot ? 'var(--pos-today-text)' : 'var(--text-secondary)',
+                                                        fontWeight: isCurrentSlot ? 'bold' : 'medium',
+                                                        backgroundColor: isCurrentSlot ? 'var(--pos-today-bg)' : undefined
+                                                    }}
+                                                    title={formatSlotTime(i)}
+                                                >
+                                                    {formatSlotTime(i)}
+                                                </th>
+                                            );
+                                        })}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {dates.map((date) => {
+                                        const daySlots = gridData.get(date) || [];
+                                        const isToday = date === todayStr;
+
                                         return (
-                                            <th
-                                                key={i}
-                                                className="p-1 text-center min-w-[32px] text-[10px] font-mono border-b border-border"
-                                                style={{
-                                                    color: isCurrentSlot ? 'var(--pos-today-text)' : 'var(--text-secondary)',
-                                                    fontWeight: isCurrentSlot ? 'bold' : 'medium',
-                                                    backgroundColor: isCurrentSlot ? 'var(--pos-today-bg)' : 'transparent'
-                                                }}
-                                                title={formatSlotTime(i)}
+                                            <tr
+                                                key={date}
+                                                ref={isToday ? todayRef : null}
+                                                className="group"
                                             >
-                                                {formatSlotTime(i)}
-                                            </th>
+                                                <td className={`sticky left-0 p-0 z-10 border-r ${isToday ? '' : 'material-glass'}`} style={{
+                                                    backgroundColor: isToday ? 'var(--pos-today-bg)' : undefined,
+                                                    borderColor: isToday ? 'var(--pos-today-border)' : 'var(--glass-border)'
+                                                }}>
+                                                    <Link
+                                                        to={`/pos/grid/${date}`}
+                                                        className="block p-2 font-mono text-xs hover:bg-(--glass-bg-subtle) transition-colors rounded-md mr-2"
+                                                        style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-primary)', fontWeight: isToday ? 'bold' : 'normal' }}
+                                                        title="Click to view day details"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div>
+                                                                <div className="font-medium">{formatDateDDMMYYYY(new Date(date))}</div>
+                                                                <div className="text-[10px]" style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-secondary)' }}>
+                                                                    {getDayName(date)}
+                                                                </div>
+                                                            </div>
+                                                            {journalEntries.has(date) && (
+                                                                <div
+                                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                                    style={{ backgroundColor: 'var(--pos-success-text)' }}
+                                                                    title="Journal entry exists"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </Link>
+                                                </td>
+                                                {daySlots.map((slot) => {
+                                                    const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
+
+                                                    return (
+                                                        <td
+                                                            key={slot.slotIndex}
+                                                            ref={isCurrentTimeSlot ? currentSlotRef : null}
+                                                            className="w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px]"
+                                                            style={{
+                                                                background: slot.segments
+                                                                    ? 'transparent'
+                                                                    : slot.color
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                if (!isCurrentTimeSlot) {
+                                                                    e.currentTarget.style.boxShadow = '0 0 0 2px var(--pos-today-border)';
+                                                                }
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                if (!isCurrentTimeSlot) {
+                                                                    e.currentTarget.style.boxShadow = '';
+                                                                }
+                                                            }}
+                                                            onClick={() => {
+                                                                setSelectedSlot({ date, slot: slot.slotIndex });
+                                                                setShowPopup(true);
+                                                            }}
+                                                        >
+                                                            {slot.segments && (
+                                                                <div className="absolute inset-0 flex overflow-hidden rounded-[4px]">
+                                                                    {slot.segments.map((seg, idx) => (
+                                                                        <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {slot.activities.length > 0 && (
+                                                                <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 backdrop-blur border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                                                                    {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
+                                                                </div>
+                                                            )}
+                                                            {isCurrentTimeSlot && (
+                                                                <div className="absolute inset-0 rounded-[4px] pointer-events-none" style={{ boxShadow: '0 0 0 2px var(--pos-today-border)' }} />
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
                                         );
                                     })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {dates.map((date) => {
-                                    const daySlots = gridData.get(date) || [];
-                                    const isToday = date === todayStr;
-
-                                    return (
-                                        <tr
-                                            key={date}
-                                            ref={isToday ? todayRef : null}
-                                            className="group"
-                                            style={{ backgroundColor: isToday ? 'var(--pos-today-bg)' : 'transparent' }}
-                                        >
-                                            <td className="sticky left-0 p-0 z-10" style={{
-                                                backgroundColor: isToday ? 'var(--pos-today-bg)' : 'var(--bg-primary)',
-                                                borderRightWidth: isToday ? '2px' : '0',
-                                                borderRightColor: isToday ? 'var(--pos-today-border)' : 'transparent'
-                                            }}>
-                                                <Link
-                                                    to={`/pos/grid/${date}`}
-                                                    className="block p-2 font-mono text-xs hover:opacity-80 transition-colors rounded-md mr-2"
-                                                    style={{ color: isToday ? 'var(--pos-today-text)' : 'inherit', fontWeight: isToday ? 'bold' : 'normal' }}
-                                                    title="Click to view day details"
-                                                >
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <div>
-                                                            <div className="font-medium">{formatDateDDMMYYYY(new Date(date))}</div>
-                                                            <div className="text-[10px]" style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-secondary)' }}>
-                                                                {getDayName(date)}
-                                                            </div>
-                                                        </div>
-                                                        {journalEntries.has(date) && (
-                                                            <div 
-                                                                className="w-2 h-2 rounded-full shrink-0" 
-                                                                style={{ backgroundColor: 'var(--pos-success-text)' }}
-                                                                title="Journal entry exists"
-                                                            />
-                                                        )}
-                                                    </div>
-                                                </Link>
-                                            </td>
-                                            {daySlots.map((slot) => {
-                                                const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
-
-                                                return (
-                                                    <td
-                                                        key={slot.slotIndex}
-                                                        ref={isCurrentTimeSlot ? currentSlotRef : null}
-                                                        className="w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px]"
-                                                        style={{
-                                                            background: slot.segments 
-                                                                ? 'transparent' 
-                                                                : slot.color
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!isCurrentTimeSlot) {
-                                                                e.currentTarget.style.boxShadow = '0 0 0 2px var(--pos-today-border)';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!isCurrentTimeSlot) {
-                                                                e.currentTarget.style.boxShadow = '';
-                                                            }
-                                                        }}
-                                                        onClick={() => {
-                                                            setSelectedSlot({ date, slot: slot.slotIndex });
-                                                            setShowPopup(true);
-                                                        }}
-                                                    >
-                                                        {slot.segments && (
-                                                            <div className="absolute inset-0 flex overflow-hidden rounded-[4px]">
-                                                                {slot.segments.map((seg, idx) => (
-                                                                    <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                        {slot.activities.length > 0 && (
-                                                            <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 backdrop-blur border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
-                                                                {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
-                                                            </div>
-                                                        )}
-                                                        {isCurrentTimeSlot && (
-                                                            <div className="absolute inset-0 rounded-[4px] pointer-events-none" style={{ boxShadow: '0 0 0 2px var(--pos-today-border)' }} />
-                                                        )}
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
                 </div>
             </div>
 

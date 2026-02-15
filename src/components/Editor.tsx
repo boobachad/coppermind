@@ -104,7 +104,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
     },
     editorProps: {
       attributes: {
-        class: className || 'prose mx-auto focus:outline-none max-w-none dark:prose-invert text-themed-text-primary',
+        class: className || 'prose mx-auto focus:outline-none max-w-none dark:prose-invert text-white',
       },
       handleDOMEvents: {
         contextmenu: (_view, event) => {
@@ -214,28 +214,28 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
 
   return (
     <>
-      <BubbleMenu editor={editor} className="flex bg-themed-surface text-themed-text-primary shadow-md border border-themed-border rounded-lg overflow-hidden divide-x divide-stone-200 dark:divide-dark-border">
+      <BubbleMenu editor={editor} className="flex material-glass-subtle p-1 rounded-lg! overflow-hidden divide-x divide-white/10">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 hover:bg-themed-bg ${editor.isActive('bold') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
+          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('bold') ? 'text-white bg-white/10' : 'text-white/60'}`}
         >
           <Bold className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`p-2 hover:bg-themed-bg ${editor.isActive('italic') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
+          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('italic') ? 'text-white bg-white/10' : 'text-white/60'}`}
         >
           <Italic className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`p-2 hover:bg-themed-bg ${editor.isActive('underline') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
+          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('underline') ? 'text-white bg-white/10' : 'text-white/60'}`}
         >
           <UnderlineIcon className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={`p-2 hover:bg-themed-bg ${editor.isActive('code') ? 'text-blue-600 dark:text-blue-400' : 'text-themed-text-primary'}`}
+          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('code') ? 'text-white bg-white/10' : 'text-white/60'}`}
         >
           <Code className="w-4 h-4" />
         </button>

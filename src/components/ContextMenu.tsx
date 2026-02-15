@@ -51,15 +51,15 @@ const BACKGROUNDS = [
   { label: 'Reset', value: 'unset' },
 ];
 
+import { createPortal } from 'react-dom';
+
 export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => {
   const [activeSubmenu, setActiveSubmenu] = useState<'text' | 'bg' | 'convert' | null>(null);
 
   if (!position) return null;
 
   const handleCopy = () => {
-    // This assumes the user has selected something or we select the block under cursor
-    // For simplicity, we just trigger browser copy if supported or tell user to use Ctrl+C
-    // Actually, we can use navigator.clipboard.writeText if we have the text
+    // ...
     const selection = editor.state.selection;
     const text = editor.state.doc.textBetween(selection.from, selection.to, '\n');
     navigator.clipboard.writeText(text);
@@ -100,22 +100,22 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
     onClose();
   };
 
-  return (
+  return createPortal(
     <>
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[9999]"
         onClick={onClose}
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <div
-        className="fixed z-50 bg-themed-surface text-themed-text-primary shadow-xl border border-themed-border rounded-lg py-1 w-64 max-w-xs flex flex-col text-sm"
+        className="fixed z-50 min-w-[160px] overflow-hidden rounded-lg! material-panel border-white/10 p-1 shadow-md animate-in fade-in-80 zoom-in-95 w-xs flex flex-col text-sm"
         style={{ top: position.y, left: position.x }}
       >
         <MenuItem icon={Copy} label="Copy" onClick={handleCopy} />
         <MenuItem icon={Clipboard} label="Paste" onClick={handlePaste} />
         <MenuItem icon={Maximize} label="Select All" onClick={handleSelectAll} />
 
-        <div className="h-px bg-themed-border my-1" />
+        <div className="h-px bg-glass-border my-1" />
 
         <div className="relative">
           <MenuItem
@@ -126,7 +126,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'convert' && (
-            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg py-1 w-48 z-50 max-h-64 overflow-y-auto">
+            <div className="absolute left-full top-0 ml-1 glass-panel p-1 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl w-48 z-50 max-h-64 overflow-y-auto">
               <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
               <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
               <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
@@ -149,11 +149,11 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'text' && (
-            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 glass-panel p-2 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl grid grid-cols-4 gap-1 w-48 z-50">
               {COLORS.map((c) => (
                 <button
                   key={c.value}
-                  className="w-8 h-8 rounded-full border border-gray-100 dark:border-dark-border hover:scale-110 transition-transform"
+                  className="w-8 h-8 rounded-full border border-glass-border/50 hover:scale-110 transition-transform"
                   style={{ backgroundColor: c.value }}
                   title={c.label}
                   onClick={() => {
@@ -163,14 +163,14 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
                 />
               ))}
               <button
-                className="w-8 h-8 rounded-full border border-themed-border flex items-center justify-center hover:bg-themed-bg text-xs"
+                className="w-8 h-8 rounded-full border border-glass-border flex items-center justify-center hover:bg-glass-border/30 text-xs"
                 onClick={() => {
                   editor.chain().focus().unsetColor().run();
                   onClose();
                 }}
                 title="Reset"
               >
-                <Check size={12} className="text-themed-text-primary" />
+                <Check size={12} className="text-glass-text" />
               </button>
             </div>
           )}
@@ -185,11 +185,11 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'bg' && (
-            <div className="absolute left-full top-0 ml-1 bg-themed-surface shadow-xl border border-themed-border rounded-lg p-2 grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 glass-panel p-2 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl grid grid-cols-4 gap-1 w-48 z-50">
               {BACKGROUNDS.map((c) => (
                 <button
                   key={c.value}
-                  className="w-8 h-8 rounded-full border border-gray-100 dark:border-dark-border hover:scale-110 transition-transform"
+                  className="w-8 h-8 rounded-full border border-glass-border/50 hover:scale-110 transition-transform"
                   style={{ backgroundColor: c.value === 'unset' ? 'white' : c.value }}
                   title={c.label}
                   onClick={() => {
@@ -217,25 +217,30 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
           }}
         />
 
-        <div className="h-px bg-themed-border my-1" />
+        <div className="h-px bg-glass-border my-1" />
 
         <MenuItem icon={ImageIcon} label="Add Image" onClick={handleImage} />
         <MenuItem icon={FileText} label="Add PDF" onClick={handlePDF} />
 
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 
 const MenuItem = ({ icon: Icon, label, onClick, hasSubmenu, active }: any) => (
   <button
-    className={`w-full px-4 py-2 text-left flex items-center justify-between hover:bg-themed-bg transition-colors outline-none ${active ? 'bg-themed-bg' : ''}`}
+    className={`relative flex cursor-pointer select-none items-center rounded-lg! px-2 py-1.5 text-sm outline-none transition-colors 
+      focus:bg-white/10 focus:text-white 
+      data-[disabled]:pointer-events-none data-[disabled]:opacity-50 
+      text-white/70 hover:text-white hover:bg-white/10
+      ${active ? 'bg-white/15 text-white' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center gap-3">
-      <Icon size={16} className="text-themed-text-secondary" />
-      <span className="text-themed-text-primary">{label}</span>
+      <Icon size={16} className="text-white/50 group-hover:text-white/80" />
+      <span>{label}</span>
     </div>
-    {hasSubmenu && <span className="text-themed-text-secondary">›</span>}
+    {hasSubmenu && <span className="text-white/40 ml-auto flex underline-0">›</span>}
   </button>
 );

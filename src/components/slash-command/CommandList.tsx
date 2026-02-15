@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { CommandItemProps } from './items';
+import clsx from 'clsx';
 
 export default forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -34,21 +35,24 @@ export default forwardRef((props: any, ref) => {
   }));
 
   return (
-    <div className="bg-themed-surface text-themed-text-primary rounded-lg shadow-md border border-themed-border outline-none overflow-y-auto max-h-[300px] w-60 py-2 z-50">
+    <div className="material-panel bg-black/90! backdrop-blur-xl text-white rounded-lg shadow-2xl border border-white/10 outline-none overflow-y-auto max-h-[300px] w-60 py-2 z-50">
       {props.items.length ? (
         props.items.map((item: CommandItemProps, index: number) => (
           <button
             key={index}
-            className={`flex items-center gap-2 w-full px-4 py-2 text-sm text-left outline-none hover:bg-themed-bg text-themed-text-primary ${index === selectedIndex ? 'bg-themed-bg' : ''
-              }`}
+            className={clsx(
+              "flex items-center gap-2 w-full px-4 py-2 text-sm text-left outline-none transition-colors",
+              "text-white hover:bg-white/10",
+              index === selectedIndex ? 'bg-white/10' : ''
+            )}
             onClick={() => selectItem(index)}
           >
-            <item.icon className="w-4 h-4 text-themed-text-secondary" />
-            <span className="text-themed-text-primary">{item.title}</span>
+            <item.icon className="w-4 h-4 text-white/60" />
+            <span className="text-white">{item.title}</span>
           </button>
         ))
       ) : (
-        <div className="px-4 py-2 text-sm text-themed-text-secondary">No results</div>
+        <div className="px-4 py-2 text-sm text-white/40">No results</div>
       )}
     </div>
   );

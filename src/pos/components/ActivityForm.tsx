@@ -77,7 +77,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
     const handleGoalChange = (value: string) => {
         setSelectedGoalId(value);
         setMetricValues({});
-        
+
         if (value !== 'none') {
             const goal = availableGoals.find(g => g.id === value);
             if (goal) {
@@ -158,7 +158,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
 
                 toast.success('Activity logged successfully');
             }
-            
+
             const [year, month, day] = date.split('-').map(Number);
             setStartDate(new Date(year, month - 1, day, 9, 0));
             const now = new Date();
@@ -169,8 +169,8 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
             setMetricValues({});
             onSuccess?.();
         } catch (error) {
-            const errorMsg = error && typeof error === 'object' && 'message' in error 
-                ? String(error.message) 
+            const errorMsg = error && typeof error === 'object' && 'message' in error
+                ? String(error.message)
                 : String(error);
             toast.error(editingActivity ? 'Failed to update activity' : 'Failed to create activity', { description: errorMsg });
             console.error('Activity error:', error);
@@ -204,10 +204,10 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                 <div>
                     <label className="block text-sm font-medium mb-2">Category</label>
                     <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger className="border-input" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                        <SelectTrigger className="material-glass-subtle border-none">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="border max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                        <SelectContent className="material-glass max-h-[300px] overflow-y-auto">
                             {Object.entries(ACTIVITY_CATEGORIES)
                                 .sort(([, a], [, b]) => a.localeCompare(b))
                                 .map(([key, value]) => (
@@ -223,10 +223,10 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                     <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
                         <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                            <SelectTrigger style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--pos-goal-link-border)' }}>
+                            <SelectTrigger className="material-glass-subtle border-none">
                                 <SelectValue placeholder="Select a goal..." />
                             </SelectTrigger>
-                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                            <SelectContent className="material-glass">
                                 <SelectItem value="none">-- No Goal --</SelectItem>
                                 {availableGoals.map((g) => (
                                     <SelectItem key={g.id} value={g.id}>
@@ -309,7 +309,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
 
             <div className="flex gap-2">
                 {editingActivity && (
-                    <Button 
+                    <Button
                         type="button"
                         onClick={onCancelEdit}
                         variant="outline"
@@ -318,9 +318,9 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                         Cancel
                     </Button>
                 )}
-                <Button 
-                    type="submit" 
-                    disabled={loading} 
+                <Button
+                    type="submit"
+                    disabled={loading}
                     className="flex-1 hover:opacity-90"
                     style={{
                         backgroundColor: 'var(--btn-primary-bg)',

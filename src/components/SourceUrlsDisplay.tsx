@@ -60,7 +60,7 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
         return (
             <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 text-themed-text-secondary hover:text-themed-text-primary cursor-pointer transition-colors text-sm"
+                className="flex items-center gap-2 text-(--text-secondary) hover:text-(--text-primary) cursor-pointer transition-colors text-sm"
             >
                 <Link2 className="w-4 h-4" />
                 <span>Add source link...</span>
@@ -79,9 +79,8 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                     rel="noopener noreferrer"
                     className={clsx(
                         "group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer",
-                        "bg-themed-surface text-themed-text-primary",
-                        "hover:bg-themed-bg transition-colors",
-                        "border border-themed-border"
+                        "material-glass-subtle text-(--text-primary) border border-(--glass-border)",
+                        "hover:bg-(--glass-bg-subtle) transition-colors"
                     )}
                     onClick={async (e) => {
                         e.preventDefault();
@@ -112,7 +111,7 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                             e.stopPropagation();
                             onRemove(url);
                         }}
-                        className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity ml-0.5"
+                        className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
                     >
                         <X className="w-3 h-3" />
                     </button>
@@ -133,8 +132,8 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                         placeholder="https://..."
                         className={clsx(
                             "w-48 px-2.5 py-1 rounded-full text-xs",
-                            "bg-themed-surface text-themed-text-primary",
-                            "border border-themed-border",
+                            "bg-(--glass-bg) text-(--text-primary)",
+                            "border border-(--glass-border)",
                             "focus:outline-none focus:ring-1 focus:ring-blue-500"
                         )}
                         autoFocus
@@ -145,9 +144,9 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                     onClick={() => setIsAdding(true)}
                     className={clsx(
                         "flex items-center justify-center w-6 h-6 rounded-full",
-                        "bg-themed-surface text-themed-text-secondary",
-                        "hover:bg-themed-bg hover:text-themed-text-primary",
-                        "transition-colors border border-dashed border-themed-border"
+                        "bg-(--glass-bg-subtle) text-(--text-secondary)",
+                        "hover:bg-(--glass-bg) hover:text-(--text-primary)",
+                        "transition-colors border border-dashed border-(--glass-border)"
                     )}
                     title="Add source link"
                 >

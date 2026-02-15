@@ -64,13 +64,13 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
       <div key={item.id} className="flex flex-col items-center mx-4">
         <div className="relative group">
           <input
-            className="bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-300 dark:border-yellow-700/50 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-yellow-100 focus:outline-none focus:border-yellow-500 text-center min-w-[100px]"
+            className="bg-white/10 border-2 border-white/20 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:border-blue-500 text-center min-w-[100px]"
             value={item.text}
             onChange={(e) => updateText(item.id, e.target.value)}
           />
           <button
             onClick={() => addChild(item.id)}
-            className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 bg-blue-100 dark:bg-blue-900/30 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-300 transition-opacity"
+            className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 bg-blue-500/20 rounded-full hover:bg-blue-500/40 text-blue-300 transition-opacity"
             title="Add Child"
           >
             <Plus size={12} />
@@ -82,7 +82,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
             {item.children.map((child: any) => (
               <div key={child.id} className="relative pt-4">
                 {/* Connector line simulation */}
-                <div className="absolute top-0 left-1/2 w-px h-4 bg-gray-300 dark:bg-gray-600 -translate-x-1/2"></div>
+                <div className="absolute top-0 left-1/2 w-px h-4 bg-white/20 -translate-x-1/2"></div>
                 {renderNode(child)}
               </div>
             ))}
@@ -93,7 +93,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   };
 
   return (
-    <NodeViewWrapper className="mindmap-tree-component my-4 overflow-x-auto p-4 bg-themed-bg rounded-xl border border-dashed border-themed-border">
+    <NodeViewWrapper className="mindmap-tree-component my-4 overflow-x-auto p-4 bg-black/20 rounded-xl border border-dashed border-white/10">
       <div className="min-w-full flex justify-center">
         {nodes.map((root: any) => renderNode(root))}
       </div>
@@ -187,12 +187,12 @@ const BlockMindMapComponent = ({ node, updateAttributes }: any) => {
   return (
     <NodeViewWrapper className="mindmap-block-component my-4">
       <div
-        className="relative h-[400px] bg-themed-bg border border-themed-border rounded-xl overflow-hidden"
+        className="relative h-[400px] bg-black/20 border border-white/10 rounded-xl overflow-hidden"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
         <div className="absolute top-2 right-2 z-10">
-          <button onClick={addBlock} className="px-3 py-1 bg-themed-surface shadow-sm border border-themed-border rounded text-sm hover:bg-themed-bg flex items-center gap-1 text-themed-text-primary">
+          <button onClick={addBlock} className="px-3 py-1 material-card shadow-sm border border-white/10 rounded text-sm hover:bg-white/10 flex items-center gap-1 text-white">
             <Plus size={14} /> Add Block
           </button>
         </div>
@@ -202,11 +202,11 @@ const BlockMindMapComponent = ({ node, updateAttributes }: any) => {
             key={block.id}
             draggable
             onDragStart={(e) => handleDragStart(e, block.id)}
-            className="absolute bg-themed-surface shadow-md border border-themed-border rounded-lg p-2 min-w-[120px] cursor-move"
+            className="absolute material-card shadow-md border border-white/10 rounded-lg p-2 min-w-[120px] cursor-move"
             style={{ left: block.x, top: block.y }}
           >
             <textarea
-              className="w-full h-full resize-none outline-none text-sm bg-transparent text-themed-text-primary"
+              className="w-full h-full resize-none outline-none text-sm bg-transparent text-white placeholder-white/50"
               value={block.text}
               onChange={(e) => updateBlockText(block.id, e.target.value)}
               rows={2}

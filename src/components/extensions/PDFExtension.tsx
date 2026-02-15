@@ -46,11 +46,11 @@ export const PDFExtension = Node.create({
         <NodeViewWrapper className="pdf-component">
           <div
             onClick={openPdf}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-themed-surface border border-themed-border rounded-full cursor-pointer hover:bg-themed-bg transition-colors select-none"
+            className="inline-flex items-center gap-2 px-3 py-1.5 material-card border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-colors select-none"
             contentEditable={false}
           >
-            <FileText size={16} className="text-red-500" />
-            <span className="text-sm font-medium text-themed-text-primary underline decoration-themed-border underline-offset-2">{node.attrs.name}</span>
+            <FileText size={16} className="text-red-400" />
+            <span className="text-sm font-medium text-white underline decoration-white/30 underline-offset-2">{node.attrs.name}</span>
           </div>
         </NodeViewWrapper>
       );

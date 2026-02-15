@@ -79,12 +79,12 @@ export function ConfirmDialogProvider({ children }: ConfirmDialogProviderProps) 
         <ConfirmDialogContext.Provider value={{ confirm, alert }}>
             {children}
             <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-                <AlertDialogContent className="bg-themed-surface border-themed-border">
+                <AlertDialogContent className="material-glass max-w-[400px]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-themed-text-primary">
+                        <AlertDialogTitle className="text-(--text-primary)">
                             {options?.title || 'Confirm'}
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-themed-text-secondary">
+                        <AlertDialogDescription className="text-(--text-secondary)">
                             {options?.description}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -92,7 +92,7 @@ export function ConfirmDialogProvider({ children }: ConfirmDialogProviderProps) 
                         {!isAlert && (
                             <AlertDialogCancel
                                 onClick={handleCancel}
-                                className="bg-themed-bg text-themed-text-primary hover:bg-themed-bg/80 border-themed-border"
+                                className="border-(--glass-border) hover:bg-(--glass-bg-subtle) text-(--text-secondary) hover:text-(--text-primary)"
                             >
                                 {options?.cancelText || 'Cancel'}
                             </AlertDialogCancel>
@@ -101,8 +101,8 @@ export function ConfirmDialogProvider({ children }: ConfirmDialogProviderProps) 
                             onClick={handleConfirm}
                             className={
                                 options?.variant === 'destructive'
-                                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                                    : 'bg-themed-text-primary text-themed-surface hover:opacity-90'
+                                    ? 'bg-red-500 hover:bg-red-600 text-white border-none'
+                                    : 'bg-(--text-primary) text-(--bg-base) hover:opacity-90 border-none'
                             }
                         >
                             {options?.confirmText || 'Confirm'}

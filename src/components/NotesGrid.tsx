@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
@@ -81,28 +82,29 @@ function SortableNote({
       onClick={isRearrangeMode ? undefined : onClick}
       onContextMenu={onContextMenu}
       className={clsx(
-        "bg-themed-surface rounded-xl p-6 shadow-sm transition-all border border-themed-border flex flex-col h-48 group relative",
-        !isRearrangeMode && "hover:shadow-md cursor-pointer",
-        isRearrangeMode && "cursor-move ring-2 ring-transparent dark:ring-transparent hover:ring-blue-200 dark:hover:ring-blue-900"
+        "material-glass-subtle rounded-xl p-6 transition-all flex flex-col h-48 group relative",
+        !isRearrangeMode && "hover:bg-white/10 cursor-pointer hover:-translate-y-1 hover:shadow-xl",
+        isRearrangeMode && "cursor-move ring-2 ring-transparent hover:ring-blue-500/50"
       )}
     >
       {note.nestedCount > 0 && (
         <div
-          className="absolute top-3 right-3 bg-themed-bg text-themed-text-secondary text-xs font-semibold px-2 py-0.5 rounded-full"
+          className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm"
+          style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--text-secondary)' }}
           title={`${note.nestedCount} nested notes inside`}
         >
           {note.nestedCount}
         </div>
       )}
-      <h3 className="text-lg font-semibold text-themed-text-primary mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pr-8">
+      <h3 className="text-lg font-semibold mb-2 truncate transition-colors pr-8" style={{ color: 'var(--text-primary)' }}>
         {note.title || 'Untitled'}
       </h3>
-      <p className="text-sm text-themed-text-secondary mb-4 flex-1 overflow-hidden relative">
-        <span className="line-clamp-4">
-          {getPreviewText(note.content) || <span className="italic text-gray-400">No content</span>}
+      <p className="text-sm mb-4 flex-1 overflow-hidden relative" style={{ color: 'var(--text-secondary)' }}>
+        <span className="line-clamp-4 leading-relaxed">
+          {getPreviewText(note.content) || <span className="italic" style={{ color: 'var(--text-tertiary)' }}>No content</span>}
         </span>
       </p>
-      <div className="text-xs text-gray-400 mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
+      <div className="text-xs mt-auto pt-4 border-t flex justify-between items-center" style={{ color: 'var(--text-tertiary)', borderColor: 'var(--glass-border)' }}>
         <span>
           {(() => {
             try {
@@ -112,7 +114,7 @@ function SortableNote({
             }
           })()}
         </span>
-        {isRearrangeMode && <Move className="w-4 h-4 text-gray-400" />}
+        {isRearrangeMode && <Move className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />}
       </div>
     </div>
   );
@@ -150,7 +152,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       const db = await getDb();
       // Direct query with proper filtering - same as Sidebar
       const filteredNotes = await db.select<Note[]>(
-        parentId 
+        parentId
           ? 'SELECT * FROM notes WHERE parent_id = $1 ORDER BY position ASC, updated_at DESC'
           : 'SELECT * FROM notes WHERE parent_id IS NULL ORDER BY position ASC, updated_at DESC',
         parentId ? [parentId] : []
@@ -215,105 +217,129 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
   };
 
   return (
-    <div className={embedded ? "w-full" : "h-full p-8 bg-themed-bg overflow-y-auto"}>
-      <div className={embedded ? "w-full" : "max-w-6xl mx-auto"}>
-        <div className="flex justify-end mb-4 h-8">
-          {isRearrangeMode && (
-            <button
-              onClick={() => setIsRearrangeMode(false)}
-              className="flex items-center text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+    <>
+      <div className={embedded ? "w-full" : "h-full p-8 overflow-y-auto custom-scrollbar"}>
+        <div className={embedded ? "w-full" : "max-w-6xl mx-auto"}>
+          <div className="flex justify-end mb-4 h-8">
+            {isRearrangeMode && (
+              <button
+                onClick={() => setIsRearrangeMode(false)}
+                className="flex items-center text-sm px-3 py-1 rounded-full transition-colors border shadow-sm"
+                style={{ 
+                  color: 'var(--text-primary)',
+                  backgroundColor: 'var(--glass-bg-subtle)',
+                  borderColor: 'var(--glass-border)'
+                }}
+              >
+                <Move className="w-4 h-4 mr-2" />
+                Done Rearranging
+              </button>
+            )}
+          </div>
+
+          {notes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="text-sm font-medium mb-1">No notes found</p>
+              <p className="text-xs">Create one from the sidebar +</p>
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
             >
-              <Move className="w-4 h-4 mr-2" />
-              Done Rearranging
-            </button>
+              <SortableContext
+                items={notes.map(n => n.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {notes.map((note) => (
+                    <SortableNote
+                      key={note.id}
+                      note={note}
+                      onClick={() => navigate(`/notes/${note.id}`)}
+                      onContextMenu={(e) => handleContextMenu(e, note.id)}
+                      isRearrangeMode={isRearrangeMode}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
-
-        {notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-themed-text-secondary">
-            <p className="text-sm font-medium mb-1">No notes</p>
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={notes.map(n => n.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {notes.map((note) => (
-                  <SortableNote
-                    key={note.id}
-                    note={note}
-                    onClick={() => navigate(`/notes/${note.id}`)}
-                    onContextMenu={(e) => handleContextMenu(e, note.id)}
-                    isRearrangeMode={isRearrangeMode}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        )}
       </div>
 
       {/* Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed bg-themed-surface rounded-lg shadow-xl border border-themed-border py-1 w-48 z-50"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="w-full text-left px-4 py-2 text-sm text-themed-text-primary hover:bg-themed-bg flex items-center"
-            onClick={() => {
-              setIsRearrangeMode(!isRearrangeMode);
-              setContextMenu(null);
-            }}
+      {contextMenu && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9999]"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+          />
+          <div
+            className="fixed material-glass rounded-lg shadow-2xl py-1 w-48 z-[9999] overflow-hidden"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <Move className="w-4 h-4 mr-2" />
-            {isRearrangeMode ? 'Disable Rearrange' : 'Re-arrange notes'}
-          </button>
-          <button
-            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
-            onClick={() => {
-              setDeleteConfirm(contextMenu.noteId);
-              setContextMenu(null);
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete note
-          </button>
-        </div>
+            <button
+              className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
+              style={{ color: 'var(--text-primary)' }}
+              onClick={() => {
+                setIsRearrangeMode(!isRearrangeMode);
+                setContextMenu(null);
+              }}
+            >
+              <Move className="w-3.5 h-3.5 mr-2 opacity-70" />
+              {isRearrangeMode ? 'Disable Rearrange' : 'Re-arrange notes'}
+            </button>
+            <div className="h-px my-1" style={{ backgroundColor: 'var(--glass-border)' }} />
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center transition-colors"
+              onClick={() => {
+                setDeleteConfirm(contextMenu.noteId);
+                setContextMenu(null);
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-2 opacity-70" />
+              Delete note
+            </button>
+          </div>
+        </>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-themed-surface rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold text-themed-text-primary mb-2">Delete Note?</h3>
-            <p className="text-sm text-themed-text-secondary mb-6">
-              Are you sure you want to delete this note? This action cannot be undone.
+      {deleteConfirm && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="material-glass rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Delete Note?</h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              Are you sure you want to delete this note? This can be undone from Settings within 7 days.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-themed-text-primary hover:bg-themed-bg rounded-lg"
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                className="px-4 py-2 text-sm font-medium rounded-lg shadow-lg transition-all"
+                style={{ 
+                  color: 'white',
+                  backgroundColor: 'rgba(239, 68, 68, 0.8)'
+                }}
               >
                 Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

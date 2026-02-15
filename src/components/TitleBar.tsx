@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X, Maximize2 } from 'lucide-react';
+import { Minus, X, Maximize2 } from 'lucide-react';
 import clsx from 'clsx';
 
 export function TitleBar() {
@@ -68,38 +68,41 @@ export function TitleBar() {
     <div
       onMouseDown={startDrag}
       className={clsx(
-        "h-[32px] flex items-center justify-between select-none z-[9999] shrink-0",
-        "h-[32px] flex items-center justify-between select-none z-[9999] shrink-0",
-        "bg-themed-surface text-themed-text-primary transition-colors duration-300"
+        "h-[36px] flex items-center justify-between select-none z-9999 shrink-0",
+        "material-glass-subtle transition-colors duration-300"
       )}
     >
       {/* App Title */}
-      <div className="flex-1 h-full flex items-center px-4 text-xs font-medium opacity-80 cursor-default">
+      <div className="flex-1 h-full flex items-center px-4 text-xs font-medium text-(--text-secondary) tracking-wide cursor-default select-none transition-colors duration-300">
         coppermind
       </div>
 
-      {/* Window Controls */}
-      <div className="flex items-center h-full z-50">
+      {/* Window Controls (macOS Traffic Lights) */}
+      <div className="flex items-center h-full z-50 px-4 gap-2">
         <button
           onClick={(e) => { e.stopPropagation(); minimize(); }}
-          className="h-full px-4 hover:bg-themed-bg transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
+          className="w-3 h-3 rounded-full bg-[#FEBC2E] hover:bg-[#FFD60A] border border-[#D3A100] flex items-center justify-center group focus:outline-none cursor-pointer"
           title="Minimize"
         >
-          <Minus className="w-4 h-4" />
+          <Minus className="w-2 h-2 text-[#4c3b0b] opacity-0 group-hover:opacity-100" strokeWidth={3} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); toggleMaximize(); }}
-          className="h-full px-4 hover:bg-themed-bg transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
+          className="w-3 h-3 rounded-full bg-[#28C840] hover:bg-[#32D74B] border border-[#1CA62B] flex items-center justify-center group focus:outline-none cursor-pointer"
           title={isMaximized ? "Restore" : "Maximize"}
         >
-          {isMaximized ? <Maximize2 className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+          {isMaximized ? (
+            <Maximize2 className="w-2 h-2 text-[#0b3310] opacity-0 group-hover:opacity-100" strokeWidth={3} />
+          ) : (
+            <Maximize2 className="w-2 h-2 text-[#0b3310] opacity-0 group-hover:opacity-100 rotate-45" strokeWidth={3} />
+          )}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); close(); }}
-          className="h-full px-4 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
+          className="w-3 h-3 rounded-full bg-[#FF5F57] hover:bg-[#FF3B30] border border-[#E0443E] flex items-center justify-center group focus:outline-none cursor-pointer"
           title="Close"
         >
-          <X className="w-4 h-4" />
+          <X className="w-2 h-2 text-[#4c0b0b] opacity-0 group-hover:opacity-100" strokeWidth={3} />
         </button>
       </div>
     </div>

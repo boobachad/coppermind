@@ -48,12 +48,12 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+            <DialogContent className="material-glass border-white/10 sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle className="text-foreground">
+                    <DialogTitle className="text-white">
                         Slot {slotIndex} ({slotStartTime} - {slotEndTime})
                     </DialogTitle>
-                    <DialogDescription className="text-muted-foreground">
+                    <DialogDescription className="text-white/60">
                         Activities logged during this time slot
                     </DialogDescription>
                 </DialogHeader>
@@ -63,20 +63,19 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                         <Loader />
                     </div>
                 ) : activities && activities.length > 0 ? (
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                         {activities.map((activity) => (
                             <div
                                 key={activity.id}
-                                className="p-3 border rounded-lg space-y-2"
-                                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
+                                className="p-3 rounded-lg space-y-2 bg-black/40 border border-white/10"
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1">
-                                        <div className="font-medium text-foreground">{activity.title}</div>
+                                        <div className="font-medium text-white">{activity.title}</div>
                                         {activity.description && (
-                                            <div className="text-xs text-muted-foreground mt-1">{activity.description}</div>
+                                            <div className="text-xs text-white/60 mt-1">{activity.description}</div>
                                         )}
-                                        <div className="text-sm text-muted-foreground mt-1">
+                                        <div className="text-sm text-white/50 mt-1">
                                             {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
                                         </div>
                                     </div>
@@ -86,31 +85,31 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                             style={{ backgroundColor: ACTIVITY_COLORS[activity.category] }}
                                         />
                                         {activity.isProductive && (
-                                            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--pos-productive-bg)', color: 'var(--pos-productive-text)' }}>
+                                            <span className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-400 border border-green-500/20">
                                                 Productive
                                             </span>
                                         )}
                                         {activity.isShadow && (
-                                            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--pos-shadow-bg)', color: 'var(--pos-shadow-text)' }}>
+                                            <span className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                                 Shadow
                                             </span>
                                         )}
                                         {activity.goalId && (
-                                            <span className="text-xs px-2 py-1 rounded flex items-center gap-1" style={{ backgroundColor: 'var(--pos-goal-link-bg)', color: 'var(--pos-goal-link-text)' }}>
+                                            <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                                 Goal <Star className="w-3 h-3" />
                                             </span>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="text-xs text-muted-foreground">
-                                    Category: <span className="text-foreground uppercase">{activity.category}</span>
+                                <div className="text-xs text-white/40">
+                                    Category: <span className="text-white/70 uppercase">{activity.category}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="py-8 text-center text-muted-foreground">
+                    <div className="py-8 text-center text-white/40">
                         No activities logged in this slot
                     </div>
                 )}

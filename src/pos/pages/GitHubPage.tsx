@@ -4,6 +4,7 @@ import { GitHubRepository, GitHubUserStats } from '../lib/types';
 import { Loader } from '../../components/Loader';
 import { Navbar } from '../components/Navbar';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -13,7 +14,7 @@ export default function GitHubPage() {
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [sortBy, setSortBy] = useState<'commits' | 'stars' | 'updated'>('commits');
-    const [languageFilter, setLanguageFilter] = useState<string>('');
+    const [languageFilter, setLanguageFilter] = useState<string>('all');
 
     const username = 'boobachad'; // TODO: Get from config
 
@@ -27,7 +28,7 @@ export default function GitHubPage() {
 
             const reposData = await invoke<GitHubRepository[]>('get_github_repositories', {
                 username,
-                language: languageFilter || null,
+                language: languageFilter === 'all' ? null : languageFilter,
                 minCommits: null,
                 sortBy,
                 limit: 100,
@@ -70,8 +71,11 @@ export default function GitHubPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <Loader />
+            <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'github' }]} />
+                <div className="flex items-center justify-center flex-1">
+                    <Loader />
+                </div>
             </div>
         );
     }
@@ -117,37 +121,37 @@ export default function GitHubPage() {
                 <div className="flex items-center gap-4 p-4 rounded-lg border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Sort by:</label>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value as any)}
-                            className="px-3 py-1.5 rounded border"
-                            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
-                        >
-                            <option value="commits">Commits</option>
-                            <option value="stars">Stars</option>
-                            <option value="updated">Recently Updated</option>
-                        </select>
+                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                            <SelectTrigger className="w-[180px] border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="material-glass">
+                                <SelectItem value="commits">Commits</SelectItem>
+                                <SelectItem value="stars">Stars</SelectItem>
+                                <SelectItem value="updated">Recently Updated</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Language:</label>
-                        <select
-                            value={languageFilter}
-                            onChange={(e) => setLanguageFilter(e.target.value)}
-                            className="px-3 py-1.5 rounded border"
-                            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
-                        >
-                            <option value="">All</option>
-                            {languages.map(lang => (
-                                <option key={lang} value={lang}>{lang}</option>
-                            ))}
-                        </select>
+                        <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                            <SelectTrigger className="w-[180px] border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent className="material-glass">
+                                <SelectItem value="all">All</SelectItem>
+                                {languages.map(lang => (
+                                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
                 {/* Repository Cards */}
                 {repos.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-center py-12 text-foreground opacity-60">
                         No repositories found. Click "Sync GitHub" to fetch data.
                     </div>
                 ) : (
@@ -165,7 +169,7 @@ export default function GitHubPage() {
 function StatCard({ label, value }: { label: string; value: number | string }) {
     return (
         <div className="p-4 rounded border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
-            <div className="text-xs text-muted-foreground mb-1">{label}</div>
+            <div className="text-xs text-foreground opacity-60 mb-1">{label}</div>
             <div className="text-2xl font-semibold">{value}</div>
         </div>
     );
@@ -186,7 +190,7 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
                         {repo.fullName}
                     </a>
                     {repo.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        <p className="text-sm text-foreground opacity-70 mt-1 line-clamp-2">
                             {repo.description}
                         </p>
                     )}
@@ -207,7 +211,7 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+            <div className="grid grid-cols-2 gap-2 text-sm text-foreground opacity-70">
                 <div className="flex items-center gap-1">
                     <span>💻</span>
                     <span>{repo.totalCommits} commits</span>
@@ -228,7 +232,7 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
 
             {/* Footer */}
             {repo.repoUpdatedAt && (
-                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground" style={{ borderColor: 'var(--border-color)' }}>
+                <div className="mt-3 pt-3 border-t text-xs text-foreground opacity-60" style={{ borderColor: 'var(--border-color)' }}>
                     Updated {new Date(repo.repoUpdatedAt).toLocaleDateString()}
                 </div>
             )}

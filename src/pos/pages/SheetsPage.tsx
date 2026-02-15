@@ -82,7 +82,7 @@ export function SheetsPage() {
                     toast.error('LeetCode sync failed', { description: String(err) });
                     return { platform: 'leetcode', newSubmissions: 0, totalSubmissions: 0 };
                 });
-            
+
             const cfData = await invoke<{ platform: string; newSubmissions: number; totalSubmissions: number }>('scrape_codeforces')
                 .catch((err) => {
                     toast.error('Codeforces sync failed', { description: String(err) });
@@ -90,7 +90,7 @@ export function SheetsPage() {
                 });
 
             const totalNew = (lcData.newSubmissions ?? 0) + (cfData.newSubmissions ?? 0);
-            
+
             if (totalNew > 0) {
                 toast.success('Sync complete', {
                     description: `LC: ${lcData.newSubmissions ?? 0}, CF: ${cfData.newSubmissions ?? 0}`
@@ -98,7 +98,7 @@ export function SheetsPage() {
             } else {
                 toast.info('No new submissions found');
             }
-            
+
             await fetchSubmissions();
         } catch (error) {
             toast.error('Sync failed', { description: String(error) });
@@ -109,7 +109,7 @@ export function SheetsPage() {
 
     const getDifficultyColor = (sub: any) => {
         if (sub.platform === 'codeforces' && sub.rating) {
-            if (sub.rating < 1200) return 'text-muted-foreground';
+            if (sub.rating < 1200) return 'text-foreground opacity-60';
             if (sub.rating < 1400) return 'text-green-500';
             if (sub.rating < 1600) return 'text-cyan-500';
             if (sub.rating < 1900) return 'text-blue-500';
@@ -121,7 +121,7 @@ export function SheetsPage() {
             if (sub.difficulty === 'Medium') return 'text-yellow-500';
             if (sub.difficulty === 'Hard') return 'text-red-500';
         }
-        return 'text-muted-foreground';
+        return 'text-foreground opacity-60';
     };
 
     // Client-side filtering (O(n))
@@ -149,10 +149,10 @@ export function SheetsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                            <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                            <SelectTrigger className="w-[140px] material-glass-subtle border-none text-sm">
                                 <SelectValue placeholder="Platform" />
                             </SelectTrigger>
-                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                            <SelectContent className="material-glass">
                                 <SelectItem value="all">All Platforms</SelectItem>
                                 <SelectItem value="leetcode">LeetCode</SelectItem>
                                 <SelectItem value="codeforces">Codeforces</SelectItem>
@@ -161,10 +161,10 @@ export function SheetsPage() {
                         </Select>
 
                         <Select value={verdictFilter} onValueChange={setVerdictFilter}>
-                            <SelectTrigger className="w-[140px] border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                            <SelectTrigger className="w-[140px] material-glass-subtle border-none text-sm">
                                 <SelectValue placeholder="Verdict" />
                             </SelectTrigger>
-                            <SelectContent className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                            <SelectContent className="material-glass">
                                 <SelectItem value="all">All Verdicts</SelectItem>
                                 {uniqueVerdicts.map(verdict => (
                                     <SelectItem key={verdict} value={verdict}>{verdict}</SelectItem>
@@ -172,14 +172,14 @@ export function SheetsPage() {
                             </SelectContent>
                         </Select>
 
-                        <div className="px-3 py-1 rounded border text-sm text-muted-foreground font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                        <div className="px-3 py-1 rounded border text-sm text-foreground opacity-70 font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                             Total: <span className="text-foreground">{filteredSubmissions.length}</span>
                         </div>
                         <Button
                             onClick={fetchSubmissions}
                             disabled={loading}
                             variant="outline"
-                            className="border text-muted-foreground transition-colors"
+                            className="border text-foreground opacity-70 transition-colors"
                             style={{ borderColor: 'var(--border-color)' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -216,20 +216,20 @@ export function SheetsPage() {
                         <table className="w-full">
                             <thead className="bg-muted/50 border-b border-border backdrop-blur-sm">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">#</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Platform</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Problem</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Diff / Rating</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Submitted</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Verdict</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Lang</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">#</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Platform</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Problem</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Diff / Rating</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Tags</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Submitted</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Verdict</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Lang</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-800/50">
                                 {filteredSubmissions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                                        <td colSpan={8} className="px-4 py-12 text-center text-foreground opacity-60">
                                             {loading ? (
                                                 <div className="flex justify-center">
                                                     <Loader />
@@ -240,7 +240,7 @@ export function SheetsPage() {
                                 ) : (
                                     filteredSubmissions.map((sub, index) => (
                                         <tr key={sub.problemId} className="hover:bg-muted/50 transition-colors border-b border-border/50">
-                                            <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
+                                            <td className="px-4 py-3 text-xs text-foreground opacity-60 font-mono">
                                                 {index + 1}
                                             </td>
                                             <td className="px-4 py-3">
@@ -254,7 +254,7 @@ export function SheetsPage() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="font-medium text-foreground text-sm">{sub.problemTitle}</div>
-                                                <div className="text-[10px] text-muted-foreground font-mono">{sub.problemId}</div>
+                                                <div className="text-[10px] text-foreground opacity-60 font-mono">{sub.problemId}</div>
                                             </td>
                                             <td className={`px-4 py-3 text-xs font-bold ${getDifficultyColor(sub)}`}>
                                                 {sub.difficulty || sub.rating || '-'}
@@ -268,20 +268,20 @@ export function SheetsPage() {
                                                             </span>
                                                         ))
                                                     ) : (
-                                                        <span className="text-muted-foreground text-[10px]">-</span>
+                                                        <span className="text-foreground opacity-60 text-[10px]">-</span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
+                                            <td className="px-4 py-3 text-xs text-foreground opacity-70 tabular-nums">
                                                 <div className="flex flex-col gap-1">
                                                     {sub.allTimestamps?.map((t: string, i: number) => (
-                                                        <div 
-                                                            key={i} 
+                                                        <div
+                                                            key={i}
                                                             className="whitespace-nowrap"
                                                             style={{
                                                                 color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
                                                                 fontWeight: i === 0 ? 500 : 400,
-                                                                opacity: i === 0 ? 1 : 0.5
+                                                                opacity: i === 0 ? 1 : 0.75
                                                             }}
                                                         >
                                                             {formatDateDDMMYYYY(new Date(t))} {formatTime(new Date(t))}
@@ -294,7 +294,7 @@ export function SheetsPage() {
                                                     {sub.verdict}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
+                                            <td className="px-4 py-3 text-xs text-foreground opacity-70 font-mono">
                                                 {sub.language}
                                             </td>
                                         </tr>

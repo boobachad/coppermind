@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
 import type { Activity } from '../lib/types';
@@ -67,7 +66,7 @@ export function ActivityHeatmap() {
       // Build months structure
       const months: MonthData[] = [];
       const monthDate = new Date(startDate);
-      
+
       while (monthDate <= endDate) {
         const year = monthDate.getFullYear();
         const month = monthDate.getMonth();
@@ -79,7 +78,7 @@ export function ActivityHeatmap() {
           const offset = dayDate.getTimezoneOffset() * 60000;
           const localDate = new Date(dayDate.getTime() - offset);
           const dateStr = localDate.toISOString().split('T')[0];
-          
+
           const count = activityMap.get(dateStr) || 0;
           let level = 0;
           if (count > 0) level = 1;
@@ -142,12 +141,15 @@ export function ActivityHeatmap() {
 
   const getHeatmapStyle = (level: number): React.CSSProperties => {
     if (level === 0) {
-      return { 
-        backgroundColor: 'var(--border-color)',
-        border: '1px solid var(--border-color)'
+      return {
+        backgroundColor: 'var(--glass-border)', // Use glass border as "empty" state
+        opacity: 0.3
       };
     }
-    return { backgroundColor: `var(--pos-heatmap-level-${level})` };
+    return {
+      backgroundColor: `var(--pos-heatmap-level-${level})`,
+      boxShadow: '0 0 4px 0 rgba(0,0,0,0.1)' // Add subtle glow to active cells
+    };
   };
 
   const chunkedDays = (days: HeatmapData[], size: number): HeatmapData[][] => {
@@ -160,87 +162,76 @@ export function ActivityHeatmap() {
 
   if (loading) {
     return (
-      <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-        <CardContent className="pt-6">
-          <div className="flex justify-center py-12">
-            <Loader />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center py-12 w-full h-full items-center">
+        <Loader />
+      </div>
     );
   }
 
   return (
-    <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Activity Heatmap</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 rounded border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-              <div className="text-2xl font-bold" style={{ color: 'var(--pos-success-text)' }}>{streakData.current}</div>
-              <div className="text-xs text-muted-foreground">Current Streak</div>
-            </div>
-            <div className="text-center p-3 rounded border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-              <div className="text-2xl font-bold" style={{ color: 'var(--pos-warning-text)' }}>{streakData.longest}</div>
-              <div className="text-xs text-muted-foreground">Longest Streak</div>
-            </div>
-            <div className="text-center p-3 rounded border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-              <div className="text-2xl font-bold" style={{ color: 'var(--pos-info-text)' }}>{streakData.total}</div>
-              <div className="text-xs text-muted-foreground">Total Days</div>
-            </div>
-          </div>
-
-          {/* Heatmap Grid */}
-          <div className="w-full overflow-x-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-fit mx-auto">
-              {monthsData.map((month, monthIndex) => {
-                const columns = chunkedDays(month.days, 7);
-                const todayStr = new Date().toISOString().split('T')[0];
-                return (
-                  <div key={`${month.name}-${monthIndex}`} className="flex flex-col">
-                    <div className="text-sm font-medium mb-2">{month.name}</div>
-                    <div className="flex gap-1">
-                      {columns.map((column, colIndex) => (
-                        <div key={`col-${monthIndex}-${colIndex}`} className="flex flex-col gap-1">
-                          {column.map((day, dayIndex) => {
-                            const isToday = day.date === todayStr;
-                            return (
-                              <div
-                                key={`${day.date}-${dayIndex}`}
-                                className="w-3 h-3 rounded transition-colors hover:ring-1"
-                                style={{
-                                  ...getHeatmapStyle(day.level),
-                                  borderColor: 'var(--border-color)',
-                                  ...(isToday && {
-                                    boxShadow: '0 0 0 2px var(--pos-today-border)',
-                                  }),
-                                }}
-                                title={`${day.date}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
-                              />
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <span>Less</span>
-            {[0, 1, 2, 3, 4].map(level => (
-              <div key={level} className="w-3 h-3 rounded" style={getHeatmapStyle(level)} />
-            ))}
-            <span>More</span>
-          </div>
+    <div className="w-full flex flex-col gap-6">
+      {/* Stats Cards - Integrated into Glass Theme */}
+      <div className="grid grid-cols-3 gap-3 w-full">
+        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
+          <span className="text-2xl font-bold text-(--pos-success-text) tabular-nums leading-none mb-1">{streakData.current}</span>
+          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Current Streak</span>
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
+          <span className="text-2xl font-bold text-(--pos-warning-text) tabular-nums leading-none mb-1">{streakData.longest}</span>
+          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Longest Streak</span>
+        </div>
+        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
+          <span className="text-2xl font-bold text-(--pos-info-text) tabular-nums leading-none mb-1">{streakData.total}</span>
+          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Total Days</span>
+        </div>
+      </div>
+
+      {/* Heatmap Visualization */}
+      <div className="w-full flex justify-center py-2">
+        <div className="grid grid-flow-col gap-6 auto-cols-max overflow-x-auto custom-scrollbar pb-4 px-2">
+          {monthsData.map((month, monthIndex) => {
+            const columns = chunkedDays(month.days, 7);
+            const todayStr = new Date().toISOString().split('T')[0];
+            return (
+              <div key={`${month.name}-${monthIndex}`} className="flex flex-col gap-1">
+                <div className="text-[10px] uppercase font-bold text-(--text-tertiary) mb-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">{month.name}</div>
+                <div className="flex gap-1">
+                  {columns.map((column, colIndex) => (
+                    <div key={`col-${monthIndex}-${colIndex}`} className="flex flex-col gap-1">
+                      {column.map((day, dayIndex) => {
+                        const isToday = day.date === todayStr;
+                        return (
+                          <div
+                            key={`${day.date}-${dayIndex}`}
+                            className={`w-3 h-3 transition-opacity duration-200 ${day.level > 0 ? 'hover:opacity-80' : 'hover:bg-(--glass-border)'} ${isToday ? 'ring-1 ring-(--glass-text) z-10' : ''}`}
+                            style={{
+                              ...getHeatmapStyle(day.level),
+                              borderRadius: '1px', // Slightly rounded but mostly square
+                            }}
+                            title={`${day.date}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-2 text-[10px] text-(--text-tertiary) mt-1 px-4">
+        <span>Less</span>
+        <div className="flex gap-1">
+          <div className="w-3 h-3" style={{ ...getHeatmapStyle(0), borderRadius: '1px' }} />
+          {[1, 2, 3, 4].map(level => (
+            <div key={level} className="w-3 h-3" style={{ ...getHeatmapStyle(level), borderRadius: '1px' }} />
+          ))}
+        </div>
+        <span>More</span>
+      </div>
+    </div>
   );
 }

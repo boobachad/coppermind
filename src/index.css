@@ -3,7 +3,6 @@
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
-@config "../tailwind.config.js";
 
 /* Theme Configuration - Moved to top for availability */
 @theme inline {
@@ -15,90 +14,111 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* Core Palette (Semantic) */
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
 
-  /* Themed Colors (mapped to CSS variables) */
-  --color-themed-bg: var(--bg-primary);
-  --color-themed-surface: var(--bg-secondary);
-  --color-themed-text-primary: var(--text-primary);
-  --color-themed-text-secondary: var(--text-secondary);
-  --color-themed-border: var(--border-color);
-  
-  /* POS Activity Colors - Register for inline style usage */
-  --color-pos-activity-coding: var(--pos-activity-coding);
-  --color-pos-activity-coding-leetcode: var(--pos-activity-coding-leetcode);
-  --color-pos-activity-coding-codeforces: var(--pos-activity-coding-codeforces);
-  --color-pos-activity-cpp: var(--pos-activity-cpp);
-  --color-pos-activity-sleep: var(--pos-activity-sleep);
-  --color-pos-activity-book: var(--pos-activity-book);
-  --color-pos-activity-real-projects: var(--pos-activity-real-projects);
-  --color-pos-activity-exercise: var(--pos-activity-exercise);
-  --color-pos-activity-college: var(--pos-activity-college);
-  --color-pos-activity-food: var(--pos-activity-food);
-  --color-pos-activity-family: var(--pos-activity-family);
-  --color-pos-activity-entertainment: var(--pos-activity-entertainment);
-  --color-pos-activity-commute: var(--pos-activity-commute);
-  --color-pos-activity-misc: var(--pos-activity-misc);
-  --color-pos-activity-ncc: var(--pos-activity-ncc);
-  --color-pos-activity-side-projects: var(--pos-activity-side-projects);
-  --color-pos-activity-surfing: var(--pos-activity-surfing);
-  --color-pos-activity-fallback: var(--pos-activity-fallback);
+  --color-card: var(--glass-bg);
+  --color-card-foreground: var(--text-primary);
+
+  --color-popover: var(--glass-bg);
+  --color-popover-foreground: var(--text-primary);
+
+  --color-primary: var(--glass-text);
+  --color-primary-foreground: var(--bg-base);
+
+  --color-secondary: var(--glass-border);
+  --color-secondary-foreground: var(--text-primary);
+
+  --color-muted: var(--glass-bg-subtle);
+  --color-muted-foreground: var(--text-secondary);
+
+  --color-accent: var(--color-accent-primary);
+  --color-accent-foreground: var(--text-primary);
+
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: var(--text-primary);
+
+  --color-border: var(--glass-border);
+  --color-input: var(--glass-bg-subtle);
+  --color-ring: var(--glass-border-highlight);
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    0% {
+      transform: scale(0.98);
+      opacity: 0;
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Material Tokens */
+  --color-material-base: var(--bg-base);
+  --color-material-glass: var(--glass-bg);
+  --color-material-sidebar: var(--glass-sidebar-bg);
 }
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --radius: 0.5rem;
-  
-  /* Design System - Dark Theme (Default) */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #141414;
-  --text-primary: #e5e5e5;
-  --text-secondary: #a3a3a3;
-  --border-color: #262626;
-  
-  /* POS-specific colors - Dark theme defaults */
-  --pos-slot-empty: #1e293b;
-  --pos-segment-empty: #1e293b;
-  --pos-activity-fallback: #334155;
-  --pos-goal-accent: #f59e0b;
-  
-  /* Heatmap colors - Dark theme */
+  font-family: Inter, system-ui, sans-serif;
+  letter-spacing: -0.015em;
+  /* Premium tight tracking */
+  --radius: 0.75rem;
+
+  /* --- STRICT MATERIAL SYSTEM --- */
+
+  /* Base - Deep, Solid Background */
+  --bg-base: #030303;
+
+  /* Text - High Contrast for Glass */
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-tertiary: rgba(255, 255, 255, 0.35);
+
+  /* Glass Materials (Dark Mode Default) */
+  /* Main Panels (Bento Cards, Content) */
+  --glass-bg: rgba(20, 20, 20, 0.85);
+  --glass-bg-subtle: rgba(35, 35, 35, 0.80);
+  /* For hovers/inputs */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-highlight: rgba(255, 255, 255, 0.15);
+  /* Top edges */
+
+  /* Sidebar Specifics */
+  --glass-sidebar-bg: rgba(10, 10, 10, 0.7);
+  --glass-sidebar-border: rgba(255, 255, 255, 0.06);
+
+  /* Accent Colors */
+  --color-accent-primary: #3b82f6;
+  /* Blue 500 */
+  --color-error: #ef4444;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+
+  /* Legacy POS Colors (Mapped to Variables) */
   --pos-heatmap-level-1: #0e4429;
   --pos-heatmap-level-2: #006d32;
   --pos-heatmap-level-3: #26a641;
   --pos-heatmap-level-4: #39d353;
-  
-  /* Activity category colors - Dark theme */
+  --pos-slot-empty: rgba(255, 255, 255, 0.03);
+
+  /* Category Colors (Retained for Data Viz) */
   --pos-activity-coding: #3b82f6;
   --pos-activity-coding-leetcode: #0ea5e9;
   --pos-activity-coding-codeforces: #14b8a6;
@@ -116,46 +136,7 @@
   --pos-activity-ncc: #f59e0b;
   --pos-activity-side-projects: #a855f7;
   --pos-activity-surfing: #64748b;
-  
-  /* Semantic status colors - Dark theme */
-  --pos-success-bg: #14532d;
-  --pos-success-border: #15803d;
-  --pos-success-text: #4ade80;
-  
-  --pos-warning-bg: #78350f;
-  --pos-warning-border: #b45309;
-  --pos-warning-text: #fbbf24;
-  
-  --pos-error-bg: #7f1d1d;
-  --pos-error-border: #991b1b;
-  --pos-error-text: #f87171;
-  
-  --pos-info-bg: #1e3a8a;
-  --pos-info-border: #2563eb;
-  --pos-info-text: #60a5fa;
-  
-  --pos-productive-bg: #14532d;
-  --pos-productive-text: #86efac;
-  
-  --pos-shadow-bg: #1e3a8a;
-  --pos-shadow-text: #93c5fd;
-  
-  --pos-goal-link-bg: #78350f;
-  --pos-goal-link-border: #d97706;
-  --pos-goal-link-text: #fcd34d;
-  
-  --pos-debt-bg: #450a0a;
-  --pos-debt-border: #7f1d1d;
-  --pos-debt-text: #fca5a5;
-  
-  --pos-today-bg: #1e3a8a;
-  --pos-today-border: #3b82f6;
-  --pos-today-text: #60a5fa;
-  
-  /* Primary action button - Dark theme: white bg, black text */
-  --btn-primary-bg: #ffffff;
-  --btn-primary-text: #000000;
-  
+
   /* Legacy shadcn variables */
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
@@ -172,24 +153,38 @@
 
 /* Theme Overrides */
 [data-theme="solarized-light"] {
+  /* Base overrides */
+  --bg-base: #FDF6E3;
   --bg-primary: #FDF6E3;
   --bg-secondary: #EEE8D5;
   --text-primary: #002B36;
   --text-secondary: #586E75;
+  --text-tertiary: #93A1A1;
   --border-color: #D6D0C0;
-  
+
+  /* Glass Materials - Solarized Light */
+  --glass-bg: rgba(253, 246, 227, 0.85);
+  --glass-bg-subtle: rgba(238, 232, 213, 0.80);
+  --glass-border: rgba(0, 43, 54, 0.15);
+  --glass-border-highlight: rgba(0, 43, 54, 0.25);
+  --glass-text: #002B36;
+
+  /* Sidebar */
+  --glass-sidebar-bg: rgba(238, 232, 213, 0.95);
+  --glass-sidebar-border: rgba(0, 43, 54, 0.2);
+
   /* POS-specific colors - Solarized Light */
   --pos-slot-empty: #D6D0C0;
   --pos-segment-empty: #D6D0C0;
   --pos-activity-fallback: #93A1A1;
   --pos-goal-accent: #d97706;
-  
+
   /* Heatmap colors - Solarized Light (darker for contrast) */
   --pos-heatmap-level-1: #c6e48b;
   --pos-heatmap-level-2: #7bc96f;
   --pos-heatmap-level-3: #239a3b;
   --pos-heatmap-level-4: #196127;
-  
+
   /* Activity category colors - Solarized Light (darker for contrast) */
   --pos-activity-coding: #1e40af;
   --pos-activity-coding-leetcode: #0369a1;
@@ -208,67 +203,86 @@
   --pos-activity-ncc: #854d0e;
   --pos-activity-side-projects: #86198f;
   --pos-activity-surfing: #334155;
-  
+
   /* Semantic status colors - Solarized Light */
   --pos-success-bg: #dcfce7;
   --pos-success-border: #16a34a;
   --pos-success-text: #15803d;
-  
+
   --pos-warning-bg: #fef3c7;
   --pos-warning-border: #d97706;
   --pos-warning-text: #92400e;
-  
+
   --pos-error-bg: #fee2e2;
   --pos-error-border: #dc2626;
   --pos-error-text: #991b1b;
-  
+
   --pos-info-bg: #dbeafe;
   --pos-info-border: #2563eb;
   --pos-info-text: #1e40af;
-  
+
   --pos-productive-bg: #dcfce7;
   --pos-productive-text: #15803d;
-  
+
   --pos-shadow-bg: #dbeafe;
   --pos-shadow-text: #1e40af;
-  
+
   --pos-goal-link-bg: #fef3c7;
   --pos-goal-link-border: #d97706;
   --pos-goal-link-text: #92400e;
-  
+
   --pos-debt-bg: #fee2e2;
   --pos-debt-border: #dc2626;
   --pos-debt-text: #991b1b;
-  
+
   --pos-today-bg: #dbeafe;
   --pos-today-border: #2563eb;
   --pos-today-text: #1e40af;
-  
-  /* Primary action button - Light themes: black bg, white text */
-  --btn-primary-bg: #000000;
-  --btn-primary-text: #ffffff;
+  --color-accent-primary: #0a84ff;
+  /* Apple-style Blue */
+  --color-error: #ff453a;
+  --color-success: #32d74b;
+  --color-warning: #ff9f0a;
+
+  /* Buttons */
+  --btn-primary-bg: #002B36;
+  --btn-primary-text: #FDF6E3;
 }
 
 [data-theme="blue-light"] {
-  --bg-primary: #F0F7FF;
-  --bg-secondary: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --border-color: #E2E8F0;
-  
+  /* Base overrides */
+  --bg-base: #F0F4F8;
+  --bg-primary: #F0F4F8;
+  --bg-secondary: #E1E8ED;
+  --text-primary: #1A202C;
+  --text-secondary: #4A5568;
+  --text-tertiary: #718096;
+  --border-color: #CBD5E0;
+
+  /* Glass Materials - Blue Light */
+  --glass-bg: rgba(240, 244, 248, 0.85);
+  --glass-bg-subtle: rgba(225, 232, 237, 0.80);
+  --glass-border: rgba(26, 32, 44, 0.15);
+  --glass-border-highlight: rgba(26, 32, 44, 0.25);
+  --glass-text: #1A202C;
+
+  /* Sidebar */
+  --glass-sidebar-bg: rgba(225, 232, 237, 0.95);
+  --glass-sidebar-border: rgba(26, 32, 44, 0.2);
+
   /* POS-specific colors - Blue Light */
-  --pos-slot-empty: #e2e8f0;
-  --pos-segment-empty: #e2e8f0;
-  --pos-activity-fallback: #94a3b8;
-  --pos-goal-accent: #d97706;
-  
-  /* Heatmap colors - Blue Light (darker for contrast) */
+  --pos-slot-empty: #CBD5E0;
+  --pos-segment-empty: #CBD5E0;
+  --pos-activity-fallback: #718096;
+  --pos-goal-accent: #3182ce;
+
+  /* Heatmap colors - Blue Light */
   --pos-heatmap-level-1: #c6e48b;
   --pos-heatmap-level-2: #7bc96f;
   --pos-heatmap-level-3: #239a3b;
   --pos-heatmap-level-4: #196127;
-  
-  /* Activity category colors - Blue Light (darker for contrast) */
+
+  /* Activity category colors - Blue Light */
   --pos-activity-coding: #1e40af;
   --pos-activity-coding-leetcode: #0369a1;
   --pos-activity-coding-codeforces: #0f766e;
@@ -286,124 +300,50 @@
   --pos-activity-ncc: #854d0e;
   --pos-activity-side-projects: #86198f;
   --pos-activity-surfing: #334155;
-  
+
   /* Semantic status colors - Blue Light */
   --pos-success-bg: #dcfce7;
   --pos-success-border: #16a34a;
   --pos-success-text: #15803d;
-  
+
   --pos-warning-bg: #fef3c7;
   --pos-warning-border: #d97706;
   --pos-warning-text: #92400e;
-  
+
   --pos-error-bg: #fee2e2;
   --pos-error-border: #dc2626;
   --pos-error-text: #991b1b;
-  
+
   --pos-info-bg: #dbeafe;
   --pos-info-border: #2563eb;
   --pos-info-text: #1e40af;
-  
+
   --pos-productive-bg: #dcfce7;
   --pos-productive-text: #15803d;
-  
+
   --pos-shadow-bg: #dbeafe;
   --pos-shadow-text: #1e40af;
-  
-  --pos-goal-link-bg: #fef3c7;
-  --pos-goal-link-border: #d97706;
-  --pos-goal-link-text: #92400e;
-  
+
+  --pos-goal-link-bg: #dbeafe;
+  --pos-goal-link-border: #2563eb;
+  --pos-goal-link-text: #1e40af;
+
   --pos-debt-bg: #fee2e2;
   --pos-debt-border: #dc2626;
   --pos-debt-text: #991b1b;
-  
+
   --pos-today-bg: #dbeafe;
   --pos-today-border: #2563eb;
   --pos-today-text: #1e40af;
-  
-  /* Primary action button - Light themes: black bg, white text */
-  --btn-primary-bg: #000000;
-  --btn-primary-text: #ffffff;
-}
 
-[data-theme="dark"] {
-  /* Explicit dark theme (same as default) */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #141414;
-  --text-primary: #e5e5e5;
-  --text-secondary: #a3a3a3;
-  --border-color: #262626;
-  
-  /* POS-specific colors */
-  --pos-slot-empty: #1e293b;
-  --pos-segment-empty: #1e293b;
-  --pos-activity-fallback: #334155;
-  --pos-goal-accent: #f59e0b;
-  
-  /* Heatmap colors - Dark theme (GitHub-style green) */
-  --pos-heatmap-level-1: #0e4429;
-  --pos-heatmap-level-2: #006d32;
-  --pos-heatmap-level-3: #26a641;
-  --pos-heatmap-level-4: #39d353;
-  
-  /* Activity category colors - Dark theme */
-  --pos-activity-coding: #3b82f6;
-  --pos-activity-coding-leetcode: #0ea5e9;
-  --pos-activity-coding-codeforces: #14b8a6;
-  --pos-activity-cpp: #06b6d4;
-  --pos-activity-sleep: #475569;
-  --pos-activity-book: #d97706;
-  --pos-activity-real-projects: #3b82f6;
-  --pos-activity-exercise: #dc2626;
-  --pos-activity-college: #818cf8;
-  --pos-activity-food: #10b981;
-  --pos-activity-family: #ec4899;
-  --pos-activity-entertainment: #a78bfa;
-  --pos-activity-commute: #14b8a6;
-  --pos-activity-misc: #94a3b8;
-  --pos-activity-ncc: #f59e0b;
-  --pos-activity-side-projects: #a855f7;
-  --pos-activity-surfing: #64748b;
-  
-  /* Semantic status colors - Dark theme */
-  --pos-success-bg: #14532d;
-  --pos-success-border: #15803d;
-  --pos-success-text: #4ade80;
-  
-  --pos-warning-bg: #78350f;
-  --pos-warning-border: #b45309;
-  --pos-warning-text: #fbbf24;
-  
-  --pos-error-bg: #7f1d1d;
-  --pos-error-border: #991b1b;
-  --pos-error-text: #f87171;
-  
-  --pos-info-bg: #1e3a8a;
-  --pos-info-border: #2563eb;
-  --pos-info-text: #60a5fa;
-  
-  --pos-productive-bg: #14532d;
-  --pos-productive-text: #86efac;
-  
-  --pos-shadow-bg: #1e3a8a;
-  --pos-shadow-text: #93c5fd;
-  
-  --pos-goal-link-bg: #78350f;
-  --pos-goal-link-border: #d97706;
-  --pos-goal-link-text: #fcd34d;
-  
-  --pos-debt-bg: #450a0a;
-  --pos-debt-border: #7f1d1d;
-  --pos-debt-text: #fca5a5;
-  
-  --pos-today-bg: #1e3a8a;
-  --pos-today-border: #3b82f6;
-  --pos-today-text: #60a5fa;
-  
-  /* Primary action button - Dark theme: white bg, black text */
-  --btn-primary-bg: #ffffff;
-  --btn-primary-text: #000000;
+  --color-accent-primary: #3182ce;
+  --color-error: #e53e3e;
+  --color-success: #38a169;
+  --color-warning: #dd6b20;
+
+  /* Buttons */
+  --btn-primary-bg: #1A202C;
+  --btn-primary-text: #F0F4F8;
 }
 
 html,
@@ -433,16 +373,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  @apply bg-gray-300 dark:bg-zinc-700 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-gray-600;
+  @apply bg-gray-400 dark:bg-zinc-600;
 }
 
 /* TipTap Editor Styles */
 .ProseMirror {
-  @apply outline-none text-themed-text-primary;
+  @apply outline-none text-(--text-primary);
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -451,42 +391,42 @@ body {
 }
 
 .ProseMirror h1 {
-  @apply text-4xl font-bold mt-6 mb-4 text-themed-text-primary;
+  @apply text-4xl font-bold mt-6 mb-4 text-(--text-primary);
 }
 
 .ProseMirror h2 {
-  @apply text-3xl font-bold mt-5 mb-3 text-themed-text-primary;
+  @apply text-3xl font-bold mt-5 mb-3 text-(--text-primary);
 }
 
 .ProseMirror h3 {
-  @apply text-2xl font-bold mt-4 mb-2 text-themed-text-primary;
+  @apply text-2xl font-bold mt-4 mb-2 text-(--text-primary);
 }
 
 .ProseMirror p,
 .ProseMirror span,
 .ProseMirror div {
-  @apply text-themed-text-primary;
+  @apply text-(--text-primary);
 }
 
 .ProseMirror strong,
 .ProseMirror b {
-  @apply text-themed-text-primary font-bold;
+  @apply text-(--text-primary) font-medium;
 }
 
 .ProseMirror ul {
-  @apply list-disc ml-6 my-2 text-themed-text-primary;
+  @apply list-disc ml-6 my-2 text-(--text-primary);
 }
 
 .ProseMirror ol {
-  @apply list-decimal ml-6 my-2 text-themed-text-primary;
+  @apply list-decimal ml-6 my-2 text-(--text-primary);
 }
 
 .ProseMirror blockquote {
-  @apply border-l-4 border-gray-300 dark:border-dark-border pl-4 py-1 my-4 italic text-themed-text-secondary;
+  @apply border-l-4 border-(--glass-border) pl-4 py-1 my-4 italic text-(--text-secondary);
 }
 
 .ProseMirror code {
-  @apply bg-gray-100 dark:bg-dark-surface rounded px-1 py-0.5 font-mono text-sm text-red-500 dark:text-red-400;
+  @apply bg-gray-100 dark:bg-zinc-800 rounded px-1 py-0.5 font-mono text-sm text-red-500 dark:text-red-400;
 }
 
 .ProseMirror pre {
@@ -507,11 +447,11 @@ ul[data-type="taskList"] li {
 }
 
 ul[data-type="taskList"] li>label {
-  @apply flex-shrink-0 mt-1 select-none mr-2;
+  @apply shrink-0 mt-1 select-none mr-2;
 }
 
 ul[data-type="taskList"] li>div {
-  @apply flex-grow;
+  @apply grow;
 }
 
 /* Custom Tippy Theme to remove default black box */
@@ -545,14 +485,14 @@ ul[data-type="taskList"] li>div {
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
-  @apply border border-gray-300 dark:border-dark-border;
+  @apply border border-(--glass-border);
 }
 
 .ProseMirror th {
   font-weight: bold;
   text-align: left;
   background-color: #f1f3f5;
-  @apply dark:bg-dark-surface text-themed-text-primary;
+  @apply bg-black/40 text-(--text-primary);
 }
 
 .ProseMirror .selectedCell:after {
@@ -617,10 +557,89 @@ ul[data-type="taskList"] li>div {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Note Colors */
+  --color-note-yellow: #4A430F;
+  --color-note-rose: #4A1F2A;
+  --color-note-red: #4A1A1A;
+  --color-note-lightblue: #143447;
+  --color-note-darkblue: #102B4A;
+  --color-note-pin: #F87171;
+
+  /* Editor Colors */
+  --color-editor-text-lightblue: #8AB4FF;
+  --color-editor-text-lightred: #F28B82;
+  --color-editor-text-lightgreen: #81C995;
+  --color-editor-text-lightorange: #FFB86C;
+  --color-editor-text-lightyellow: #FCD34D;
+  --color-editor-text-lightpurple: #CFA8FF;
+  --color-editor-text-lightpink: #FF9ACF;
+  --color-editor-text-gray: #A1A1AA;
+
+  --color-editor-bg-softyellow: #4A3F1A;
+  --color-editor-bg-softorange: #4A2F1A;
+  --color-editor-bg-softpink: #4A1F35;
+  --color-editor-bg-softblue: #1A2F4A;
+  --color-editor-bg-softgreen: #1A4A2C;
+  --color-editor-bg-softpurple: #3A1A4A;
+  --color-editor-bg-softgray: #2A2A2A;
+
+  /* Sticker Colors */
+  --color-sticker-postal: #EF4444;
+  --color-sticker-approved: #22C55E;
+  --color-sticker-smile: #FACC15;
+  --color-sticker-completed: #10B981;
+  --color-sticker-pending: #EF4444;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
+}
+
+@layer utilities {
+  /*
+    STRICT MATERIAL SYSTEM
+    ----------------------
+    Use these classes for ALL structure.
+  */
+
+  .material-base {
+    @apply bg-(--bg-base) text-white/90;
+  }
+
+  .material-glass {
+    @apply backdrop-blur-2xl backdrop-saturate-180 bg-(--glass-bg) border-(--glass-border) shadow-2xl;
+  }
+
+  .material-glass-subtle {
+    @apply backdrop-blur-xl backdrop-saturate-160 bg-(--glass-bg-subtle) border-(--glass-border) shadow-lg;
+  }
+
+  .material-sidebar {
+    @apply backdrop-blur-3xl backdrop-saturate-200 bg-material-sidebar border-(--glass-sidebar-border);
+  }
+
+  .material-input {
+    @apply bg-transparent border-none outline-none text-(--text-primary) placeholder:text-(--text-tertiary) rounded-md;
+  }
+
+  /* Utility text classes for new opacity system */
+  .text-p {
+    @apply text-[var(--text-primary)];
+  }
+
+  .text-s {
+    @apply text-muted-foreground text-sm;
+  }
+
+  .text-t {
+    @apply text-(--text-tertiary) text-xs;
   }
 }
