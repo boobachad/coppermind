@@ -46,7 +46,7 @@ export default function ScheduleViewer({
           interaction: false,
           penMode: false,
           background: 'transparent',
-          fontColor: '#666',
+          fontColor: getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#666',
         });
 
         // Convert canvas to base64
@@ -138,12 +138,8 @@ export default function ScheduleViewer({
             {mode === 'editor' && (
               <Button
                 onClick={() => setIsModalOpen(true)}
-                variant="outline"
+                variant="default"
                 className="flex-1 flex items-center justify-center gap-2 h-10"
-                style={{
-                  backgroundColor: 'var(--btn-primary-bg)',
-                  color: 'var(--btn-primary-text)'
-                }}
               >
                 <Edit3 className="h-4 w-4" />
                 Edit Schedule
@@ -151,12 +147,8 @@ export default function ScheduleViewer({
             )}
             <Button
               onClick={() => fileInputRef.current?.click()}
-              variant="outline"
+              variant="default"
               className="flex-1 flex items-center justify-center gap-2 h-10"
-              style={{ 
-                backgroundColor: 'var(--btn-primary-bg)', 
-                color: 'var(--btn-primary-text)'
-              }}
             >
               <Upload className="h-4 w-4" />
               {mode === 'image' ? 'Replace Image' : 'Upload Image Instead'}
@@ -178,12 +170,8 @@ export default function ScheduleViewer({
           </div>
           <Button
             onClick={() => setIsModalOpen(true)}
-            variant="outline"
+            variant="default"
             className="w-full flex items-center justify-center gap-2"
-            style={{
-              backgroundColor: 'var(--btn-primary-bg)',
-              color: 'var(--btn-primary-text)'
-            }}
           >
             <Edit3 className="h-4 w-4" />
             Create with Editor

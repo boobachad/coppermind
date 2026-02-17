@@ -36,6 +36,7 @@ export function UnifiedGoalsPage() {
         urgent: filter === 'urgent' ? true : undefined,
         isDebt: filter === 'debt' ? true : undefined,
         search: search || undefined,
+        timezone_offset: -new Date().getTimezoneOffset(),
       };
 
       const result = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });

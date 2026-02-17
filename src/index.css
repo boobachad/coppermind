@@ -24,8 +24,9 @@
   --color-popover: var(--glass-bg);
   --color-popover-foreground: var(--text-primary);
 
-  --color-primary: var(--glass-text);
-  --color-primary-foreground: var(--bg-base);
+  /* Remap Primary to explicit button tokens to ensure control */
+  --color-primary: var(--btn-primary-bg);
+  --color-primary-foreground: var(--btn-primary-text);
 
   --color-secondary: var(--glass-border);
   --color-secondary-foreground: var(--text-primary);
@@ -244,9 +245,38 @@
   --color-success: #32d74b;
   --color-warning: #ff9f0a;
 
-  /* Buttons */
+  /* Buttons - Universal Dark Mode Default (White BG, Black Text) */
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-text: #000000;
+
+  /* Linking Shadcn Primary to Button Colors */
+  --primary: oklch(1 0 0);
+  /* White */
+  --primary-foreground: oklch(0 0 0);
+  /* Black */
+}
+
+/* Theme Overrides */
+[data-theme="solarized-light"] {
+  /* ... existing overrides ... */
+  /* Buttons - Solarized Light (Dark BG, Light Text) */
   --btn-primary-bg: #002B36;
   --btn-primary-text: #FDF6E3;
+  --primary: oklch(0.205 0 0);
+  /* #002B36 approx */
+  --primary-foreground: oklch(0.985 0 0);
+  /* #FDF6E3 approx */
+}
+
+[data-theme="blue-light"] {
+  /* ... existing overrides ... */
+  /* Buttons - Blue Light (Dark BG, Light Text) */
+  --btn-primary-bg: #1A202C;
+  --btn-primary-text: #F0F4F8;
+  --primary: oklch(0.205 0 0);
+  /* #1A202C approx */
+  --primary-foreground: oklch(0.985 0 0);
+  /* #F0F4F8 approx */
 }
 
 [data-theme="blue-light"] {
@@ -632,7 +662,7 @@ ul[data-type="taskList"] li>div {
 
   /* Utility text classes for new opacity system */
   .text-p {
-    @apply text-[var(--text-primary)];
+    @apply text-(--text-primary);
   }
 
   .text-s {

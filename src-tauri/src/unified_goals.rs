@@ -131,6 +131,43 @@ pub async fn get_unified_goals(
 
     let mut query = "SELECT * FROM unified_goals WHERE 1=1".to_string();
 
+    // ─── LAZY DEBT LOGIC ───
+    // Automatically move overdue goals to Debt. 
+    // We do this before fetching so the UI always sees the latest state.
+    // Definition of Debt: Past Due AND Not Completed AND Not Already Debt.
+
+    // Calculate "Today start" in UTC, based on user's timezone offset
+    // If no filter/offset provided, default to UTC (offset=0).
+    let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
+    
+    // 1. Get current time in User's Local Timezone
+    let now_utc = Utc::now();
+    let now_local = now_utc + chrono::Duration::minutes(offset_minutes as i64);
+    
+    // 2. Get "Start of Today" in Local Time (e.g. 2026-02-17 00:00:00)
+    let today_local = now_local.date_naive();
+    
+    // 3. Convert back to UTC to get the comparison threshold
+    // threshold = (Today 00:00 Local) - Offset
+    #[allow(deprecated)] // Date::and_hms is deprecated in favor of and_hms_opt, but we know 0,0,0 is valid
+    let today_start_local = today_local.and_hms_opt(0, 0, 0).unwrap();
+    let today_start_utc = DateTime::<Utc>::from_utc(today_start_local, Utc) - chrono::Duration::minutes(offset_minutes as i64);
+
+    // We execute an UPDATE.
+    // "due_date < today_start_utc": checks if due_date is strictly before today's start.
+    sqlx::query(
+        r#"UPDATE unified_goals 
+           SET is_debt = TRUE 
+           WHERE completed = FALSE 
+           AND is_debt = FALSE 
+           AND due_date IS NOT NULL 
+           AND due_date < $1"#
+    )
+    .bind(today_start_utc)
+    .execute(pool)
+    .await
+    .map_err(|e| db_context("update debt status", e))?;
+
     // ─── LAZY GENERATION LOGIC ───
     // If a date range is requested, check for active recurring templates and generate instances.
     if let Some(ref f) = filters {

@@ -74,12 +74,19 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
     setCurrentShape(defaultData.shape);
     setLanes(defaultData.lanes);
 
+    const getThemeColor = () => {
+      // Check computed style on html to catch 'dark' class variables safely
+      const style = getComputedStyle(document.documentElement);
+      const color = style.getPropertyValue('--text-primary').trim();
+      return color || (document.documentElement.classList.contains('dark') ? '#ffffff' : '#000000');
+    };
+
     try {
       chartRef.current = window.Napchart.init(ctx, defaultData, {
         interaction: true,
         penMode: true,
         background: 'transparent',
-        fontColor: '#666',
+        fontColor: getThemeColor(),
         defaultColor: currentColor,
       });
 
@@ -89,18 +96,18 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
           const element = chartRef.current.data.elements.find((e: any) => e.id === id);
           if (element) {
             setElementText(element.text || '');
-            // Focus input after state update
             setTimeout(() => inputRef.current?.focus(), 0);
           }
+          chartRef.current.penMode = false;
+          chartRef.current.interaction = true;
         } else {
           setElementText('');
+          chartRef.current.penMode = true;
         }
       };
 
       chartRef.current.onUpdate = () => {
-        // Sync element text changes from canvas interactions
         if (!chartRef.current) return;
-        
         if (selectedElement !== false) {
           const element = chartRef.current.data.elements.find((e: any) => e.id === selectedElement);
           if (element && element.text !== elementText) {
@@ -112,9 +119,20 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
       console.error('Failed to initialize napchart:', error);
     }
 
-    return () => {
+    const observer = new MutationObserver(() => {
       if (chartRef.current) {
-        // Cleanup callbacks before unmount to prevent null errors
+        const newColor = getThemeColor();
+        // Try updating multiple config paths to be safe
+        if (chartRef.current.config) chartRef.current.config.fontColor = newColor;
+        if (chartRef.current.data) chartRef.current.data.fontColor = newColor;
+        chartRef.current.draw();
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+
+    return () => {
+      observer.disconnect();
+      if (chartRef.current) {
         chartRef.current.onSetSelected = null;
         chartRef.current.onUpdate = null;
         chartRef.current = null;
@@ -157,10 +175,7 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
   const handleTextChange = (text: string) => {
     setElementText(text);
     if (selectedElement !== false && chartRef.current) {
-      // Update element text in napchart data
       chartRef.current.updateElement({ id: selectedElement, text });
-      
-      // Force re-render to persist text
       chartRef.current.draw();
     }
   };
@@ -180,9 +195,13 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
 
   if (!isOpen) return null;
 
+  // Standard button styles using theme variables
+  const btnActive = "bg-primary text-primary-foreground font-bold shadow-sm";
+  const btnInactive = "bg-secondary text-secondary-foreground hover:bg-secondary/80";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-[95vw] h-[95vh] rounded-lg flex" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-[95vw] h-[95vh] rounded-xl flex material-glass overflow-hidden border border-(--glass-border)">
         {/* Left Sidebar */}
         <div className="w-48 border-r p-4 space-y-6 overflow-y-auto" style={{ borderColor: 'var(--border-color)' }}>
           <div>
@@ -190,15 +209,13 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
             <div className="space-y-1">
               <button
                 onClick={() => handleShapeChange('circle')}
-                className={`w-full px-3 py-1.5 text-sm rounded ${currentShape === 'circle' ? 'bg-red-500 text-white' : ''}`}
-                style={currentShape !== 'circle' ? { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' } : {}}
+                className={`w-full px-3 py-1.5 text-sm rounded transition-all ${currentShape === 'circle' ? btnActive : btnInactive}`}
               >
                 circle
               </button>
               <button
                 onClick={() => handleShapeChange('wide')}
-                className={`w-full px-3 py-1.5 text-sm rounded ${currentShape === 'wide' ? 'bg-red-500 text-white' : ''}`}
-                style={currentShape !== 'wide' ? { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' } : {}}
+                className={`w-full px-3 py-1.5 text-sm rounded transition-all ${currentShape === 'wide' ? btnActive : btnInactive}`}
               >
                 wide
               </button>
@@ -212,16 +229,14 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
               <button
                 onClick={handleAddLane}
                 disabled={lanes >= 4}
-                className="w-full px-3 py-1.5 text-sm rounded disabled:opacity-50"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                className={`w-full px-3 py-1.5 text-sm rounded transition-colors ${lanes >= 4 ? 'opacity-50 cursor-not-allowed' : ''} ${btnInactive}`}
               >
                 Add lane
               </button>
               <button
                 onClick={handleRemoveLane}
                 disabled={lanes <= 1}
-                className="w-full px-3 py-1.5 text-sm rounded disabled:opacity-50"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                className={`w-full px-3 py-1.5 text-sm rounded transition-colors ${lanes <= 1 ? 'opacity-50 cursor-not-allowed' : ''} ${btnInactive}`}
               >
                 Delete lane
               </button>
@@ -235,7 +250,7 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
                 <button
                   key={color.value}
                   onClick={() => setCurrentColor(color.value)}
-                  className={`w-8 h-8 rounded-full border-2 ${currentColor === color.value ? 'ring-2 ring-offset-1' : ''}`}
+                  className={`w-8 h-8 rounded-full border-2 ${currentColor === color.value ? 'ring-2 ring-offset-1 ring-foreground' : ''}`}
                   style={{
                     backgroundColor: color.hex,
                     borderColor: currentColor === color.value ? 'var(--text-primary)' : 'transparent',
@@ -277,8 +292,8 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
           <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
             <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
             <div className="flex items-center gap-2">
-              <Button onClick={handleSave}>Save</Button>
-              <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
+              <Button onClick={handleSave} variant="default" className="font-medium">Save</Button>
+              <button onClick={onClose} className="p-2 rounded hover:bg-white/10 transition-colors">
                 <X className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
               </button>
             </div>
