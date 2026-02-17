@@ -225,7 +225,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
               <button
                 onClick={() => setIsRearrangeMode(false)}
                 className="flex items-center text-sm px-3 py-1 rounded-full transition-colors border shadow-sm"
-                style={{ 
+                style={{
                   color: 'var(--text-primary)',
                   backgroundColor: 'var(--glass-bg-subtle)',
                   borderColor: 'var(--glass-border)'
@@ -273,12 +273,12 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       {contextMenu && createPortal(
         <>
           <div
-            className="fixed inset-0 z-[9999]"
+            className="fixed inset-0 z-9999"
             onClick={() => setContextMenu(null)}
             onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
           />
           <div
-            className="fixed material-glass rounded-lg shadow-2xl py-1 w-48 z-[9999] overflow-hidden"
+            className="fixed material-glass rounded-lg shadow-2xl py-1 w-48 z-9999 overflow-hidden"
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -311,11 +311,11 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-9999">
           <div className="material-glass rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
             <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Delete Note?</h3>
             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Are you sure you want to delete this note? This can be undone from Settings within 7 days.
+              This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
@@ -328,7 +328,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 text-sm font-medium rounded-lg shadow-lg transition-all"
-                style={{ 
+                style={{
                   color: 'white',
                   backgroundColor: 'rgba(239, 68, 68, 0.8)'
                 }}

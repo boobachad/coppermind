@@ -15,7 +15,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
         <nav className="flex items-center text-sm text-(--text-secondary)">
             {items.map((item, index) => (
                 <Fragment key={index}>
-                    {index > 0 && <span className="mx-2 text-(--text-tertiary)">/</span>}
+                    {index > 0 && <span className="mx-2 text-(--text-tertiary)">//</span>}
                     {item.href ? (
                         <Link
                             to={item.href}

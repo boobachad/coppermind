@@ -8,9 +8,9 @@ import { ActivityForm } from '../components/ActivityForm';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
-import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime } from '../lib/time';
+import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, formatLocalAsUTC } from '../lib/time';
 import { getActivityColor } from '../lib/config';
-import type { Activity, GoalWithDetails } from '../lib/types';
+import type { Activity, UnifiedGoal } from '../lib/types';
 import { ArrowLeft, BookOpen, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
@@ -25,7 +25,7 @@ interface GridSlot {
 export function DailyPage() {
     const { date } = useParams<{ date: string }>();
     const [activities, setActivities] = useState<Activity[]>([]);
-    const [goals, setGoals] = useState<GoalWithDetails[]>([]);
+    const [goals, setGoals] = useState<UnifiedGoal[]>([]);
     const [daySlots, setDaySlots] = useState<GridSlot[]>([]);
     const [metrics, setMetrics] = useState({
         totalMinutes: 0,
@@ -42,13 +42,13 @@ export function DailyPage() {
 
     const fetchData = async () => {
         if (!date) return;
-        
+
         setLoading(true);
         try {
             const now = new Date();
             const localDateStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
             setIsToday(date === localDateStr);
-            
+
             const currentMinute = now.getHours() * 60 + now.getMinutes();
             setCurrentSlotIndex(Math.floor(currentMinute / 30));
 
@@ -73,16 +73,16 @@ export function DailyPage() {
             const actData = response.activities;
             setActivities(actData);
 
-            const sortedActivities = [...actData].sort((a, b) => 
+            const sortedActivities = [...actData].sort((a, b) =>
                 parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
             );
 
             const mergedIntervals: Array<{ start: number; end: number; productive: boolean; goalDirected: boolean }> = [];
-            
+
             for (const act of sortedActivities) {
                 const start = parseActivityTime(act.startTime).getTime();
                 const end = parseActivityTime(act.endTime).getTime();
-                
+
                 if (mergedIntervals.length === 0 || mergedIntervals[mergedIntervals.length - 1].end < start) {
                     mergedIntervals.push({
                         start,
@@ -109,10 +109,10 @@ export function DailyPage() {
                 if (interval.goalDirected) goalDirected += duration;
             });
 
-            setMetrics({ 
-                totalMinutes: Math.round(total), 
-                productiveMinutes: Math.round(productive), 
-                goalDirectedMinutes: Math.round(goalDirected) 
+            setMetrics({
+                totalMinutes: Math.round(total),
+                productiveMinutes: Math.round(productive),
+                goalDirectedMinutes: Math.round(goalDirected)
             });
 
             const [year, month, day] = date.split('-').map(Number);
@@ -122,7 +122,7 @@ export function DailyPage() {
                 const slotEnd = new Date(slotStart);
                 slotEnd.setMinutes(slotEnd.getMinutes() + 30);
 
-                const overlapping = actData.filter((activity) => 
+                const overlapping = actData.filter((activity) =>
                     activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)
                 );
 
@@ -132,7 +132,7 @@ export function DailyPage() {
                 if (overlapping.length === 1) {
                     slotBackground = getActivityColor(overlapping[0].category);
                 } else if (overlapping.length > 1) {
-                    const sorted = [...overlapping].sort((a, b) => 
+                    const sorted = [...overlapping].sort((a, b) =>
                         parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
                     );
                     const localSegments: { width: number; color: string }[] = [];
@@ -165,7 +165,17 @@ export function DailyPage() {
             });
             setDaySlots(slots);
 
-            const goalData = await invoke<GoalWithDetails[]>('get_goals', { date });
+            // ─── UNIFIED GOALS INTEGRATION ───
+            const [y, m, d] = date.split('-').map(Number);
+            const startOfDay = new Date(y, m - 1, d, 0, 0, 0);
+            const endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+
+            const filters = {
+                date_range: [formatLocalAsUTC(startOfDay), formatLocalAsUTC(endOfDay)],
+                timezone_offset: -new Date().getTimezoneOffset()
+            };
+
+            const goalData = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
             setGoals(goalData);
         } catch (error) {
             toast.error('Failed to fetch data', { description: String(error) });
@@ -203,14 +213,14 @@ export function DailyPage() {
                     <h1 className="text-2xl font-bold tracking-tight">{formatDateDDMMYYYY(new Date(date!))}</h1>
                     {hasJournalEntry && (
                         <Link to={`/journal/${date}`}>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex items-center gap-2 hover:opacity-90"
-                              style={{
-                                backgroundColor: 'var(--btn-primary-bg)',
-                                color: 'var(--btn-primary-text)'
-                              }}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2 hover:opacity-90"
+                                style={{
+                                    backgroundColor: 'var(--btn-primary-bg)',
+                                    color: 'var(--btn-primary-text)'
+                                }}
                             >
                                 <BookOpen className="h-4 w-4" />
                                 View Journal
@@ -219,6 +229,7 @@ export function DailyPage() {
                     )}
                 </div>
 
+                {/* Stats Cards (Unchanged) */}
                 <div className="grid grid-cols-4 gap-2">
                     <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                         <CardContent className="pt-4 pb-2 px-4">
@@ -254,12 +265,12 @@ export function DailyPage() {
                         <div className="flex gap-0.5 h-14">
                             {daySlots.map((slot) => {
                                 const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
-                                
+
                                 return (
                                     <div
                                         key={slot.slotIndex}
                                         className="w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group"
-                                        style={{ 
+                                        style={{
                                             background: slot.segments ? 'transparent' : slot.color,
                                             borderColor: isCurrentTimeSlot ? 'var(--pos-today-border)' : 'var(--border-color)',
                                             borderWidth: isCurrentTimeSlot ? '2px' : '1px',
@@ -299,8 +310,8 @@ export function DailyPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pb-4 px-4">
-                                <ActivityForm 
-                                    date={date!} 
+                                <ActivityForm
+                                    date={date!}
                                     onSuccess={() => {
                                         fetchData();
                                         setEditingActivity(null);
@@ -369,29 +380,48 @@ export function DailyPage() {
                                         {goals.map((goal) => (
                                             <div
                                                 key={goal.id}
-                                                className="border rounded p-3"
+                                                className="border rounded p-3 transition-colors"
                                                 style={{
-                                                    borderColor: goal.isVerified ? 'var(--pos-success-border)' : 'var(--border-color)',
-                                                    backgroundColor: goal.isVerified ? 'var(--pos-success-bg)' : 'var(--bg-secondary)'
+                                                    borderColor: goal.verified ? 'var(--pos-success-border)' : 'var(--border-color)',
+                                                    backgroundColor: goal.verified ? 'var(--pos-success-bg)' : 'var(--bg-secondary)'
                                                 }}
                                             >
                                                 <div className="flex items-start justify-between">
                                                     <div>
-                                                        <p className="text-sm font-medium">{goal.description}</p>
+                                                        <p className="text-sm font-medium">{goal.text}</p>
+                                                        {goal.description && <p className="text-xs text-muted-foreground mt-0.5">{goal.description}</p>}
                                                         {goal.problemId && (
                                                             <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                                                                 Target: {goal.problemId}
                                                             </p>
                                                         )}
+                                                        {goal.recurringPattern && (
+                                                            <div className="flex items-center gap-1 mt-1">
+                                                                <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                                                    Recurring
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <span
-                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase"
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 select-none"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await invoke('update_unified_goal', {
+                                                                    id: goal.id,
+                                                                    req: { verified: !goal.verified }
+                                                                });
+                                                                fetchData(); // Reload to update UI
+                                                            } catch (e) {
+                                                                toast.error("Failed to update goal");
+                                                            }
+                                                        }}
                                                         style={{
-                                                            backgroundColor: goal.isVerified ? 'var(--pos-success-border)' : 'var(--muted)',
-                                                            color: goal.isVerified ? 'var(--pos-success-text)' : 'var(--muted-foreground)'
+                                                            backgroundColor: goal.verified ? 'var(--pos-success-border)' : 'var(--muted)',
+                                                            color: goal.verified ? 'var(--pos-success-text)' : 'var(--muted-foreground)'
                                                         }}
                                                     >
-                                                        {goal.isVerified ? 'Verified' : 'Pending'}
+                                                        {goal.verified ? 'Verified' : 'Pending'}
                                                     </span>
                                                 </div>
                                             </div>

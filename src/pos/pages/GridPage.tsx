@@ -57,10 +57,13 @@ export function GridPage() {
     }, []);
 
     useEffect(() => {
-        if (!loading && todayRef.current && currentSlotRef.current) {
-            // Scroll to center both row and column
-            todayRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            currentSlotRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        if (!loading && currentSlotRef.current) {
+            // Scroll to center the current slot in both directions
+            currentSlotRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'center'
+            });
         }
     }, [loading]);
 
@@ -201,7 +204,7 @@ export function GridPage() {
     return (
         <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid' }]} />
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1">
                 <div className="max-w-[1800px] mx-auto space-y-6 p-8">
                     <div className="flex items-center justify-between mb-4">
                         <h1 className="text-2xl font-bold tracking-tight">Life Grid</h1>

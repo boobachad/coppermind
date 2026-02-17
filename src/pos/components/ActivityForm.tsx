@@ -321,11 +321,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                 <Button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 hover:opacity-90"
-                    style={{
-                        backgroundColor: 'var(--btn-primary-bg)',
-                        color: 'var(--btn-primary-text)'
-                    }}
+                    className="flex-1 hover:opacity-90 bg-primary text-primary-foreground"
                 >
                     {loading ? (editingActivity ? 'Saving...' : 'Creating...') : (editingActivity ? 'Save Edits' : 'Log Activity')}
                 </Button>

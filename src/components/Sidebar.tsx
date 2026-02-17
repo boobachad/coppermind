@@ -155,7 +155,7 @@ export function Sidebar() {
                 <button
                   onClick={async (e) => {
                     e.preventDefault();
-                    if (await confirm({ title: 'Delete Note', description: 'This action cannot be undone.', confirmText: 'Delete', variant: 'destructive' })) {
+                    if (await confirm({ title: 'Delete Note?', description: 'This action cannot be undone.', confirmText: 'Delete', variant: 'destructive' })) {
                       await softDelete('notes', note.id);
                       window.dispatchEvent(new Event('notes-updated'));
                       if (window.location.pathname.includes(note.id)) navigate('/');

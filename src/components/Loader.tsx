@@ -1,6 +1,8 @@
-export function Loader() {
+import { cn } from "../lib/utils";
+
+export function Loader({ className }: { className?: string }) {
     return (
-        <div className="relative w-16 h-16">
+        <div className={cn("relative w-16 h-16", className)}>
             {/* Three concentric rings with staggered rotation */}
             <div
                 className="absolute inset-0 rounded-full border-2"
@@ -26,7 +28,7 @@ export function Loader() {
                     animation: 'spin 1s linear infinite'
                 }}
             />
-            
+
             <style>{`
                 @keyframes spin {
                     to { transform: rotate(360deg); }

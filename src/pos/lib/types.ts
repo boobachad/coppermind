@@ -114,6 +114,43 @@ export interface ScraperResponse {
     totalSubmissions: number;
 }
 
+// ─── Unified Goals ──────────────────────────────────────────────
+
+export interface UnifiedGoal {
+    id: string;
+    text: string;
+    description: string | null;
+    completed: boolean;
+    completedAt: string | null;  // ISO 8601 UTC
+    verified: boolean;
+    dueDate: string | null;      // ISO 8601 UTC
+    recurringPattern: string | null;
+    recurringTemplateId: string | null;
+    priority: 'low' | 'medium' | 'high';
+    urgent: boolean;
+    metrics: any | null; // Placeholder for JSON
+    problemId: string | null;
+    linkedActivityIds: string[] | null;
+    labels: string[] | null;
+    createdAt: string;
+    updatedAt: string;
+    originalDate: string | null;
+    isDebt: boolean;
+}
+
+export interface GoalFilters {
+    is_completed?: boolean;
+    is_verified?: boolean;
+    priority?: string;
+    urgent?: boolean;
+    due_date?: string; // ISO String
+    is_debt?: boolean;
+    has_recurring?: boolean;
+    search?: string;
+    date_range?: [string, string]; // [start, end] ISO strings
+    timezone_offset?: number; // Minutes
+}
+
 // ─── Scraper API types (for Rust command responses) ─────────────
 
 export interface LeetCodeSubmission {
