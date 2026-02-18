@@ -147,8 +147,13 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
     // Unique constraint: one recurring instance per template per local date
-    // Full constraint (not partial index) so ON CONFLICT (cols) DO NOTHING works correctly
-    "ALTER TABLE unified_goals ADD CONSTRAINT IF NOT EXISTS uq_recurring_instance UNIQUE (recurring_template_id, due_date_local)",
+    // Uses DO block because ADD CONSTRAINT IF NOT EXISTS is only available in PG 17+
+    r#"DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_recurring_instance') THEN
+            ALTER TABLE unified_goals ADD CONSTRAINT uq_recurring_instance UNIQUE (recurring_template_id, due_date_local);
+        END IF;
+    END $$"#,
 
     // ─── GitHub Repositories (aggregated stats per repo) ────────────
     "CREATE TABLE IF NOT EXISTS github_repositories (
