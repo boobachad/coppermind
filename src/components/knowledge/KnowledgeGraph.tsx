@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { invoke } from '@tauri-apps/api/core';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
@@ -33,15 +33,15 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
 
     useEffect(() => {
         loadGraphData();
-    }, []);
+    }, [loadGraphData]);
 
     useEffect(() => {
         if (!loading && items.length > 0) {
             renderGraph();
         }
-    }, [items, links, selectedItemId, loading]);
+    }, [items, links, selectedItemId, loading, renderGraph]);
 
-    const loadGraphData = async () => {
+    const loadGraphData = useCallback(async () => {
         setLoading(true);
         try {
             const [itemsData, linksData] = await Promise.all([
@@ -55,9 +55,9 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const renderGraph = () => {
+    const renderGraph = useCallback(() => {
         if (!svgRef.current || items.length === 0) return;
 
         const svg = d3.select(svgRef.current);
@@ -172,27 +172,27 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
             node
                 .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
         });
-    };
+    }, [items, links, selectedItemId, onNodeClick]);
 
     const handleZoomIn = () => {
         if (!svgRef.current) return;
         const svg = d3.select(svgRef.current);
         const zoom = d3.zoom<SVGSVGElement, unknown>();
-        svg.transition().call(zoom.scaleBy as any, 1.3);
+        svg.transition().call(zoom.scaleBy, 1.3);
     };
 
     const handleZoomOut = () => {
         if (!svgRef.current) return;
         const svg = d3.select(svgRef.current);
         const zoom = d3.zoom<SVGSVGElement, unknown>();
-        svg.transition().call(zoom.scaleBy as any, 0.7);
+        svg.transition().call(zoom.scaleBy, 0.7);
     };
 
     const handleResetZoom = () => {
         if (!svgRef.current) return;
         const svg = d3.select(svgRef.current);
         const zoom = d3.zoom<SVGSVGElement, unknown>();
-        svg.transition().call(zoom.transform as any, d3.zoomIdentity);
+        svg.transition().call(zoom.transform, d3.zoomIdentity);
     };
 
     return (

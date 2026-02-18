@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Link2, ArrowRight, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,11 +16,7 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
     const [outgoingLinks, setOutgoingLinks] = useState<KnowledgeItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadBacklinks();
-    }, [itemId]);
-
-    const loadBacklinks = async () => {
+    const loadBacklinks = useCallback(async () => {
         setLoading(true);
         try {
             // Get all links for this item
@@ -50,7 +46,11 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [itemId]);
+
+    useEffect(() => {
+        loadBacklinks();
+    }, [itemId, loadBacklinks]);
 
     const handleRemoveLink = async () => {
         try {

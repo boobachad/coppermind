@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Search, Filter, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,11 +18,7 @@ export function KnowledgeInbox() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
 
-    useEffect(() => {
-        loadItems();
-    }, [statusFilter, typeFilter, searchQuery]);
-
-    const loadItems = async () => {
+    const loadItems = useCallback(async () => {
         setLoading(true);
         try {
             const filters: KnowledgeItemFilters = {};
@@ -46,7 +42,11 @@ export function KnowledgeInbox() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [statusFilter, typeFilter, searchQuery]);
+
+    useEffect(() => {
+        loadItems();
+    }, [loadItems]);
 
     const handleCreateNew = () => {
         setEditingItem(null);

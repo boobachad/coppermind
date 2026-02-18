@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Type declarations for napchart library
 declare module 'napchart' {
   export interface NapchartElement {

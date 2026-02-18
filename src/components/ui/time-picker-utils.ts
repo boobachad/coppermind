@@ -41,7 +41,7 @@ export function getDateByType(date: Date, type: "hours" | "minutes" | "seconds")
 }
 
 export function getValidNumber(value: string, max: number, min = 0) {
-  let numericValue = parseInt(value, 10);
+  const numericValue = parseInt(value, 10);
   if (isNaN(numericValue)) return 0;
   if (numericValue > max) return max;
   if (numericValue < min) return min;

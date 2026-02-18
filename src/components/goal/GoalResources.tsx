@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Book, Sparkles } from 'lucide-react';
 import { ContextItem } from '../../pos/lib/types';
@@ -12,13 +12,7 @@ export function GoalResources({ goalId }: GoalResourcesProps) {
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState(false);
 
-    useEffect(() => {
-        if (expanded) {
-            loadResources();
-        }
-    }, [goalId, expanded]);
-
-    const loadResources = async () => {
+    const loadResources = useCallback(async () => {
         setLoading(true);
         try {
             const result = await invoke<ContextItem[]>('get_context_for_goal', {
@@ -31,7 +25,13 @@ export function GoalResources({ goalId }: GoalResourcesProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [goalId]);
+
+    useEffect(() => {
+        if (expanded) {
+            loadResources();
+        }
+    }, [goalId, expanded, loadResources]);
 
     return (
         <div className="mt-3">
