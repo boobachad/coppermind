@@ -26,17 +26,17 @@ const formatDuration = (seconds: number) => {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} `;
 };
 
-export function FocusWidget() {
+export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
     const { state, start, stop, takeBreak, resumeWork, extendTime, setDetails, restartSession } = useFocusTimer();
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpandedState, setIsExpanded] = useState(false);
+    const isExpanded = alwaysExpanded || isExpandedState;
 
-    // Auto-expand on start if collapsed? Maybe not, usually distracting.
-    // Auto-collapse on start? Yes, user wants to focus.
+    // Auto-collapse on work start (only relevant when not alwaysExpanded)
     useEffect(() => {
-        if (state.isActive && state.mode === 'work') {
+        if (!alwaysExpanded && state.isActive && state.mode === 'work') {
             setIsExpanded(false);
         }
-    }, [state.isActive, state.mode]);
+    }, [alwaysExpanded, state.isActive, state.mode]);
 
     // Derived values
     const progress = state.timerType === 'pomodoro'
@@ -97,9 +97,13 @@ export function FocusWidget() {
         );
     }
 
-    // ─── Expanded View ───────────────────────────────────────────────────
     return (
-        <div className="fixed bottom-6 right-6 z-50 w-[320px] material-glass rounded-2xl p-5 flex flex-col gap-4 transition-all duration-300">
+        <div className={clsx(
+            "z-50 material-glass flex flex-col gap-4 transition-all duration-300",
+            alwaysExpanded
+                ? "fixed inset-0 w-full h-full rounded-none p-6"
+                : "fixed bottom-6 right-6 w-[320px] rounded-2xl p-5"
+        )}>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -108,16 +112,18 @@ export function FocusWidget() {
                         {state.mode === 'idle' ? 'Ready' : state.mode}
                     </span>
                 </div>
-                <button
-                    onClick={() => setIsExpanded(false)}
-                    className="p-1 rounded-md hover:bg-(--glass-bg-subtle) text-muted-foreground"
-                >
-                    <Minimize2 className="w-4 h-4" />
-                </button>
+                {!alwaysExpanded && (
+                    <button
+                        onClick={() => setIsExpanded(false)}
+                        className="p-1 rounded-md hover:bg-(--glass-bg-subtle) text-muted-foreground"
+                    >
+                        <Minimize2 className="w-4 h-4" />
+                    </button>
+                )}
             </div>
 
             {/* Inputs (Editable anytime) */}
-            <div className="space-y-3">
+            <div className={clsx("flex flex-col", alwaysExpanded ? "flex-1 gap-4" : "space-y-3")}>
                 <input
                     type="text"
                     placeholder="What are you working on?"
@@ -135,7 +141,7 @@ export function FocusWidget() {
                         <SelectTrigger className="flex-1 h-8 bg-(--glass-bg-subtle) border-(--glass-border) text-(--text-primary) text-xs">
                             <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
-                        <SelectContent className="material-glass border-(--glass-border)">
+                        <SelectContent className="material-glass border-(--glass-border) max-h-48 overflow-y-auto">
                             {Object.values(ACTIVITY_CATEGORIES).map(cat => (
                                 <SelectItem key={cat} value={cat} className="text-(--text-primary) focus:bg-(--glass-bg-subtle) focus:text-(--text-primary)">
                                     {cat}
@@ -156,23 +162,32 @@ export function FocusWidget() {
                 </div>
 
                 {/* Large Timer Display */}
-                <div className="flex items-center justify-center py-4 relative">
-                    {/* Progress Ring (Visual flair) */}
-                    <svg className="absolute w-48 h-48 opacity-10 pointer-events-none">
-                        <circle cx="96" cy="96" r="90" fill="none" stroke="currentColor" strokeWidth="2" />
+                <div className={clsx(
+                    "flex items-center justify-center relative",
+                    alwaysExpanded ? "flex-1 py-8" : "py-4"
+                )}>
+                    {/* Progress Ring */}
+                    <svg className={clsx(
+                        "absolute opacity-10 pointer-events-none",
+                        alwaysExpanded ? "w-64 h-64" : "w-48 h-48"
+                    )}>
+                        <circle cx={alwaysExpanded ? "128" : "96"} cy={alwaysExpanded ? "128" : "96"} r={alwaysExpanded ? "120" : "90"} fill="none" stroke="currentColor" strokeWidth="2" />
                         {state.timerType === 'pomodoro' && (
                             <circle
-                                cx="96" cy="96" r="90"
+                                cx={alwaysExpanded ? "128" : "96"} cy={alwaysExpanded ? "128" : "96"} r={alwaysExpanded ? "120" : "90"}
                                 fill="none" stroke="currentColor" strokeWidth="4"
-                                strokeDasharray="565"
-                                strokeDashoffset={565 - (565 * progress / 100)}
+                                strokeDasharray={alwaysExpanded ? "754" : "565"}
+                                strokeDashoffset={(alwaysExpanded ? 754 : 565) - ((alwaysExpanded ? 754 : 565) * progress / 100)}
                                 className="text-white transition-all duration-1000 ease-linear"
-                                transform="rotate(-90 96 96)"
+                                transform={alwaysExpanded ? "rotate(-90 128 128)" : "rotate(-90 96 96)"}
                             />
                         )}
                     </svg>
 
-                    <div className="text-6xl font-mono font-bold text-(--text-primary) tracking-tighter tabular-nums z-10">
+                    <div className={clsx(
+                        "font-mono font-bold text-(--text-primary) tracking-tighter tabular-nums z-10",
+                        alwaysExpanded ? "text-8xl" : "text-6xl"
+                    )}>
                         {formatDuration(state.timerType === 'stopwatch' ? state.elapsedTime : state.timeLeft)}
                     </div>
                 </div>
