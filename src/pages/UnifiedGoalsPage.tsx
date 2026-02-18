@@ -14,6 +14,7 @@ import { GoalStats } from '../pos/components/GoalStats';
 import { GoalList } from '../pos/components/GoalList';
 import { GoalFormModal } from '../pos/components/GoalFormModal';
 import { MonthlyGoalWidget } from '../pos/components/MonthlyGoalWidget';
+import { DebtTrail } from '../pos/components/DebtTrail';
 
 export function UnifiedGoalsPage() {
   const [goals, setGoals] = useState<UnifiedGoal[]>([]);
@@ -214,6 +215,14 @@ export function UnifiedGoalsPage() {
 
       {/* Goals List */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        {/* Debt Trail (if debt exists) */}
+        {debtGoals.length > 0 && (
+          <div className="mb-8">
+            <DebtTrail daysBack={30} onDebtResolved={loadGoals} />
+          </div>
+        )}
+        
+        {/* Goals Lists */}
         <GoalList
           regularGoals={regularGoals}
           debtGoals={debtGoals}
