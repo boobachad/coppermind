@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
+import { AlertCircle } from 'lucide-react';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
 import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot } from '../lib/time';
@@ -48,6 +49,7 @@ export function GridPage() {
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
     const [availableMonths, setAvailableMonths] = useState<{ year: number; month: number; label: string }[]>([]);
     const [journalEntries, setJournalEntries] = useState<Set<string>>(new Set());
+    const [debtDates, setDebtDates] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         setTodayStr(getLocalDateString());
@@ -111,6 +113,24 @@ export function GridPage() {
             );
             const journalDates = new Set(journalRows.map(r => r.date));
             setJournalEntries(journalDates);
+
+            // Batch fetch debt dates using get_accumulated_debt command
+            // This fetches all incomplete goals from before each date
+            try {
+                const debtResults = await Promise.all(
+                    dates.map(async (date) => {
+                        const debtGoals = await invoke<any[]>('get_accumulated_debt', { date });
+                        return { date, hasDebt: debtGoals.length > 0 };
+                    })
+                );
+                const datesWithDebt = new Set(
+                    debtResults.filter(r => r.hasDebt).map(r => r.date)
+                );
+                setDebtDates(datesWithDebt);
+            } catch (err) {
+                console.error('Failed to fetch debt data:', err);
+                // Continue without debt indicators if fetch fails
+            }
 
             // Batch fetch all activities in one query (O(1) round trips instead of O(n))
             const batchResponse = await invoke<Record<string, { activities: Activity[] }>>('get_activities_batch', { dates });
@@ -265,7 +285,9 @@ export function GridPage() {
                                             >
                                                 <td className={`sticky left-0 p-0 z-10 border-r ${isToday ? '' : 'material-glass'}`} style={{
                                                     backgroundColor: isToday ? 'var(--pos-today-bg)' : undefined,
-                                                    borderColor: isToday ? 'var(--pos-today-border)' : 'var(--glass-border)'
+                                                    borderColor: isToday ? 'var(--pos-today-border)' : 'var(--glass-border)',
+                                                    boxShadow: debtDates.has(date) ? '0 0 0 2px var(--color-error)' : undefined,
+                                                    borderRadius: debtDates.has(date) ? '4px' : undefined
                                                 }}>
                                                     <Link
                                                         to={`/pos/grid/${date}`}
@@ -280,13 +302,23 @@ export function GridPage() {
                                                                     {getDayName(date)}
                                                                 </div>
                                                             </div>
-                                                            {journalEntries.has(date) && (
-                                                                <div
-                                                                    className="w-2 h-2 rounded-full shrink-0"
-                                                                    style={{ backgroundColor: 'var(--pos-success-text)' }}
-                                                                    title="Journal entry exists"
-                                                                />
-                                                            )}
+                                                            <div className="flex items-center gap-1">
+                                                                {debtDates.has(date) && (
+                                                                    <div title="Has incomplete goals (debt)">
+                                                                        <AlertCircle
+                                                                            className="w-3 h-3 shrink-0"
+                                                                            style={{ color: 'var(--color-error)' }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {journalEntries.has(date) && (
+                                                                    <div
+                                                                        className="w-2 h-2 rounded-full shrink-0"
+                                                                        style={{ backgroundColor: 'var(--pos-success-text)' }}
+                                                                        title="Journal entry exists"
+                                                                    />
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </Link>
                                                 </td>

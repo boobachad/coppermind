@@ -11,7 +11,7 @@ import { Loader } from '@/components/Loader';
 import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, formatLocalAsUTC } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, UnifiedGoal } from '../lib/types';
-import { ArrowLeft, BookOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, BookOpen, Pencil, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -39,6 +39,8 @@ export function DailyPage() {
     const [isToday, setIsToday] = useState(false);
     const [hasJournalEntry, setHasJournalEntry] = useState(false);
     const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+    const [hasDebt, setHasDebt] = useState(false);
+    const [debtCount, setDebtCount] = useState(0);
 
     const fetchData = async () => {
         if (!date) return;
@@ -67,6 +69,15 @@ export function DailyPage() {
                 setHasJournalEntry(journalRows.length > 0);
             } catch (err) {
                 console.error('Failed to check journal entry:', err);
+            }
+
+            // Fetch debt for this date
+            try {
+                const debtGoals = await invoke<UnifiedGoal[]>('get_accumulated_debt', { date });
+                setHasDebt(debtGoals.length > 0);
+                setDebtCount(debtGoals.length);
+            } catch (err) {
+                console.error('Failed to fetch debt:', err);
             }
 
             const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
@@ -210,7 +221,23 @@ export function DailyPage() {
                     <Link to="/pos/grid" className="text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-2xl font-bold tracking-tight">{formatDateDDMMYYYY(new Date(date!))}</h1>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        {formatDateDDMMYYYY(new Date(date!))}
+                        {hasDebt && (
+                            <div 
+                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid var(--color-error)',
+                                    color: 'var(--color-error)',
+                                }}
+                                title={`${debtCount} incomplete goal${debtCount > 1 ? 's' : ''} from previous days`}
+                            >
+                                <AlertCircle className="w-3 h-3" />
+                                {debtCount} Debt
+                            </div>
+                        )}
+                    </h1>
                     {hasJournalEntry && (
                         <Link to={`/journal/${date}`}>
                             <Button
