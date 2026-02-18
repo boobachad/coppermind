@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ActivityForm } from '../components/ActivityForm';
+import { LogEntryModule } from '../components/LogEntryModule';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
@@ -310,7 +310,7 @@ export function DailyPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pb-4 px-4">
-                                <ActivityForm
+                                <LogEntryModule
                                     date={date!}
                                     onSuccess={() => {
                                         fetchData();
