@@ -424,3 +424,12 @@ export interface LadderStats {
 export interface ImportLadderRequest {
     htmlContent: string;
 }
+
+export interface CFFriend {
+    id: string;
+    cf_handle: string;
+    display_name: string;
+    submission_count: number;
+    last_synced_at: string | null;
+    created_at: string;
+}
