@@ -2,25 +2,26 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import type { NodeViewProps, MindMapNode } from '@/types/tiptap';
 
 // --- Tree Mind Map ---
 
-const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
-  const [nodes, setNodes] = useState(node.attrs.nodes || [
+const TreeMindMapComponent = ({ node, updateAttributes }: NodeViewProps) => {
+  const [nodes, setNodes] = useState<MindMapNode[]>(node.attrs.nodes || [
     { id: 'root', text: 'Central Topic', children: [] }
   ]);
 
   // Very basic update wrapper
-  const updateNodes = (newNodes: any) => {
+  const updateNodes = (newNodes: MindMapNode[]) => {
     setNodes(newNodes);
     updateAttributes({ nodes: newNodes });
   };
 
   const addChild = (parentId: string) => {
     // Deep clone to avoid mutation issues
-    const newNodes = JSON.parse(JSON.stringify(nodes));
+    const newNodes = JSON.parse(JSON.stringify(nodes)) as MindMapNode[];
 
-    const findAndAdd = (list: any[]) => {
+    const findAndAdd = (list: MindMapNode[]): boolean => {
       for (const item of list) {
         if (item.id === parentId) {
           item.children.push({
@@ -42,8 +43,8 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   };
 
   const updateText = (id: string, text: string) => {
-    const newNodes = JSON.parse(JSON.stringify(nodes));
-    const findAndUpdate = (list: any[]) => {
+    const newNodes = JSON.parse(JSON.stringify(nodes)) as MindMapNode[];
+    const findAndUpdate = (list: MindMapNode[]): boolean => {
       for (const item of list) {
         if (item.id === id) {
           item.text = text;
@@ -59,7 +60,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
     updateNodes(newNodes);
   };
 
-  const renderNode = (item: any) => {
+  const renderNode = (item: MindMapNode) => {
     return (
       <div key={item.id} className="flex flex-col items-center mx-4">
         <div className="relative group">
@@ -79,7 +80,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
         {item.children.length > 0 && (
           <div className="flex mt-4 relative">
             {/* Simple lines would go here, but for now just flex layout */}
-            {item.children.map((child: any) => (
+            {item.children.map((child: MindMapNode) => (
               <div key={child.id} className="relative pt-4">
                 {/* Connector line simulation */}
                 <div className="absolute top-0 left-1/2 w-px h-4 bg-white/20 -translate-x-1/2"></div>
@@ -95,7 +96,7 @@ const TreeMindMapComponent = ({ node, updateAttributes }: any) => {
   return (
     <NodeViewWrapper className="mindmap-tree-component my-4 overflow-x-auto p-4 bg-black/20 rounded-xl border border-dashed border-white/10">
       <div className="min-w-full flex justify-center">
-        {nodes.map((root: any) => renderNode(root))}
+        {nodes.map((root: MindMapNode) => renderNode(root))}
       </div>
     </NodeViewWrapper>
   );
