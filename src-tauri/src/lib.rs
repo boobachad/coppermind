@@ -13,6 +13,7 @@ mod monthly_goals;
 mod debt_system;
 mod context_engine;
 mod reflection;
+mod retrospectives;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -360,6 +361,10 @@ pub fn run() {
             reflection::create_goal_reflection,
             reflection::get_goal_reflections,
             reflection::delete_goal_reflection,
+            retrospectives::create_retrospective,
+            retrospectives::get_retrospectives,
+            retrospectives::get_retrospective_stats,
+            retrospectives::delete_retrospective,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

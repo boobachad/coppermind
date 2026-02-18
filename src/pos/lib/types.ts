@@ -346,3 +346,38 @@ export interface CreateReflectionInput {
     learningText: string;
     createKbItem: boolean;
 }
+
+// ─── Retrospectives (SPACE Framework) ───────────────────────────
+
+export interface Retrospective {
+    id: string;
+    periodType: 'weekly' | 'monthly';
+    periodStart: string;           // ISO 8601 UTC
+    periodEnd: string;             // ISO 8601 UTC
+    questionsData: RetrospectiveQuestions;
+    createdAt: string;             // ISO 8601 UTC
+}
+
+export interface RetrospectiveQuestions {
+    energy: number;                // 1-10
+    satisfaction: number;          // 1-10
+    deep_work_hours: number;       // Hours
+    accomplishments?: string;
+    challenges?: string;
+    improvements?: string;
+    goals_next_period?: string;
+}
+
+export interface CreateRetrospectiveInput {
+    periodType: 'weekly' | 'monthly';
+    periodStart: string;
+    periodEnd: string;
+    questionsData: RetrospectiveQuestions;
+}
+
+export interface RetrospectiveStats {
+    avgEnergy: number;
+    avgSatisfaction: number;
+    totalDeepWorkHours: number;
+    correlation: number;           // -1 to 1
+}

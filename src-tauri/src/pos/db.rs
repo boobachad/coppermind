@@ -276,4 +276,16 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         kb_item_id      TEXT
     )",
     "CREATE INDEX IF NOT EXISTS idx_reflections_goal_id ON goal_reflections(goal_id)",
+
+    // ─── Retrospectives (SPACE Framework Surveys) ───────────────────
+    "CREATE TABLE IF NOT EXISTS retrospectives (
+        id              TEXT PRIMARY KEY,
+        period_type     TEXT NOT NULL CHECK (period_type IN ('weekly', 'monthly')),
+        period_start    TIMESTAMPTZ NOT NULL,
+        period_end      TIMESTAMPTZ NOT NULL,
+        questions_data  JSONB NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_retrospectives_period_type ON retrospectives(period_type)",
+    "CREATE INDEX IF NOT EXISTS idx_retrospectives_period_start ON retrospectives(period_start)",
 ];
