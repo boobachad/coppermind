@@ -381,3 +381,45 @@ export interface RetrospectiveStats {
     totalDeepWorkHours: number;
     correlation: number;           // -1 to 1
 }
+
+// ─── Codeforces Ladder System ────────────────────────────────────
+
+export interface CFLadder {
+    id: string;
+    title: string;
+    description: string;
+    difficulty: number;
+    createdAt: string;
+}
+
+export interface CFLadderProblem {
+    id: string;
+    ladderId: string;
+    position: number;
+    name: string;
+    url: string;
+    onlineJudge: string;
+    difficulty: number;
+    problemId: string | null; // Extracted from URL for CF problems
+}
+
+export interface CFLadderProgress {
+    id: string;
+    ladderId: string;
+    problemId: string;
+    status: 'unsolved' | 'attempted' | 'solved';
+    attemptedAt: string | null;
+    solvedAt: string | null;
+}
+
+export interface LadderStats {
+    totalProblems: number;
+    solved: number;
+    attempted: number;
+    unsolved: number;
+    progressPercentage: number;
+}
+
+export interface ImportLadderRequest {
+    htmlContent: string;
+}
