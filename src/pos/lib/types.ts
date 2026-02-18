@@ -140,6 +140,7 @@ export interface UnifiedGoal {
     problemId: string | null;
     linkedActivityIds: string[] | null;
     labels: string[] | null;
+    parentGoalId: string | null;  // Link to MonthlyGoal
     createdAt: string;
     updatedAt: string;
     originalDate: string | null;
@@ -274,4 +275,25 @@ export interface KnowledgeItemFilters {
 export interface DuplicateCheckResult {
     isDuplicate: boolean;
     existingItems: KnowledgeItem[];
+}
+
+// ─── Monthly Goals (Goal Periods) ───────────────────────────────
+
+export interface MonthlyGoal {
+    id: string;
+    targetMetric: string;         // e.g., "Pushups", "LeetCode Problems"
+    targetValue: number;
+    periodStart: string;          // ISO 8601 UTC
+    periodEnd: string;            // ISO 8601 UTC
+    strategy: 'EvenDistribution' | 'FrontLoad' | 'Manual';
+    currentValue: number;         // Aggregated from linked daily goals
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BalancerResult {
+    monthlyGoalId: string;
+    updatedGoals: number;
+    dailyRequired: number;
+    message: string;
 }

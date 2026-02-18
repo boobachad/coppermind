@@ -65,10 +65,12 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         problem_id        TEXT,
         is_verified       BOOLEAN NOT NULL DEFAULT FALSE,
         recurring_goal_id TEXT,
+        category          TEXT,
         created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
     "CREATE INDEX IF NOT EXISTS idx_pos_goals_date       ON pos_goals (date)",
     "CREATE INDEX IF NOT EXISTS idx_pos_goals_problem_id ON pos_goals (problem_id)",
+    "CREATE INDEX IF NOT EXISTS idx_pos_goals_category   ON pos_goals (category) WHERE category IS NOT NULL",
 
     // ─── Goal Metrics ───────────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS pos_goal_metrics (
@@ -135,6 +137,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         problem_id             TEXT,
         linked_activity_ids    JSONB,
         labels                 JSONB,
+        parent_goal_id         TEXT,
         created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         original_date          TEXT,
@@ -146,6 +149,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_due_date ON unified_goals(due_date)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_parent ON unified_goals(parent_goal_id) WHERE parent_goal_id IS NOT NULL",
     // Unique constraint: one recurring instance per template per local date
     // Uses DO block because ADD CONSTRAINT IF NOT EXISTS is only available in PG 17+
     r#"DO $$
@@ -234,4 +238,19 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     )",
     "CREATE INDEX IF NOT EXISTS idx_kb_links_source ON knowledge_links(source_id)",
     "CREATE INDEX IF NOT EXISTS idx_kb_links_target ON knowledge_links(target_id)",
+
+    // ─── Monthly Goals (Goal Periods) ───────────────────────────────
+    "CREATE TABLE IF NOT EXISTS goal_periods (
+        id              TEXT PRIMARY KEY,
+        target_metric   TEXT NOT NULL,
+        target_value    INTEGER NOT NULL,
+        period_start    TIMESTAMPTZ NOT NULL,
+        period_end      TIMESTAMPTZ NOT NULL,
+        strategy        TEXT NOT NULL DEFAULT 'EvenDistribution' CHECK (strategy IN ('EvenDistribution', 'FrontLoad', 'Manual')),
+        current_value   INTEGER DEFAULT 0,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_goal_periods_dates ON goal_periods(period_start, period_end)",
+    "CREATE INDEX IF NOT EXISTS idx_goal_periods_metric ON goal_periods(target_metric)",
 ];

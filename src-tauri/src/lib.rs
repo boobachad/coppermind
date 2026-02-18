@@ -9,6 +9,7 @@ use sqlx::postgres::PgPoolOptions;
 mod pos;
 mod unified_goals;
 mod knowledge_base;
+mod monthly_goals;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -342,6 +343,11 @@ pub fn run() {
             knowledge_base::create_knowledge_link,
             knowledge_base::get_knowledge_links,
             knowledge_base::check_knowledge_duplicates,
+            monthly_goals::create_monthly_goal,
+            monthly_goals::get_monthly_goals,
+            monthly_goals::update_monthly_goal,
+            monthly_goals::run_balancer_engine,
+            monthly_goals::delete_monthly_goal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

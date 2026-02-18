@@ -34,6 +34,7 @@ pub struct UnifiedGoalRow {
     pub problem_id: Option<String>,
     pub linked_activity_ids: Option<sqlx::types::Json<Vec<String>>>,
     pub labels: Option<sqlx::types::Json<Vec<String>>>,
+    pub parent_goal_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub original_date: Option<String>,
@@ -52,6 +53,7 @@ pub struct CreateGoalRequest {
     pub metrics: Option<Vec<UnifiedGoalMetric>>,
     pub problem_id: Option<String>,
     pub labels: Option<Vec<String>>,
+    pub parent_goal_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,6 +70,7 @@ pub struct UpdateGoalRequest {
     pub metrics: Option<Vec<UnifiedGoalMetric>>,
     pub problem_id: Option<String>,
     pub labels: Option<Vec<String>>,
+    pub parent_goal_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,9 +102,9 @@ pub async fn create_unified_goal(
         r#"INSERT INTO unified_goals (
             id, text, description, completed, completed_at, verified,
             due_date, recurring_pattern, recurring_template_id, priority, urgent,
-            metrics, problem_id, linked_activity_ids, labels,
+            metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
             created_at, updated_at, original_date, is_debt
-        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $11, NULL, false)
+        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
         RETURNING *"#,
     )
     .bind(&id)
@@ -114,6 +117,7 @@ pub async fn create_unified_goal(
     .bind(metrics_json)
     .bind(&req.problem_id)
     .bind(labels_json)
+    .bind(&req.parent_goal_id)
     .bind(now)
     .fetch_one(pool)
     .await
@@ -219,9 +223,9 @@ pub async fn get_unified_goals(
                         r#"INSERT INTO unified_goals (
                             id, text, description, completed, completed_at, verified,
                             due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
-                            metrics, problem_id, linked_activity_ids, labels,
+                            metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
                             created_at, updated_at, original_date, is_debt
-                        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, $10, NULL, $11, $12, $12, NULL, false)
+                        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, $10, NULL, $11, NULL, $12, $12, NULL, false)
                         ON CONFLICT (recurring_template_id, due_date_local) DO NOTHING"#
                     )
                     .bind(&new_id)
