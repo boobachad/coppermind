@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { FloatingNavBar } from './FloatingNavBar';
 import { TitleBar } from './TitleBar';
 import { useEffect, useState } from 'react';
+import { FocusWidget } from '../pos/components/FocusWidget';
 
 export function Layout() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 750);
@@ -35,6 +36,9 @@ export function Layout() {
 
         {isMobile && <FloatingNavBar />}
       </div>
+
+      {/* Global Focus Timer Widget */}
+      <FocusWidget />
     </div>
   );
 }

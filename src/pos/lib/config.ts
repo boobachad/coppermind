@@ -17,6 +17,9 @@ export const ACTIVITY_CATEGORIES = {
     NCC: 'ncc',
     SIDE_PROJECTS: 'side_projects',
     SURFING: 'surfing',
+    BATH: 'bath',
+    WALKING: 'walking',
+    BREAK: 'break',
 } as const;
 
 export type ActivityCategory = typeof ACTIVITY_CATEGORIES[keyof typeof ACTIVITY_CATEGORIES];
@@ -40,6 +43,9 @@ export const ACTIVITY_COLORS: Record<string, string> = {
     ncc: 'var(--pos-activity-ncc)',
     side_projects: 'var(--pos-activity-side-projects)',
     surfing: 'var(--pos-activity-surfing)',
+    bath: 'var(--pos-activity-bath)',
+    walking: 'var(--pos-activity-walking)',
+    break: 'var(--pos-activity-break)',
 };
 
 // Helper to get activity color with fallback

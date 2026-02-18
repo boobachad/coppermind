@@ -17,7 +17,7 @@ import { GoalFormModal } from '../pos/components/GoalFormModal';
 export function UnifiedGoalsPage() {
   const [goals, setGoals] = useState<UnifiedGoal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'urgent' | 'debt'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'urgent' | 'debt'>('active');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'priority' | 'due'>('newest');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,17 +26,15 @@ export function UnifiedGoalsPage() {
 
   useEffect(() => {
     loadGoals();
-  }, [filter]);
+  }, []); // Only load on mount (and manual refreshes), filter change is local
 
   const loadGoals = async () => {
     setLoading(true);
     try {
+      // Fetch ALL goals to support global stats + local filtering
       const filters = {
-        completed: filter === 'completed' ? true : filter === 'active' ? false : undefined,
-        urgent: filter === 'urgent' ? true : undefined,
-        isDebt: filter === 'debt' ? true : undefined,
-        search: search || undefined,
         timezone_offset: -new Date().getTimezoneOffset(),
+        // No other filters - fetch everything!
       };
 
       const result = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
@@ -77,9 +75,22 @@ export function UnifiedGoalsPage() {
   const filteredGoals = useMemo(() => {
     let res = goals;
 
+    // 1. Text Search
     if (search) {
       res = res.filter(g => g.text.toLowerCase().includes(search.toLowerCase()));
     }
+
+    // 2. View Filter
+    if (filter === 'active') {
+      res = res.filter(g => !g.completed && !g.isDebt);
+    } else if (filter === 'completed') {
+      res = res.filter(g => g.completed);
+    } else if (filter === 'urgent') {
+      res = res.filter(g => g.urgent); // Urgent shows regardless of debt status
+    } else if (filter === 'debt') {
+      res = res.filter(g => g.isDebt && !g.completed); // Show only incomplete debt
+    }
+    // 'all' shows everything (no filter needed)
 
     return res.sort((a, b) => {
       if (sortBy === 'priority') {
@@ -93,9 +104,9 @@ export function UnifiedGoalsPage() {
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [goals, search, sortBy]);
+  }, [goals, search, sortBy, filter]);
 
-  const debtGoals = goals.filter(g => g.isDebt && !g.completed);
+  const debtGoals = filteredGoals.filter(g => g.isDebt && !g.completed);
   const regularGoals = filteredGoals.filter(g => !g.isDebt);
 
   if (loading) {
@@ -140,7 +151,7 @@ export function UnifiedGoalsPage() {
               placeholder="Search goals..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadGoals()}
+              // onKeyDown={(e) => e.key === 'Enter' && loadGoals()} // Search is now instant/local
               className="w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
               style={{
                 backgroundColor: 'var(--glass-bg-subtle)',
