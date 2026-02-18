@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { UnifiedGoal, KnowledgeItem } from '../lib/types';
 import { getLocalDateString, formatDateDDMMYYYY } from '../lib/time';
 import { Loader } from '@/components/Loader';
-import { ReflectionPrompt } from '@/components/reflection/ReflectionPrompt';
+import { ReflectionPrompt } from '@/components/goal/ReflectionPrompt';
 
 interface DailyBriefingData {
     keyGoals: UnifiedGoal[];
@@ -342,6 +342,16 @@ export function DailyBriefingPage() {
                     </p>
                 </section>
             </div>
+
+            {/* Reflection Prompt */}
+            {showReflection && completedGoal && (
+                <ReflectionPrompt
+                    goalId={completedGoal.id}
+                    goalText={completedGoal.text}
+                    onClose={() => setShowReflection(false)}
+                    onSaved={handleReflectionComplete}
+                />
+            )}
         </div>
     );
 }

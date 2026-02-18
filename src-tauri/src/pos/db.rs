@@ -266,4 +266,14 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     )",
     "CREATE INDEX IF NOT EXISTS idx_debt_archive_month ON debt_archive(original_month)",
     "CREATE INDEX IF NOT EXISTS idx_debt_archive_goal ON debt_archive(goal_id)",
+
+    // ─── Goal Reflections (Learning System) ─────────────────────────
+    "CREATE TABLE IF NOT EXISTS goal_reflections (
+        id              TEXT PRIMARY KEY,
+        goal_id         TEXT NOT NULL REFERENCES unified_goals(id) ON DELETE CASCADE,
+        learning_text   TEXT NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        kb_item_id      TEXT
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_reflections_goal_id ON goal_reflections(goal_id)",
 ];

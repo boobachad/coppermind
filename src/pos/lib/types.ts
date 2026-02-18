@@ -330,3 +330,19 @@ export interface DebtTrailItem {
     debtCount: number;
     goals: UnifiedGoal[];
 }
+
+// ─── Reflection System ──────────────────────────────────────────
+
+export interface GoalReflection {
+    id: string;
+    goalId: string;
+    learningText: string;
+    createdAt: string;             // ISO 8601 UTC
+    kbItemId: string | null;
+}
+
+export interface CreateReflectionInput {
+    goalId: string;
+    learningText: string;
+    createKbItem: boolean;
+}
