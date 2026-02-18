@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import * as chrono from 'chrono-node';
-import { UnifiedGoal } from '../../lib/types';
+import { UnifiedGoal } from '../lib/types';
 import { DatePicker } from '../../components/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { X, Repeat } from 'lucide-react';

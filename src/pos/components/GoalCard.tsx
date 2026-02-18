@@ -1,4 +1,4 @@
-import { UnifiedGoal } from '../../lib/types';
+import { UnifiedGoal } from '../lib/types';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import { CheckCircle2, Repeat, Flame, AlertTriangle, Calendar, Pencil, Trash2 } from 'lucide-react';

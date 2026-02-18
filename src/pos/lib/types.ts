@@ -116,6 +116,14 @@ export interface ScraperResponse {
 
 // ─── Unified Goals ──────────────────────────────────────────────
 
+export interface UnifiedGoalMetric {
+    id: string;
+    label: string;
+    target: number;
+    current: number;
+    unit: string;
+}
+
 export interface UnifiedGoal {
     id: string;
     text: string;
@@ -128,7 +136,7 @@ export interface UnifiedGoal {
     recurringTemplateId: string | null;
     priority: 'low' | 'medium' | 'high';
     urgent: boolean;
-    metrics: any | null; // Placeholder for JSON
+    metrics: UnifiedGoalMetric[] | null;
     problemId: string | null;
     linkedActivityIds: string[] | null;
     labels: string[] | null;

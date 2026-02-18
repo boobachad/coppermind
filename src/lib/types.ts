@@ -65,32 +65,4 @@ export interface GraphEdge {
   type?: string;
 }
 
-export interface UnifiedGoalMetric {
-  id: string;
-  label: string;
-  target: number;
-  current: number;
-  unit: string;
-}
 
-export interface UnifiedGoal {
-  id: string;
-  text: string;
-  description?: string;
-  completed: boolean;
-  completedAt?: number;
-  verified: boolean;
-  dueDate?: number;
-  recurringPattern?: string;
-  recurringTemplateId?: string;
-  priority: 'low' | 'medium' | 'high';
-  urgent: boolean;
-  metrics?: UnifiedGoalMetric[];
-  problemId?: string;
-  linkedActivityIds?: string[];
-  labels?: string[];
-  createdAt: number;
-  updatedAt: number;
-  originalDate?: string;
-  isDebt: boolean;
-}

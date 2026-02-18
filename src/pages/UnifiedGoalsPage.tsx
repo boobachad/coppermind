@@ -4,7 +4,7 @@ import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import clsx from 'clsx';
-import { UnifiedGoal } from '../lib/types';
+import { UnifiedGoal } from '../pos/lib/types';
 import { Loader } from '../components/Loader';
 import { DatePicker } from '../components/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';

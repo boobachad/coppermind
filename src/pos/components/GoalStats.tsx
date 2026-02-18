@@ -1,4 +1,4 @@
-import { UnifiedGoal } from '../../lib/types';
+import { UnifiedGoal } from '../lib/types';
 import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Target, CheckCircle2, Loader, Flame, AlertTriangle } from 'lucide-react';
 

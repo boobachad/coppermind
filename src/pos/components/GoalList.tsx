@@ -1,4 +1,4 @@
-import { UnifiedGoal } from '../../lib/types';
+import { UnifiedGoal } from '../lib/types';
 import { GoalCard } from './GoalCard';
 import { Target } from 'lucide-react';
 

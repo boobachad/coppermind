@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, AlertTriangle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
-import type { UnifiedGoal } from '@/lib/types';
-import type { Activity } from '../lib/types';
+import type { UnifiedGoal, Activity } from '../lib/types';
 import { formatLocalAsUTC } from '../lib/time';
 import { toast } from 'sonner';
 
