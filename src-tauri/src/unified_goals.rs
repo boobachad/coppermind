@@ -170,88 +170,90 @@ pub async fn get_unified_goals(
 
     // ─── LAZY GENERATION LOGIC ───
     // If a date range is requested, check for active recurring templates and generate instances.
-    if let Some(ref f) = filters {
-        if let Some((start, end)) = f.date_range {
-            // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)
-            let templates = sqlx::query_as::<_, UnifiedGoalRow>(
-                "SELECT * FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
-            )
-            .fetch_all(pool)
-            .await
-            .map_err(|e| db_context("fetch recurring templates", e))?;
+    // ─── LAZY GENERATION LOGIC ───
+    // Check for active recurring templates and generate instances.
+    // Default to "Today" if no range is requested (ensures List View has today's goals).
+    
+    let (gen_start, gen_end) = if let Some(Some((start, end))) = filters.as_ref().map(|f| f.date_range) {
+        (start, end)
+    } else {
+         (now_utc, now_utc)
+    };
 
-            // 2. Iterate through each day in the range (usually just 1 day for Daily View)
-            let mut curr = start;
-            while curr <= end {
-                // Apply timezone offset to determine the "Local Day Name"
-                // offset is in minutes. 
-                // Note: JS getTimezoneOffset() returns +ve for West (UTC-5 -> 300) and -ve for East (UTC+5:30 -> -330)
-                // BUT commonly APIs expect "Offset FROM UTC". 
-                // Let's assume the frontend sends the offset to ADD to UTC to get Local.
-                // e.g. IST is +05:30 => +330 minutes. 
-                // We will standardize on: Frontend sends `local - utc` in minutes.
-                let offset_minutes = f.timezone_offset.unwrap_or(0);
-                let local_curr = curr + chrono::Duration::minutes(offset_minutes as i64);
-                
-                let date_str = local_curr.format("%Y-%m-%d").to_string();
-                let day_name = local_curr.format("%a").to_string(); // Mon, Tue...
+    // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)
+    let templates = sqlx::query_as::<_, UnifiedGoalRow>(
+        "SELECT * FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("fetch recurring templates", e))?;
 
-                for tmpl in &templates {
-                    if let Some(ref pattern) = tmpl.recurring_pattern {
-                        // Check if today matches the pattern (e.g. "Mon,Wed" contains "Mon")
-                        if pattern.contains(&day_name) || pattern == "Daily" {
-                            // Check if an instance already exists for this template on this date
-                            // We check for: recurring_template_id = tmpl.id AND due_date = curr (approx)
-                            // Note: storing due_date as TIMESTAMPTZ, so we compare DATE(due_date) = DATE(curr)
-                            let exists: Option<(String,)> = sqlx::query_as(
-                                r#"SELECT id FROM unified_goals 
-                                   WHERE recurring_template_id = $1 
-                                   AND due_date::date = $2::date"#
-                            )
-                            .bind(&tmpl.id)
-                            .bind(curr)
-                            .fetch_optional(pool)
-                            .await
-                            .map_err(|e| db_context("check existing instance", e))?;
+    // 2. Iterate through each day in the range
+    let mut curr = gen_start;
+    
+    // Safety clamp to avoid infinite loops if invalid date range provided
+    let max_days = 366; 
+    let mut days_processed = 0;
 
-                            if exists.is_none() {
-                                // Create the new instance
-                                let new_id = gen_id();
-                                let now = Utc::now();
-                                
-                                sqlx::query(
-                                    r#"INSERT INTO unified_goals (
-                                        id, text, description, completed, completed_at, verified,
-                                        due_date, recurring_pattern, recurring_template_id, priority, urgent,
-                                        metrics, problem_id, linked_activity_ids, labels,
-                                        created_at, updated_at, original_date, is_debt
-                                    ) VALUES ($1, $2, $3, false, NULL, false, $4, NULL, $5, $6, $7, $8, $9, NULL, $10, $11, $11, NULL, false)"#
-                                )
-                                .bind(&new_id)
-                                .bind(&tmpl.text)
-                                .bind(&tmpl.description)
-                                .bind(curr) // due_date = target generation date
-                                .bind(&tmpl.id) // recurring_template_id
-                                .bind(&tmpl.priority)
-                                .bind(tmpl.urgent)
-                                .bind(&tmpl.metrics)
-                                .bind(&tmpl.problem_id)
-                                .bind(&tmpl.labels)
-                                .bind(now)
-                                .execute(pool)
-                                .await
-                                .map_err(|e| db_context("create recurring instance", e))?;
-                                
-                                log::info!("[Unified] Generated recurring instance '{}' for date {}", tmpl.text, date_str);
+    while curr <= gen_end && days_processed < max_days {
+        // Apply timezone offset to determine the "Local Day Name"
+        let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
+        let local_curr = curr + chrono::Duration::minutes(offset_minutes as i64);
+        
+        let date_str = local_curr.format("%Y-%m-%d").to_string();
+        let day_name = local_curr.format("%a").to_string(); // Mon, Tue...
+
+        // log::info!("[Unified] Checking generation for date: {} (Day: {})", date_str, day_name);
+
+        for tmpl in &templates {
+            if let Some(ref pattern) = tmpl.recurring_pattern {
+                // Check if today matches the pattern (e.g. "Mon,Wed" contains "Mon")
+                if pattern.contains(&day_name) || pattern == "Daily" {
+                    // Check if an instance already exists for this template on this date
+                    let new_id = gen_id();
+                    let now = Utc::now();
+
+                    // ON CONFLICT (recurring_template_id, due_date_local): unique index enforces
+                    // idempotency at the DB level — safe against concurrent requests.
+                    let insert_result = sqlx::query(
+                        r#"INSERT INTO unified_goals (
+                            id, text, description, completed, completed_at, verified,
+                            due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
+                            metrics, problem_id, linked_activity_ids, labels,
+                            created_at, updated_at, original_date, is_debt
+                        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, $10, NULL, $11, $12, $12, NULL, false)
+                        ON CONFLICT (recurring_template_id, due_date_local) DO NOTHING"#
+                    )
+                    .bind(&new_id)
+                    .bind(&tmpl.text)
+                    .bind(&tmpl.description)
+                    .bind(local_curr)       // due_date (TIMESTAMPTZ, UTC)
+                    .bind(&date_str)        // due_date_local (TEXT, e.g. "2026-02-18")
+                    .bind(&tmpl.id)         // recurring_template_id
+                    .bind(&tmpl.priority)
+                    .bind(tmpl.urgent)
+                    .bind(&tmpl.metrics)
+                    .bind(&tmpl.problem_id)
+                    .bind(&tmpl.labels)
+                    .bind(now)
+                    .execute(pool)
+                    .await;
+
+                    match insert_result {
+                        Ok(result) => {
+                            if result.rows_affected() > 0 {
+                                log::info!("[Unified] Generated recurring instance '{}' for {}", tmpl.text, date_str);
                             }
-                        }
+                        },
+                        Err(e) => log::error!("[Unified] Failed to generate instance: {}", e),
                     }
                 }
-                
-                // Advance exactly one day
-                curr = curr + chrono::Duration::days(1);
             }
         }
+        
+        // Advance exactly one day
+        curr = curr + chrono::Duration::days(1);
+        days_processed += 1;
     }
     // ─────────────────────────────
 

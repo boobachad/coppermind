@@ -126,6 +126,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         completed_at           TIMESTAMPTZ,
         verified               BOOLEAN DEFAULT FALSE,
         due_date               TIMESTAMPTZ,
+        due_date_local         TEXT,
         recurring_pattern      TEXT,
         recurring_template_id  TEXT,
         priority               TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
@@ -145,6 +146,8 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_due_date ON unified_goals(due_date)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
+    // Unique constraint: one recurring instance per template per local date
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_unified_goals_recurring_unique ON unified_goals (recurring_template_id, due_date_local) WHERE recurring_template_id IS NOT NULL AND due_date_local IS NOT NULL",
 
     // ─── GitHub Repositories (aggregated stats per repo) ────────────
     "CREATE TABLE IF NOT EXISTS github_repositories (

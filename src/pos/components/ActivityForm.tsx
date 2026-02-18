@@ -231,7 +231,8 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                                 {availableGoals.map((g) => (
                                     <SelectItem key={g.id} value={g.id}>
                                         <span className="flex items-center gap-1">
-                                            {g.text.substring(0, 40)}{g.text.length > 40 ? '...' : ''}
+                                            {g.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{new Date(g.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}]</span> : null}
+                                            {g.text.substring(0, 35)}{g.text.length > 35 ? '...' : ''}
                                             {g.urgent && <Flame className="w-3 h-3 text-orange-500" />}
                                             {g.isDebt && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
                                         </span>
