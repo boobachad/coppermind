@@ -297,3 +297,21 @@ export interface BalancerResult {
     dailyRequired: number;
     message: string;
 }
+
+// ─── Debt System ────────────────────────────────────────────────
+
+export interface DebtArchive {
+    id: string;
+    goalId: string;
+    originalMonth: string;         // YYYY-MM
+    archivedAt: string;            // ISO 8601 UTC
+    reason: string | null;
+    goalText: string;
+    goalData: Record<string, unknown> | null;
+}
+
+export interface DebtTrailItem {
+    date: string;                  // YYYY-MM-DD
+    debtCount: number;
+    goals: UnifiedGoal[];
+}

@@ -253,4 +253,17 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     )",
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_dates ON goal_periods(period_start, period_end)",
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_metric ON goal_periods(target_metric)",
+
+    // ─── Debt Archive (Monthly Reset) ───────────────────────────────
+    "CREATE TABLE IF NOT EXISTS debt_archive (
+        id              TEXT PRIMARY KEY,
+        goal_id         TEXT NOT NULL,
+        original_month  TEXT NOT NULL,
+        archived_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        reason          TEXT,
+        goal_text       TEXT NOT NULL,
+        goal_data       JSONB
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_debt_archive_month ON debt_archive(original_month)",
+    "CREATE INDEX IF NOT EXISTS idx_debt_archive_goal ON debt_archive(goal_id)",
 ];

@@ -10,6 +10,7 @@ mod pos;
 mod unified_goals;
 mod knowledge_base;
 mod monthly_goals;
+mod debt_system;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -348,6 +349,11 @@ pub fn run() {
             monthly_goals::update_monthly_goal,
             monthly_goals::run_balancer_engine,
             monthly_goals::delete_monthly_goal,
+            debt_system::get_accumulated_debt,
+            debt_system::get_debt_trail,
+            debt_system::transition_monthly_debt,
+            debt_system::get_debt_archive,
+            debt_system::reset_debt_for_month,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
