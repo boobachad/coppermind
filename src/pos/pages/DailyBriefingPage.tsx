@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { UnifiedGoal, KnowledgeItem } from '../lib/types';
 import { getLocalDateString, formatDateDDMMYYYY } from '../lib/time';
 import { Loader } from '@/components/Loader';
+import { ReflectionPrompt } from '@/components/reflection/ReflectionPrompt';
 
 interface DailyBriefingData {
     keyGoals: UnifiedGoal[];
@@ -16,6 +17,8 @@ export function DailyBriefingPage() {
     const [briefing, setBriefing] = useState<DailyBriefingData | null>(null);
     const [loading, setLoading] = useState(true);
     const [todayStr] = useState(getLocalDateString());
+    const [showReflection, setShowReflection] = useState(false);
+    const [completedGoal, setCompletedGoal] = useState<UnifiedGoal | null>(null);
 
     useEffect(() => {
         loadBriefing();
@@ -68,17 +71,30 @@ export function DailyBriefingPage() {
         }
     };
 
-    const handleCompleteGoal = async (goalId: string) => {
+    const handleCompleteGoal = async (goal: UnifiedGoal) => {
         try {
             await invoke('update_unified_goal', {
-                id: goalId,
+                id: goal.id,
                 req: { completed: true }
             });
             toast.success('Goal completed!');
-            loadBriefing();
+            
+            // Show reflection prompt for high-value goals
+            if (goal.priority === 'high' || goal.urgent) {
+                setCompletedGoal(goal);
+                setShowReflection(true);
+            } else {
+                loadBriefing();
+            }
         } catch (err) {
             toast.error('Failed to complete goal', { description: String(err) });
         }
+    };
+
+    const handleReflectionComplete = () => {
+        setShowReflection(false);
+        setCompletedGoal(null);
+        loadBriefing();
     };
 
     if (loading) {
@@ -174,7 +190,7 @@ export function DailyBriefingPage() {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => handleCompleteGoal(goal.id)}
+                                            onClick={() => handleCompleteGoal(goal)}
                                             className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
                                             style={{
                                                 backgroundColor: 'var(--btn-primary-bg)',
