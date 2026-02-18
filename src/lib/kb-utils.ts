@@ -93,13 +93,12 @@ export function extractProblemId(url: string): string | null {
 }
 
 /**
- * Spaced Repetition Algorithm (SM-2 simplified)
- * Returns next review date based on current interval and quality
+ * Calculate next review date based on current interval and quality
  * @param currentInterval - Current interval in days
  * @param quality - Rating 0-5 (0=total blackout, 5=perfect)
  */
 export function calculateNextReview(currentInterval: number, quality: number): Date {
-    const now = new Date();
+    const now = new Date(); // Note: This is for spaced repetition calculation, not display
     let newInterval = currentInterval;
     
     if (quality < 3) {
@@ -132,7 +131,7 @@ export function isDueForReview(nextReviewDate: string | null): boolean {
     if (!nextReviewDate) return false;
     
     const reviewDate = new Date(nextReviewDate);
-    const now = new Date();
+    const now = new Date(); // Comparing review date with current time
     
     return reviewDate <= now;
 }
@@ -144,7 +143,7 @@ export function formatReviewDate(nextReviewDate: string | null): string {
     if (!nextReviewDate) return 'Not scheduled';
     
     const reviewDate = new Date(nextReviewDate);
-    const now = new Date();
+    const now = new Date(); // For calculating relative time display
     const diffMs = reviewDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     
@@ -192,7 +191,7 @@ export function deduplicateUrls(
  */
 export function parseTemporalKeywords(text: string): { keyword: string; date: Date } | null {
     const lowerText = text.toLowerCase();
-    const now = new Date();
+    const now = new Date(); // Used for temporal keyword parsing
     
     // Today
     if (lowerText.includes('today')) {

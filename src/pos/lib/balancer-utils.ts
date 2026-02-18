@@ -2,7 +2,6 @@
 // Helper functions for monthly goal distribution and progress calculation.
 
 import { MonthlyGoal, UnifiedGoal } from '@/pos/lib/types';
-import { getLocalDateString } from '@/pos/lib/time';
 
 /**
  * Calculate daily target based on strategy
@@ -43,7 +42,7 @@ export function calculateDailyTarget(
  * Calculate remaining days in a period
  */
 export function calculateRemainingDays(periodEnd: string): number {
-    const today = new Date();
+    const today = new Date(); // For calculating days remaining
     today.setHours(0, 0, 0, 0);
     
     const endDate = new Date(periodEnd);
@@ -209,7 +208,7 @@ export function estimateCompletionDate(
     if (current === 0) return null;
     
     const start = new Date(periodStart);
-    const today = new Date();
+    const today = new Date(); // For calculating elapsed time
     today.setHours(0, 0, 0, 0);
     
     const elapsedMs = today.getTime() - start.getTime();
@@ -249,9 +248,14 @@ export function getDistributionPreview(
     let remainingTarget = monthlyGoal.targetValue - monthlyGoal.currentValue;
     let remainingDays = calculateRemainingDays(monthlyGoal.periodEnd);
     
+    const today = new Date(); // For comparing past vs future dates
+    today.setHours(0, 0, 0, 0);
+    
     for (let i = 0; i < dates.length; i++) {
         const date = dates[i];
-        const isPast = new Date(date) < new Date(getLocalDateString());
+        const dateObj = new Date(date);
+        dateObj.setHours(0, 0, 0, 0);
+        const isPast = dateObj < today;
         
         // Find actual value for this date
         const dayGoal = linkedGoals.find(g => g.dueDate?.split('T')[0] === date);

@@ -129,7 +129,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                 {/* Metadata */}
                 {item.metadata && (
                     <div className="flex flex-wrap gap-2 mb-3">
-                        {item.metadata.title && (
+                        {typeof item.metadata.title === 'string' && (
                             <div
                                 className="text-xs px-2 py-1 rounded"
                                 style={{
@@ -137,23 +137,26 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                                     color: 'var(--text-tertiary)',
                                 }}
                             >
-                                {JSON.stringify(item.metadata.title).replace(/"/g, '')}
+                                {item.metadata.title}
                             </div>
                         )}
-                        {item.metadata.tags && Array.isArray(item.metadata.tags) && (
+                        {Array.isArray(item.metadata.tags) && (
                             <>
-                                {item.metadata.tags.slice(0, 3).map((tag, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="text-xs px-2 py-1 rounded"
-                                        style={{
-                                            background: 'var(--color-accent-primary)15',
-                                            color: 'var(--color-accent-primary)',
-                                        }}
-                                    >
-                                        {JSON.stringify(tag).replace(/"/g, '')}
-                                    </div>
-                                ))}
+                                {item.metadata.tags.slice(0, 3).map((tag, idx) => {
+                                    if (typeof tag !== 'string') return null;
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="text-xs px-2 py-1 rounded"
+                                            style={{
+                                                background: 'var(--color-accent-primary)15',
+                                                color: 'var(--color-accent-primary)',
+                                            }}
+                                        >
+                                            {tag}
+                                        </div>
+                                    );
+                                })}
                             </>
                         )}
                     </div>
