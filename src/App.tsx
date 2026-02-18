@@ -15,6 +15,12 @@ import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
 import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
+import { LadderBrowser } from './components/codeforces/LadderBrowser';
+import LadderView from './components/codeforces/LadderView';
+import CategoryBrowser from './components/codeforces/CategoryBrowser';
+import { FriendsManager } from './components/codeforces/FriendsManager';
+import { FriendsLadder } from './components/codeforces/FriendsLadder';
+import { DailyProblemsPicker } from './components/codeforces/DailyProblemsPicker';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -56,6 +62,12 @@ function App() {
             <Route path="pos/github" element={<GitHubPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="journal/:date" element={<EntryPage />} />
+            <Route path="cf/ladders" element={<LadderBrowser />} />
+            <Route path="cf/ladders/:id" element={<LadderView />} />
+            <Route path="cf/categories" element={<CategoryBrowser />} />
+            <Route path="cf/friends" element={<FriendsManager />} />
+            <Route path="cf/friends-ladder" element={<FriendsLadder />} />
+            <Route path="cf/daily" element={<DailyProblemsPicker />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
