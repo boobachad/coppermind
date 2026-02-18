@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
 import { Tag, CheckCircle, TrendingUp } from 'lucide-react';
 
 interface CFCategory {

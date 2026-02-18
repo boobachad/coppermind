@@ -401,6 +401,7 @@ export interface CFLadderProblem {
     onlineJudge: string;
     difficulty: number;
     problemId: string | null; // Extracted from URL for CF problems
+    status?: 'unsolved' | 'attempted' | 'solved'; // From progress join
 }
 
 export interface CFLadderProgress {

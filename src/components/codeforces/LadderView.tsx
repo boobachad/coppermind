@@ -89,7 +89,7 @@ export default function LadderView() {
     );
   }
 
-  const progressPercent = stats ? Math.round((stats.solved / stats.total) * 100) : 0;
+  const progressPercent = stats ? Math.round(stats.progressPercentage) : 0;
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -127,7 +127,7 @@ export default function LadderView() {
             marginBottom: '0.5rem',
             color: 'var(--text-primary)'
           }}>
-            {ladder.name}
+            {ladder.title}
           </h1>
           
           {ladder.description && (
@@ -146,7 +146,7 @@ export default function LadderView() {
                 Progress
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                {stats?.solved || 0} / {stats?.total || 0}
+                {stats?.solved || 0} / {stats?.totalProblems || 0}
               </div>
             </div>
 
@@ -247,7 +247,7 @@ export default function LadderView() {
                     </div>
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                    {problem.judge}
+                    {problem.onlineJudge}
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <span style={{ 
