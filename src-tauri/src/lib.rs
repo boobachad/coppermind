@@ -15,6 +15,7 @@ mod context_engine;
 mod reflection;
 mod retrospectives;
 mod cf_ladder_system;
+mod cf_friends_system;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -367,6 +368,11 @@ pub fn run() {
             retrospectives::get_retrospective_stats,
             retrospectives::delete_retrospective,
             // CF Ladder System
+            cf_friends_system::add_cf_friend,
+            cf_friends_system::get_cf_friends,
+            cf_friends_system::sync_cf_friend_submissions,
+            cf_friends_system::delete_cf_friend,
+            cf_friends_system::generate_friends_ladder,
             cf_ladder_system::import_ladder_from_html,
             cf_ladder_system::get_ladders,
             cf_ladder_system::get_ladder_problems,
