@@ -148,11 +148,9 @@ export default function CategoryBrowser() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.02)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -232,11 +230,12 @@ export default function CategoryBrowser() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.5rem',
-                    background: 'rgba(34, 197, 94, 0.1)',
+                    backgroundColor: 'var(--color-success)',
+                    opacity: 0.15,
                     borderRadius: '0.5rem'
                   }}>
-                    <CheckCircle size={16} style={{ color: 'var(--color-success)' }} />
-                    <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '500' }}>
+                    <CheckCircle size={16} style={{ color: 'var(--color-success)', opacity: 1 }} />
+                    <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '500', opacity: 1 }}>
                       Completed!
                     </span>
                   </div>

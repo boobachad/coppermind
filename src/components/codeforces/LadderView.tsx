@@ -224,7 +224,8 @@ export default function LadderView() {
                   key={problem.id}
                   style={{ 
                     borderBottom: '1px solid var(--border-secondary)',
-                    background: problem.status === 'solved' ? 'rgba(34, 197, 94, 0.05)' : 'transparent',
+                    backgroundColor: problem.status === 'solved' ? 'var(--color-success)' : 'transparent',
+                    opacity: problem.status === 'solved' ? 0.1 : 1,
                     transition: 'background 0.2s'
                   }}
                 >
