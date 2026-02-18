@@ -245,12 +245,19 @@ export interface GitHubUserStats {
 
 // ─── Knowledge Base ─────────────────────────────────────────────
 
+export interface KnowledgeMetadata {
+    title?: string;
+    tags?: string[];
+    difficulty?: string;
+    relatedItemIds?: string[];
+}
+
 export interface KnowledgeItem {
     id: string;
     itemType: 'Link' | 'Problem' | 'NoteRef' | 'StickyRef' | 'Collection';
     source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
     content: string;              // URL or Text or JSON array for Collections
-    metadata: Record<string, unknown> | null;  // Title, Tags, Difficulty, RelatedItemIds
+    metadata: KnowledgeMetadata | null;  // Title, Tags, Difficulty, RelatedItemIds
     status: 'Inbox' | 'Planned' | 'Completed' | 'Archived';
     nextReviewDate: string | null;  // ISO 8601 UTC
     createdAt: string;

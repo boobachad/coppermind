@@ -129,7 +129,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                 {/* Metadata */}
                 {item.metadata && (
                     <div className="flex flex-wrap gap-2 mb-3">
-                        {typeof item.metadata.title === 'string' && (
+                        {item.metadata.title && (
                             <div
                                 className="text-xs px-2 py-1 rounded"
                                 style={{
@@ -137,26 +137,23 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                                     color: 'var(--text-tertiary)',
                                 }}
                             >
-                                {item.metadata.title}
+                                {String(item.metadata.title)}
                             </div>
                         )}
-                        {Array.isArray(item.metadata.tags) && (
+                        {item.metadata.tags && Array.isArray(item.metadata.tags) && (
                             <>
-                                {item.metadata.tags.slice(0, 3).map((tag, idx) => {
-                                    if (typeof tag !== 'string') return null;
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className="text-xs px-2 py-1 rounded"
-                                            style={{
-                                                background: 'var(--color-accent-primary)15',
-                                                color: 'var(--color-accent-primary)',
-                                            }}
-                                        >
-                                            {tag}
-                                        </div>
-                                    );
-                                })}
+                                {item.metadata.tags.slice(0, 3).map((tag, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="text-xs px-2 py-1 rounded"
+                                        style={{
+                                            background: 'var(--color-accent-primary)15',
+                                            color: 'var(--color-accent-primary)',
+                                        }}
+                                    >
+                                        {String(tag)}
+                                    </div>
+                                ))}
                             </>
                         )}
                     </div>

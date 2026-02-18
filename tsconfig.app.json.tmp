@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "tsc": "--skipLibCheck"
+  },
+  "include": ["src"]
+}
