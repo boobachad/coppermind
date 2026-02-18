@@ -217,12 +217,19 @@ pub fn run() {
                         .build(),
                 )?;
             }
-            app.handle().plugin(tauri_plugin_sql::Builder::default().build())?;
+            let is_widget = std::env::var("WIDGET_MODE").is_ok();
+
+            if !is_widget {
+                app.handle().plugin(tauri_plugin_sql::Builder::default().build())?;
+            }
             app.handle().plugin(tauri_plugin_clipboard_manager::init())?;
             app.handle().plugin(tauri_plugin_shell::init())?;
             
-            // Start keyboard listener for double-shift detection
-            start_keyboard_listener(app.handle().clone());
+            // rdev::grab is an exclusive evdev grab — only one process can hold it.
+            // Widget process must not grab, or it breaks double-shift in the main app.
+            if !is_widget {
+                start_keyboard_listener(app.handle().clone());
+            }
 
             // ─── POS: Load and validate configuration ─────────────────
             log::info!("[POS] Step 1: Loading configuration from .env");

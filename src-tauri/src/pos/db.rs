@@ -147,7 +147,8 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
     // Unique constraint: one recurring instance per template per local date
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_unified_goals_recurring_unique ON unified_goals (recurring_template_id, due_date_local) WHERE recurring_template_id IS NOT NULL AND due_date_local IS NOT NULL",
+    // Full constraint (not partial index) so ON CONFLICT (cols) DO NOTHING works correctly
+    "ALTER TABLE unified_goals ADD CONSTRAINT IF NOT EXISTS uq_recurring_instance UNIQUE (recurring_template_id, due_date_local)",
 
     // ─── GitHub Repositories (aggregated stats per repo) ────────────
     "CREATE TABLE IF NOT EXISTS github_repositories (

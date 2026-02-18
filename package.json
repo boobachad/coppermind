@@ -9,7 +9,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "tauri": "tauri",
-    "widget": "cross-env CARGO_TARGET_DIR=../target_widget bun tauri dev --config src-tauri/tauri.widget.conf.json"
+    "widget": "cross-env WIDGET_MODE=1 CARGO_TARGET_DIR=../target_widget bun tauri dev --config src-tauri/tauri.widget.conf.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
