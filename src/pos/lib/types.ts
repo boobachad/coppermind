@@ -307,6 +307,14 @@ export interface BalancerResult {
 
 // ─── Debt System ────────────────────────────────────────────────
 
+export interface ContextItem {
+    id: string;
+    itemType: string;
+    content: string;
+    title: string | null;
+    relevanceScore: number;
+}
+
 export interface DebtArchive {
     id: string;
     goalId: string;

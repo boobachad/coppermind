@@ -2,6 +2,7 @@ import { UnifiedGoal } from '../lib/types';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import { CheckCircle2, Repeat, Flame, AlertTriangle, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { GoalResources } from '../../components/goal/GoalResources';
 
 interface GoalCardProps {
     goal: UnifiedGoal;
@@ -187,6 +188,9 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                     <Trash2 className="w-4 h-4" />
                 </button>
             </div>
+            
+            {/* Resources Section */}
+            {!goal.completed && <GoalResources goalId={goal.id} />}
         </div>
     );
 }
