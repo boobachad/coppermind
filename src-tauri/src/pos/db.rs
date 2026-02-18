@@ -288,4 +288,100 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     )",
     "CREATE INDEX IF NOT EXISTS idx_retrospectives_period_type ON retrospectives(period_type)",
     "CREATE INDEX IF NOT EXISTS idx_retrospectives_period_start ON retrospectives(period_start)",
+
+    // ─── Codeforces Ladders ─────────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_ladders (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        description     TEXT,
+        rating_min      INTEGER,
+        rating_max      INTEGER,
+        difficulty      INTEGER,
+        source          TEXT NOT NULL CHECK (source IN ('A2OJ', 'Custom', 'FriendsGenerated')),
+        problem_count   INTEGER DEFAULT 0,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_ladders_rating ON cf_ladders(rating_min, rating_max)",
+
+    "CREATE TABLE IF NOT EXISTS cf_ladder_problems (
+        id              TEXT PRIMARY KEY,
+        ladder_id       TEXT NOT NULL REFERENCES cf_ladders(id) ON DELETE CASCADE,
+        problem_id      TEXT NOT NULL,
+        problem_name    TEXT NOT NULL,
+        problem_url     TEXT NOT NULL,
+        position        INTEGER NOT NULL,
+        difficulty      INTEGER,
+        online_judge    TEXT NOT NULL DEFAULT 'Codeforces',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_ladder_problems_ladder_id ON cf_ladder_problems(ladder_id)",
+    "CREATE INDEX IF NOT EXISTS idx_cf_ladder_problems_problem_id ON cf_ladder_problems(problem_id)",
+
+    // ─── Codeforces Categories ──────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_categories (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL UNIQUE,
+        description     TEXT,
+        problem_count   INTEGER DEFAULT 0,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+
+    "CREATE TABLE IF NOT EXISTS cf_category_problems (
+        id              TEXT PRIMARY KEY,
+        category_id     TEXT NOT NULL REFERENCES cf_categories(id) ON DELETE CASCADE,
+        problem_id      TEXT NOT NULL,
+        problem_name    TEXT NOT NULL,
+        problem_url     TEXT NOT NULL,
+        position        INTEGER NOT NULL,
+        difficulty      INTEGER,
+        online_judge    TEXT NOT NULL DEFAULT 'Codeforces',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_category_problems_category_id ON cf_category_problems(category_id)",
+
+    // ─── Codeforces Friends ─────────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_friends (
+        id              TEXT PRIMARY KEY,
+        cf_handle       TEXT NOT NULL UNIQUE,
+        display_name    TEXT,
+        current_rating  INTEGER,
+        max_rating      INTEGER,
+        last_synced     TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_friends_handle ON cf_friends(cf_handle)",
+
+    "CREATE TABLE IF NOT EXISTS cf_friend_submissions (
+        id              TEXT PRIMARY KEY,
+        friend_id       TEXT NOT NULL REFERENCES cf_friends(id) ON DELETE CASCADE,
+        problem_id      TEXT NOT NULL,
+        verdict         TEXT NOT NULL,
+        submission_time TIMESTAMPTZ NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_friend_id ON cf_friend_submissions(friend_id)",
+    "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_problem_id ON cf_friend_submissions(problem_id)",
+    "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_time ON cf_friend_submissions(submission_time DESC)",
+
+    // ─── User Progress Tracking ─────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_ladder_progress (
+        id              TEXT PRIMARY KEY,
+        ladder_id       TEXT NOT NULL REFERENCES cf_ladders(id) ON DELETE CASCADE,
+        problem_id      TEXT NOT NULL,
+        solved_at       TIMESTAMPTZ,
+        attempts        INTEGER DEFAULT 0,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT unique_ladder_problem UNIQUE (ladder_id, problem_id)
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_ladder_progress_ladder_id ON cf_ladder_progress(ladder_id)",
+
+    // ─── Daily Recommendations ──────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_daily_recommendations (
+        id              TEXT PRIMARY KEY,
+        date            DATE NOT NULL UNIQUE,
+        problem_ids     TEXT[] NOT NULL,
+        sources         TEXT[] NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_daily_recommendations_date ON cf_daily_recommendations(date DESC)",
 ];

@@ -14,6 +14,7 @@ mod debt_system;
 mod context_engine;
 mod reflection;
 mod retrospectives;
+mod cf_ladder_system;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -365,6 +366,12 @@ pub fn run() {
             retrospectives::get_retrospectives,
             retrospectives::get_retrospective_stats,
             retrospectives::delete_retrospective,
+            // CF Ladder System
+            cf_ladder_system::import_ladder_from_html,
+            cf_ladder_system::get_ladders,
+            cf_ladder_system::get_ladder_problems,
+            cf_ladder_system::track_ladder_progress,
+            cf_ladder_system::get_ladder_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
