@@ -8,6 +8,7 @@ use sqlx::postgres::PgPoolOptions;
 
 mod pos;
 mod unified_goals;
+mod knowledge_base;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -334,6 +335,13 @@ pub fn run() {
             unified_goals::delete_unified_goal,
             unified_goals::toggle_unified_goal_completion,
             unified_goals::link_activity_to_unified_goal,
+            knowledge_base::create_knowledge_item,
+            knowledge_base::get_knowledge_items,
+            knowledge_base::update_knowledge_item,
+            knowledge_base::delete_knowledge_item,
+            knowledge_base::create_knowledge_link,
+            knowledge_base::get_knowledge_links,
+            knowledge_base::check_knowledge_duplicates,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

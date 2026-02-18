@@ -205,4 +205,33 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         top_repos               JSONB,
         synced_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
+
+    // ─── Knowledge Base - Items ─────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS knowledge_items (
+        id                  TEXT PRIMARY KEY,
+        item_type           TEXT NOT NULL CHECK (item_type IN ('Link', 'Problem', 'NoteRef', 'StickyRef', 'Collection')),
+        source              TEXT NOT NULL CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal')),
+        content             TEXT NOT NULL,
+        metadata            JSONB,
+        status              TEXT NOT NULL DEFAULT 'Inbox' CHECK (status IN ('Inbox', 'Planned', 'Completed', 'Archived')),
+        next_review_date    TIMESTAMPTZ,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_kb_items_status ON knowledge_items(status)",
+    "CREATE INDEX IF NOT EXISTS idx_kb_items_type ON knowledge_items(item_type)",
+    "CREATE INDEX IF NOT EXISTS idx_kb_items_review ON knowledge_items(next_review_date) WHERE next_review_date IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_kb_items_content ON knowledge_items USING gin(to_tsvector('english', content))",
+
+    // ─── Knowledge Base - Links (Networked Knowledge) ───────────────
+    "CREATE TABLE IF NOT EXISTS knowledge_links (
+        id          TEXT PRIMARY KEY,
+        source_id   TEXT NOT NULL REFERENCES knowledge_items(id) ON DELETE CASCADE,
+        target_id   TEXT NOT NULL REFERENCES knowledge_items(id) ON DELETE CASCADE,
+        link_type   TEXT NOT NULL CHECK (link_type IN ('related', 'blocks', 'requires')),
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT unique_kb_link UNIQUE (source_id, target_id, link_type)
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_kb_links_source ON knowledge_links(source_id)",
+    "CREATE INDEX IF NOT EXISTS idx_kb_links_target ON knowledge_links(target_id)",
 ];

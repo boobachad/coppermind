@@ -204,7 +204,7 @@ export interface GitHubRepository {
     repoOwner: string;
     fullName: string;
     description: string | null;
-    languages: any | null;
+    languages: Record<string, unknown> | null;
     primaryLanguage: string | null;
     totalCommits: number;
     totalPrs: number;
@@ -222,7 +222,7 @@ export interface GitHubRepository {
     repoUpdatedAt: string | null;
     repoUrl: string | null;
     homepageUrl: string | null;
-    topics: any | null;
+    topics: Record<string, unknown> | null;
     syncedAt: string;
 }
 
@@ -234,10 +234,44 @@ export interface GitHubUserStats {
     totalIssues: number;
     totalReviews: number;
     totalStarsReceived: number;
-    languagesBreakdown: any | null;
+    languagesBreakdown: Record<string, unknown> | null;
     currentStreakDays: number;
     longestStreakDays: number;
-    contributionsByYear: any | null;
-    topRepos: any | null;
+    contributionsByYear: Record<string, unknown> | null;
+    topRepos: Record<string, unknown> | null;
     syncedAt: string;
+}
+
+// ─── Knowledge Base ─────────────────────────────────────────────
+
+export interface KnowledgeItem {
+    id: string;
+    itemType: 'Link' | 'Problem' | 'NoteRef' | 'StickyRef' | 'Collection';
+    source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
+    content: string;              // URL or Text or JSON array for Collections
+    metadata: Record<string, unknown> | null;  // Title, Tags, Difficulty, RelatedItemIds
+    status: 'Inbox' | 'Planned' | 'Completed' | 'Archived';
+    nextReviewDate: string | null;  // ISO 8601 UTC
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface KnowledgeLink {
+    id: string;
+    sourceId: string;
+    targetId: string;
+    linkType: 'related' | 'blocks' | 'requires';
+    createdAt: string;
+}
+
+export interface KnowledgeItemFilters {
+    status?: string;
+    item_type?: string;
+    search?: string;
+    due_for_review?: boolean;
+}
+
+export interface DuplicateCheckResult {
+    isDuplicate: boolean;
+    existingItems: KnowledgeItem[];
 }
