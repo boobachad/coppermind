@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { GoalStats } from '../pos/components/GoalStats';
 import { GoalList } from '../pos/components/GoalList';
 import { GoalFormModal } from '../pos/components/GoalFormModal';
+import { MonthlyGoalWidget } from '../pos/components/MonthlyGoalWidget';
 
 export function UnifiedGoalsPage() {
   const [goals, setGoals] = useState<UnifiedGoal[]>([]);
@@ -139,6 +140,11 @@ export function UnifiedGoalsPage() {
 
         {/* Stats Dashboard */}
         <GoalStats goals={goals} />
+        
+        {/* Monthly Goals Widget */}
+        <div className="mt-6">
+          <MonthlyGoalWidget />
+        </div>
       </div>
 
       {/* Toolbar */}
