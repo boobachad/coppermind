@@ -3,7 +3,8 @@ import { useFocusTimer } from '../hooks/useFocusTimer';
 import { ACTIVITY_CATEGORIES, getActivityColor, ActivityCategory } from '../lib/config';
 import {
     Play, Square, Coffee, Briefcase,
-    Minimize2, Timer, Watch, Plus
+    Minimize2, Timer, Watch, Plus,
+    AlignLeft, CheckCircle2, Circle
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -133,6 +134,17 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                 // autoFocus={!state.name} // Maybe annoying?
                 />
 
+                <div className="relative">
+                    <AlignLeft className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Add details (optional)"
+                        value={state.description}
+                        onChange={(e) => setDetails({ description: e.target.value })}
+                        className="w-full bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground outline-none pl-6"
+                    />
+                </div>
+
                 <div className="flex gap-2">
                     <Select
                         value={state.category || ''}
@@ -158,6 +170,19 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         title="Toggle Timer Mode"
                     >
                         {state.timerType === 'pomodoro' ? 'Timer' : 'Stopwatch'}
+                    </button>
+
+                    <button
+                        onClick={() => setDetails({ isProductive: !state.isProductive })}
+                        className={clsx(
+                            "p-1 rounded-md border transition-colors",
+                            state.isProductive
+                                ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
+                                : "bg-zinc-500/10 border-zinc-500/20 text-zinc-500 hover:bg-zinc-500/20"
+                        )}
+                        title={state.isProductive ? "Marked as Productive" : "Marked as Unproductive"}
+                    >
+                        {state.isProductive ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                     </button>
                 </div>
 

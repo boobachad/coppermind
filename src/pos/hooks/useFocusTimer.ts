@@ -16,6 +16,7 @@ interface FocusTimerState {
     category: ActivityCategory | null;
     name: string;
     description: string;
+    isProductive: boolean;
 }
 
 // Simple oscillator beep for notification
@@ -55,6 +56,7 @@ export function useFocusTimer() {
         category: null,
         name: '',
         description: '',
+        isProductive: true,
     });
 
     const intervalRef = useRef<number | null>(null);
@@ -129,7 +131,7 @@ export function useFocusTimer() {
 
     // ─── Actions ─────────────────────────────────────────────────────────
 
-    const setDetails = (updates: Partial<Pick<FocusTimerState, 'name' | 'description' | 'category' | 'timerType' | 'totalDuration'>>) => {
+    const setDetails = (updates: Partial<Pick<FocusTimerState, 'name' | 'description' | 'category' | 'timerType' | 'totalDuration' | 'isProductive'>>) => {
         setState(prev => {
             let next = { ...prev, ...updates };
             // If updating duration while idle/pomodoro, update timeLeft too
@@ -261,7 +263,7 @@ export function useFocusTimer() {
             description: isBreak ? 'Break Session' : s.description,
             start_time: formatLocalAsUTC(startTime),
             end_time: formatLocalAsUTC(endTime),
-            is_productive: isBreak ? false : true,
+            is_productive: isBreak ? false : s.isProductive,
             is_shadow: false,
             goal_id: null,
             // Derive local YYYY-MM-DD from startTime
