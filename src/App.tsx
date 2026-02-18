@@ -14,6 +14,7 @@ import { DailyPage } from './pos/pages/DailyPage';
 import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
+import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -45,6 +46,7 @@ function App() {
             <Route path="notes/:id" element={<NotePage />} />
             {/* <Route path="todos" element={<TodosPage />} /> */}
             <Route path="goals" element={<UnifiedGoalsPage />} />
+            <Route path="briefing" element={<DailyBriefingPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="pos" element={<HomePage />} />
             <Route path="pos/grid" element={<GridPage />} />
