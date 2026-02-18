@@ -31,16 +31,6 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
     const [loading, setLoading] = useState(true);
     const [zoomLevel, setZoomLevel] = useState(1);
 
-    useEffect(() => {
-        loadGraphData();
-    }, [loadGraphData]);
-
-    useEffect(() => {
-        if (!loading && items.length > 0) {
-            renderGraph();
-        }
-    }, [items, links, selectedItemId, loading, renderGraph]);
-
     const loadGraphData = useCallback(async () => {
         setLoading(true);
         try {
@@ -173,6 +163,16 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
                 .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
         });
     }, [items, links, selectedItemId, onNodeClick]);
+
+    useEffect(() => {
+        loadGraphData();
+    }, [loadGraphData]);
+
+    useEffect(() => {
+        if (!loading && items.length > 0) {
+            renderGraph();
+        }
+    }, [items, links, selectedItemId, loading, renderGraph]);
 
     const handleZoomIn = () => {
         if (!svgRef.current) return;

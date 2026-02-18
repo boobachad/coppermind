@@ -38,7 +38,7 @@ const NodeWrapper = ({ children, label, icon: Icon, selected, id }: { children: 
           style={{ color: 'var(--text-tertiary)' }}
           onClick={(e) => {
             e.stopPropagation();
-            deleteElements({ nodes: [{ id }] });
+            (deleteElements as (opts: { nodes: { id: string }[] }) => void)({ nodes: [{ id }] });
           }}
           title="Delete Node"
         >
@@ -195,9 +195,10 @@ export function NodesPage() {
       if (exists.length > 0) {
         // Update (simplified) - in real app we'd update position on drag end
       } else {
+        const nodePosition = node.position as { x: number; y: number };
         await db.execute(
           'INSERT INTO nodes (id, type, data, position_x, position_y, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-          [node.id, node.type, JSON.stringify(node.data), node.position.x, node.position.y, Date.now()]
+          [node.id, node.type, JSON.stringify(node.data), nodePosition.x, nodePosition.y, Date.now()]
         );
       }
     } catch (err) {
@@ -220,10 +221,11 @@ export function NodesPage() {
     setEdges((eds: Edge[]) => addEdge(params, eds));
     // Save edge to DB
     if (db) {
-      const edge = { ...params, id: uuidv4() };
+      const edge = { ...(params as unknown as Record<string, unknown>), id: uuidv4() };
+      const edgeWithProps = edge as unknown as { id: string; source: string; target: string };
       db.execute(
         'INSERT INTO edges (id, source, target, type, created_at) VALUES (?, ?, ?, ?)',
-        [edge.id, edge.source, edge.target, 'default', Date.now()]
+        [edgeWithProps.id, edgeWithProps.source, edgeWithProps.target, 'default', Date.now()]
       );
     }
   }, [db, setEdges]);
@@ -293,11 +295,11 @@ export function NodesPage() {
     [reactFlowInstance, addNode]
   );
 
-  const updateNodeData = (id: string, data: any) => {
+  const updateNodeData = (id: string, data: unknown) => {
     setNodes((nds: Node[]) =>
       nds.map((node: Node) => {
         if (node.id === id) {
-          return { ...node, data: { ...node.data, ...data } };
+          return { ...node, data: { ...(node.data as Record<string, unknown>), ...(data as Record<string, unknown>) } };
         }
         return node;
       })

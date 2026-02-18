@@ -124,7 +124,8 @@ export const MindMapTreeExtension = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(TreeMindMapComponent);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ReactNodeViewRenderer(TreeMindMapComponent as any);
   },
 });
 

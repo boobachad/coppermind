@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
-import tippy from 'tippy.js';
+import tippy, { Instance as TippyInstance } from 'tippy.js';
 
 interface TableControlsProps {
   editor: Editor;
@@ -10,8 +10,8 @@ export function TableControls({ editor }: TableControlsProps) {
   const [tableEl, setTableEl] = useState<HTMLTableElement | null>(null);
   const horizRef = useRef<HTMLDivElement | null>(null);
   const vertRef = useRef<HTMLDivElement | null>(null);
-  const horizTip = useRef<any>(null);
-  const vertTip = useRef<any>(null);
+  const horizTip = useRef<TippyInstance | null>(null);
+  const vertTip = useRef<TippyInstance | null>(null);
 
   useEffect(() => {
     const updateTableEl = () => {

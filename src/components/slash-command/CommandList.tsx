@@ -2,7 +2,16 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { CommandItemProps } from './items';
 import clsx from 'clsx';
 
-export default forwardRef((props: any, ref) => {
+interface CommandListProps {
+  items: CommandItemProps[];
+  command: (item: CommandItemProps) => void;
+}
+
+interface CommandListRef {
+  onKeyDown: (props: { event: KeyboardEvent }) => boolean;
+}
+
+const CommandList = forwardRef<CommandListRef, CommandListProps>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const selectItem = (index: number) => {
@@ -57,3 +66,7 @@ export default forwardRef((props: any, ref) => {
     </div>
   );
 });
+
+CommandList.displayName = 'CommandList';
+
+export default CommandList;
