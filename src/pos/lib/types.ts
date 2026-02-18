@@ -254,9 +254,9 @@ export interface KnowledgeMetadata {
 
 export interface KnowledgeItem {
     id: string;
-    itemType: 'Link' | 'Problem' | 'NoteRef' | 'StickyRef' | 'Collection';
+    itemType: 'Link' | 'Problem' | 'NoteRef' | 'StickyRef' | 'Quest';
     source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
-    content: string;              // URL or Text or JSON array for Collections
+    content: string;              // URL or Text or JSON array for Quests
     metadata: KnowledgeMetadata | null;  // Title, Tags, Difficulty, RelatedItemIds
     status: 'Inbox' | 'Planned' | 'Completed' | 'Archived';
     nextReviewDate: string | null;  // ISO 8601 UTC

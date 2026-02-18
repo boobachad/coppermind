@@ -162,7 +162,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                                 <SelectItem value="Link">Link</SelectItem>
                                 <SelectItem value="Problem">Problem</SelectItem>
                                 <SelectItem value="NoteRef">Note Reference</SelectItem>
-                                <SelectItem value="Collection">Collection</SelectItem>
+                                <SelectItem value="Quest">Quest</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

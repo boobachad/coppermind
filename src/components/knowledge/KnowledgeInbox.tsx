@@ -183,7 +183,7 @@ export function KnowledgeInbox() {
                             <SelectItem value="Link">Links</SelectItem>
                             <SelectItem value="Problem">Problems</SelectItem>
                             <SelectItem value="NoteRef">Note References</SelectItem>
-                            <SelectItem value="Collection">Collections</SelectItem>
+                            <SelectItem value="Quest">Quests</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

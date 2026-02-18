@@ -12,9 +12,9 @@ use crate::pos::utils::gen_id;
 #[serde(rename_all = "camelCase")]
 pub struct KnowledgeItemRow {
     pub id: String,
-    pub item_type: String,           // "Link" | "Problem" | "NoteRef" | "StickyRef" | "Collection"
+    pub item_type: String,           // "Link" | "Problem" | "NoteRef" | "StickyRef" | "Quest"
     pub source: String,              // "ActivityLog" | "Manual" | "BrowserExtension" | "Journal"
-    pub content: String,             // URL or Text or JSON array of URLs for Collections
+    pub content: String,             // URL or Text or JSON array of URLs for Quests
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>, // Title, Tags, Difficulty, RelatedItemIds
     pub status: String,              // "Inbox" | "Planned" | "Completed" | "Archived"
     pub next_review_date: Option<DateTime<Utc>>,

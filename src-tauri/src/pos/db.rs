@@ -213,7 +213,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     // ─── Knowledge Base - Items ─────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS knowledge_items (
         id                  TEXT PRIMARY KEY,
-        item_type           TEXT NOT NULL CHECK (item_type IN ('Link', 'Problem', 'NoteRef', 'StickyRef', 'Collection')),
+        item_type           TEXT NOT NULL CHECK (item_type IN ('Link', 'Problem', 'NoteRef', 'StickyRef', 'Quest')),
         source              TEXT NOT NULL CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal')),
         content             TEXT NOT NULL,
         metadata            JSONB,

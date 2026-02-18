@@ -17,7 +17,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                 return <LinkIcon className="w-4 h-4" />;
             case 'Problem':
                 return <FileText className="w-4 h-4" />;
-            case 'Collection':
+            case 'Quest':
                 return <Folder className="w-4 h-4" />;
             default:
                 return <FileText className="w-4 h-4" />;
