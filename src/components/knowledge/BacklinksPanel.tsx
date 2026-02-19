@@ -8,7 +8,7 @@ import { generatePreview } from '@/lib/kb-utils';
 
 interface BacklinksPanelProps {
     itemId: string;
-    onItemClick?: (itemId: string) => void;
+    onItemClick?: (item: KnowledgeItem) => void;
 }
 
 export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
@@ -98,7 +98,7 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                 background: 'var(--glass-bg-subtle)',
                 border: '1px solid var(--glass-border)',
             }}
-            onClick={() => onItemClick?.(item.id)}
+            onClick={() => onItemClick?.(item)}
         >
             <div className="flex items-start gap-2">
                 <div className="flex-shrink-0 mt-1">

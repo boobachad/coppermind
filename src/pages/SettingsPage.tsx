@@ -50,7 +50,7 @@ export function SettingsPage() {
   const handleExport = async () => {
     try {
       const db = await getDb();
-      const notes = await db.select<Array<{ title: string; content: string; updated_at: string }>>(
+      const notes = await db.select<Array<{ title: string; content: string; updated_at: number | null }>>(
         'SELECT title, content, updated_at FROM notes ORDER BY updated_at DESC'
       );
 
@@ -70,7 +70,7 @@ export function SettingsPage() {
         filename += '.json';
         mimeType = 'application/json';
       } else if (exportFormat === 'html') {
-        content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Notes Export</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:2rem;color:var(--text-primary)}h1{border-bottom:1px solid var(--border-primary)}hr{border:1px solid var(--border-primary)}</style></head><body>${notes.map(n => `<h1>${n.title || 'Untitled'}</h1><div>${n.content || ''}</div><hr>`).join('')}</body></html>`;
+        content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Notes Export</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:auto;padding:2rem;color:#1a1a1f}h1{margin-top:2rem;border-bottom:1px solid #e5e7eb;padding-bottom:0.5rem}hr{border:none;border-top:1px solid #e5e7eb;margin:2rem 0}</style></head><body>${notes.map(n => `<h1>${n.title || 'Untitled'}</h1><div>${n.content || ''}</div><hr>`).join('')}</body></html>`;
         filename += '.html';
         mimeType = 'text/html';
       }

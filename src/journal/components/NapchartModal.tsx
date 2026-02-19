@@ -77,8 +77,9 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
     const getThemeColor = () => {
       // Check computed style on html to catch 'dark' class variables safely
       const style = getComputedStyle(document.documentElement);
+      // Canvas drawing APIs cannot resolve CSS variable strings — resolve to actual value
       const color = style.getPropertyValue('--text-primary').trim();
-      return color || 'var(--text-primary)';
+      return color || '#1a1a1f';
     };
 
     try {

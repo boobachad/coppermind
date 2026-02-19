@@ -55,12 +55,11 @@ export function DailyProblemsPicker() {
   const addToGoals = async (rec: DailyRecommendation) => {
     try {
       await invoke('create_unified_goal', {
-        goal: {
+        req: {
           text: `Solve ${rec.onlineJudge}: ${rec.problemName}`,
-          for_date: getLocalDateString(),
+          dueDate: `${getLocalDateString()}T00:00:00Z`,
           priority: 'medium',
-          category: 'coding_codeforces',
-          problem_url: rec.problemUrl,
+          problemId: rec.problemUrl,
         },
       });
       setGoalAdded(rec.problemId);

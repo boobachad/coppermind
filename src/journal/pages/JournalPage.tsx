@@ -60,12 +60,6 @@ export default function JournalPage() {
       return;
     }
 
-    const isPast = new Date(today) < new Date(getLocalDateString());
-    if (isPast) {
-      toast.error('Cannot create entries for past dates');
-      return;
-    }
-
     try {
       const db = await getDb();
       const id = genId();

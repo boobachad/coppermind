@@ -17,12 +17,13 @@ export default function GitHubPage() {
     const [sortBy, setSortBy] = useState<'commits' | 'stars' | 'updated'>('commits');
     const [languageFilter, setLanguageFilter] = useState<string>('all');
     const [username, setUsername] = useState<string | null>(null);
+    const [configLoaded, setConfigLoaded] = useState(false);
 
     useEffect(() => {
-        // Load GitHub username from config first, then fetch data
         invoke<{ githubUsername: string | null }>('get_pos_config')
             .then((cfg) => {
                 setUsername(cfg.githubUsername);
+                setConfigLoaded(true);
             })
             .catch((err) => {
                 console.error('Failed to load config:', err);
@@ -31,10 +32,10 @@ export default function GitHubPage() {
     }, []);
 
     useEffect(() => {
-        if (username !== null) {
+        if (configLoaded) {
             loadData();
         }
-    }, [username, sortBy, languageFilter]);
+    }, [configLoaded, sortBy, languageFilter]);
 
     async function loadData() {
         if (!username) {

@@ -22,10 +22,11 @@ interface KnowledgeGraphProps {
     selectedItemId?: string | null;
     onNodeClick?:    (item: KnowledgeItem) => void;
     onDateClick?:    (date: string) => void;
+    onDataLoaded?:   (data: YearlyGraphData) => void;
     year?:           number;
 }
 
-export function KnowledgeGraph({ selectedItemId, onNodeClick, onDateClick, year }: KnowledgeGraphProps) {
+export function KnowledgeGraph({ selectedItemId, onNodeClick, onDateClick, onDataLoaded, year }: KnowledgeGraphProps) {
     const targetYear = year ?? new Date().getFullYear();
     const canvasRef  = useRef<HTMLCanvasElement>(null);
 
@@ -202,6 +203,7 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick, onDateClick, year 
         setLoading(true);
         try {
             const data = await invoke<YearlyGraphData>('get_yearly_graph_data', { year: targetYear });
+            onDataLoaded?.(data);
             const total = data.activities.length + data.goals.length + data.submissions.length
                 + data.kbItems.length + data.retrospectives.length
                 + data.journalEntries.length + data.notes.length;

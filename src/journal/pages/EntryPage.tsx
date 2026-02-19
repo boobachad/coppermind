@@ -139,7 +139,7 @@ export default function EntryPage() {
 
   if (!entry) return null;
 
-  const isPast = new Date(date!) < new Date(getLocalDateString());
+  const isPast = date! < getLocalDateString();
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>

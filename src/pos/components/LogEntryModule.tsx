@@ -254,7 +254,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         await invoke('create_unified_goal', {
                             req: {
                                 text: title,
-                                date: goalDate,
+                                dueDate: `${goalDate}T00:00:00Z`,
                                 urgent: false,
                                 priority: 'medium',
                             }

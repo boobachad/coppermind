@@ -53,12 +53,11 @@ export default function LadderView() {
   const handleAddToGoals = async (problem: CFLadderProblem) => {
     try {
       await invoke('create_unified_goal', {
-        goal: {
+        req: {
           text: `Solve ${problem.onlineJudge}: ${problem.problemName}`,
-          for_date: getLocalDateString(),
+          dueDate: `${getLocalDateString()}T00:00:00Z`,
           priority: 'medium',
-          category: 'coding_codeforces',
-          problem_url: problem.problemUrl,
+          problemId: problem.problemUrl,
         },
       });
       setGoalAdded(problem.id);

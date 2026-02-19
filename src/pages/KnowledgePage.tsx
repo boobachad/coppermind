@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { BookOpen, Network, Link2 } from 'lucide-react';
 import { KnowledgeInbox } from '../components/knowledge/KnowledgeInbox';
 import { KnowledgeGraph } from '../components/knowledge/KnowledgeGraph';
@@ -15,9 +15,8 @@ export default function KnowledgePage() {
     const [isModalOpen,  setIsModalOpen]  = useState(false);
     const [editingItem,  setEditingItem]  = useState<KnowledgeItem | null>(null);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
-    // graphData ref shared between KnowledgeGraph and DateSummaryPanel —
-    // avoids re-fetching when the panel opens
-    const graphDataRef = useRef<YearlyGraphData | null>(null);
+    // graphData state: KnowledgeGraph populates it via onDataLoaded; DateSummaryPanel reads it
+    const [graphData,    setGraphData]    = useState<YearlyGraphData | null>(null);
 
     const tabs: { key: KBTab; label: string; icon: React.ReactNode }[] = [
         { key: 'inbox',     label: 'Inbox',     icon: <BookOpen size={16} /> },
@@ -86,13 +85,14 @@ export default function KnowledgePage() {
                         {/* DateSummaryPanel slides in from the left */}
                         <DateSummaryPanel
                             date={selectedDate}
-                            graphData={graphDataRef.current}
+                            graphData={graphData}
                             onClose={() => setSelectedDate(null)}
                         />
                         <KnowledgeGraph
                             selectedItemId={selectedItem?.id ?? null}
                             onNodeClick={handleNodeClick}
                             onDateClick={handleDateClick}
+                            onDataLoaded={setGraphData}
                         />
                     </div>
                 )}
@@ -131,7 +131,7 @@ export default function KnowledgePage() {
                                 </div>
                                 <BacklinksPanel
                                     itemId={selectedItem.id}
-                                    onItemClick={(id) => setSelectedItem({ ...selectedItem, id })}
+                                    onItemClick={(item) => setSelectedItem(item)}
                                 />
                             </div>
                         ) : (
