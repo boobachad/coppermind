@@ -157,6 +157,8 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS original_date TEXT",
     "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS is_debt BOOLEAN DEFAULT FALSE",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_parent ON unified_goals(parent_goal_id) WHERE parent_goal_id IS NOT NULL",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS due_date_local TEXT",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS recurring_template_id TEXT",
     // Unique constraint: one recurring instance per template per local date
     // Uses DO block because ADD CONSTRAINT IF NOT EXISTS is only available in PG 17+
     r#"DO $$
