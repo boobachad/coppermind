@@ -40,6 +40,7 @@ reqwest = { version = "0.12", features = ["json"] }
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 regex = "1.10"
+scraper = "0.25.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

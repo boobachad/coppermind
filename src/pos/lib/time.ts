@@ -43,12 +43,7 @@ export function getLocalDateString(): string {
  */
 export function formatLocalAsUTC(localDate: Date): string {
     const iso = localDate.toISOString();
-    console.log('[formatLocalAsUTC]', {
-        localTime: `${localDate.getHours()}:${localDate.getMinutes()}`,
-        localString: localDate.toString(),
-        utcISO: iso,
-        utcTime: `${localDate.getUTCHours()}:${localDate.getUTCMinutes()}`
-    });
+
     return iso;
 }
 
@@ -59,11 +54,6 @@ export function formatLocalAsUTC(localDate: Date): string {
  */
 export function parseActivityTime(isoString: string): Date {
     const date = new Date(isoString);
-    console.log('[parseActivityTime]', {
-        utcISO: isoString,
-        localTime: `${date.getHours()}:${date.getMinutes()}`,
-        localString: date.toString()
-    });
     return date;
 }
 

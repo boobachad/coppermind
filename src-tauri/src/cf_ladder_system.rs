@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use scraper::{Html, Selector};
+use scraper::{Html, Selector, ElementRef};
 
 use crate::PosDb;
 use crate::pos::error::{PosError, db_context};
@@ -81,34 +81,35 @@ pub fn parse_ladder_html(html: &str) -> Result<(String, Option<String>, Vec<Pars
     let document = Html::parse_document(html);
     
     // Extract title
-    let title_sel = Selector::parse("title").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
+    let title_sel = Selector::parse("title").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
     let title = document.select(&title_sel)
         .next()
-        .map(|el| el.text().collect::<String>())
+        .map(|el: ElementRef| el.text().collect::<String>())
         .unwrap_or_default()
         .trim()
         .to_string();
     
     // Extract description from table if exists
-    let desc_sel = Selector::parse("table tr td[colspan]").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
+    let desc_sel = Selector::parse("table tr td[colspan]").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
     let description = document.select(&desc_sel)
-        .filter(|el| el.text().collect::<String>().contains("Description"))
+        .filter(|el: &ElementRef| el.text().collect::<String>().contains("Description"))
         .next()
-        .map(|el| el.text().collect::<String>().trim().to_string());
+        .map(|el: ElementRef| el.text().collect::<String>().trim().to_string());
     
     // Parse problem table
-    let table_sel = Selector::parse("table").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
-    let row_sel = Selector::parse("tr").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
-    let cell_sel = Selector::parse("td").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
-    let link_sel = Selector::parse("a").map_err(|_| PosError::BadRequest("Invalid selector".into()))?;
+    let table_sel = Selector::parse("table").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
+    let row_sel = Selector::parse("tr").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
+    let cell_sel = Selector::parse("td").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
+    let link_sel = Selector::parse("a").map_err(|_| PosError::InvalidInput("Invalid selector".into()))?;
     
     let mut problems = Vec::new();
     
     for table in document.select(&table_sel) {
-        for (idx, row) in table.select(&row_sel).enumerate() {
+        let rows = table.select(&row_sel);
+        for (idx, row) in rows.enumerate() {
             if idx == 0 { continue; } // Skip header
             
-            let cells: Vec<_> = row.select(&cell_sel).collect();
+            let cells: Vec<ElementRef> = row.select(&cell_sel).collect();
             if cells.len() < 3 { continue; }
             
             // Column 1: Position/ID
@@ -184,11 +185,11 @@ pub async fn import_ladder_from_html(
 ) -> Result<CFLadderRow, PosError> {
     let (title, description, problems) = parse_ladder_html(&req.html_content)?;
     
-    let ladder_id = gen_id("lad");
+    let ladder_id = gen_id();
     let now = Utc::now();
     
     // Insert ladder
-    sqlx::query(
+    sqlx::query::<sqlx::Postgres>(
         "INSERT INTO cf_ladders (id, name, description, source, problem_count, created_at)
          VALUES ($1, $2, $3, $4, $5, $6)"
     )
@@ -198,14 +199,14 @@ pub async fn import_ladder_from_html(
     .bind(&req.source)
     .bind(problems.len() as i32)
     .bind(now)
-    .execute(&**db)
+    .execute(&db.0)
     .await
-    .map_err(db_context("insert cf_ladder"))?;
+    .map_err(|e| db_context("insert cf_ladder", e))?;
     
     // Insert problems
     for problem in problems {
-        let problem_row_id = gen_id("ladp");
-        sqlx::query(
+        let problem_row_id = gen_id();
+        sqlx::query::<sqlx::Postgres>(
             "INSERT INTO cf_ladder_problems 
              (id, ladder_id, problem_id, problem_name, problem_url, position, difficulty, online_judge, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
@@ -219,19 +220,19 @@ pub async fn import_ladder_from_html(
         .bind(problem.difficulty)
         .bind(&problem.judge)
         .bind(now)
-        .execute(&**db)
+        .execute(&db.0)
         .await
-        .map_err(db_context("insert cf_ladder_problem"))?;
+        .map_err(|e| db_context("insert cf_ladder_problem", e))?;
     }
     
     // Fetch and return
-    let ladder = sqlx::query_as::<_, CFLadderRow>(
+    let ladder = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
         "SELECT * FROM cf_ladders WHERE id = $1"
     )
     .bind(&ladder_id)
-    .fetch_one(&**db)
+    .fetch_one(&db.0)
     .await
-    .map_err(db_context("fetch cf_ladder"))?;
+    .map_err(|e| db_context("fetch cf_ladder", e))?;
     
     Ok(ladder)
 }
@@ -240,12 +241,12 @@ pub async fn import_ladder_from_html(
 pub async fn get_ladders(
     db: State<'_, PosDb>,
 ) -> Result<Vec<CFLadderRow>, PosError> {
-    let ladders = sqlx::query_as::<_, CFLadderRow>(
+    let ladders = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
         "SELECT * FROM cf_ladders ORDER BY created_at DESC"
     )
-    .fetch_all(&**db)
+    .fetch_all(&db.0)
     .await
-    .map_err(db_context("fetch cf_ladders"))?;
+    .map_err(|e| db_context("fetch cf_ladders", e))?;
     
     Ok(ladders)
 }
@@ -255,13 +256,13 @@ pub async fn get_ladder_problems(
     ladder_id: String,
     db: State<'_, PosDb>,
 ) -> Result<Vec<CFLadderProblemRow>, PosError> {
-    let problems = sqlx::query_as::<_, CFLadderProblemRow>(
+    let problems = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
         "SELECT * FROM cf_ladder_problems WHERE ladder_id = $1 ORDER BY position"
     )
     .bind(&ladder_id)
-    .fetch_all(&**db)
+    .fetch_all(&db.0)
     .await
-    .map_err(db_context("fetch cf_ladder_problems"))?;
+    .map_err(|e| db_context("fetch cf_ladder_problems", e))?;
     
     Ok(problems)
 }
@@ -271,12 +272,12 @@ pub async fn track_ladder_progress(
     req: TrackProgressRequest,
     db: State<'_, PosDb>,
 ) -> Result<CFLadderProgressRow, PosError> {
-    let progress_id = gen_id("ladprog");
+    let progress_id = gen_id();
     let now = Utc::now();
     
     // Upsert progress
     let progress = if req.solved {
-        sqlx::query_as::<_, CFLadderProgressRow>(
+        sqlx::query_as::<sqlx::Postgres, CFLadderProgressRow>(
             "INSERT INTO cf_ladder_progress (id, ladder_id, problem_id, solved_at, attempts, created_at)
              VALUES ($1, $2, $3, $4, 1, $5)
              ON CONFLICT (ladder_id, problem_id) 
@@ -288,11 +289,11 @@ pub async fn track_ladder_progress(
         .bind(&req.problem_id)
         .bind(Some(now))
         .bind(now)
-        .fetch_one(&**db)
+        .fetch_one(&db.0)
         .await
-        .map_err(db_context("track cf_ladder_progress"))?
+        .map_err(|e| db_context("track cf_ladder_progress", e))?
     } else {
-        sqlx::query_as::<_, CFLadderProgressRow>(
+        sqlx::query_as::<sqlx::Postgres, CFLadderProgressRow>(
             "INSERT INTO cf_ladder_progress (id, ladder_id, problem_id, attempts, created_at)
              VALUES ($1, $2, $3, 1, $4)
              ON CONFLICT (ladder_id, problem_id) 
@@ -303,9 +304,9 @@ pub async fn track_ladder_progress(
         .bind(&req.ladder_id)
         .bind(&req.problem_id)
         .bind(now)
-        .fetch_one(&**db)
+        .fetch_one(&db.0)
         .await
-        .map_err(db_context("track cf_ladder_progress"))?
+        .map_err(|e| db_context("track cf_ladder_progress", e))?
     };
     
     Ok(progress)
@@ -317,23 +318,23 @@ pub async fn get_ladder_stats(
     db: State<'_, PosDb>,
 ) -> Result<LadderStats, PosError> {
     // Get total problems
-    let total: i32 = sqlx::query_scalar(
+    let total: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
         "SELECT COUNT(*) FROM cf_ladder_problems WHERE ladder_id = $1"
     )
     .bind(&ladder_id)
-    .fetch_one(&**db)
+    .fetch_one(&db.0)
     .await
-    .map_err(db_context("count cf_ladder_problems"))?;
+    .map_err(|e| db_context("count cf_ladder_problems", e))?;
     
     // Get solved count
-    let solved: i32 = sqlx::query_scalar(
+    let solved: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
         "SELECT COUNT(*) FROM cf_ladder_progress 
          WHERE ladder_id = $1 AND solved_at IS NOT NULL"
     )
     .bind(&ladder_id)
-    .fetch_one(&**db)
+    .fetch_one(&db.0)
     .await
-    .map_err(db_context("count solved problems"))?;
+    .map_err(|e| db_context("count solved problems", e))?;
     
     let percentage = if total > 0 {
         (solved as f64 / total as f64) * 100.0
@@ -342,8 +343,8 @@ pub async fn get_ladder_stats(
     };
     
     Ok(LadderStats {
-        total_problems: total,
-        solved_count: solved,
+        total_problems: total as i32,
+        solved_count: solved as i32,
         progress_percentage: percentage,
     })
 }

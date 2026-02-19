@@ -57,7 +57,7 @@ export function GoalStats({ goals }: GoalStatsProps) {
                 </div>
                 <p className="text-4xl font-bold text-(--text-primary)">{stats.debt}</p>
             </div>
-            <div className="h-32">
+            <div className="h-32 w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie

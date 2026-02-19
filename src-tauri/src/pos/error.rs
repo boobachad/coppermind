@@ -10,6 +10,8 @@ pub enum PosError {
     External(String),
 }
 
+pub type PosResult<T> = std::result::Result<T, PosError>;
+
 impl std::fmt::Display for PosError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

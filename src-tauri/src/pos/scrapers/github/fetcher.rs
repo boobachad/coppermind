@@ -1,3 +1,16 @@
+use tauri::State;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use serde::Deserialize;
+
+use crate::{PosDb, PosConfig};
+use crate::pos::error::{PosError, db_context};
+use crate::pos::scrapers::ScraperResponse;
+use super::super::build_http_client;
+use super::db::{insert_repository_from_graphql, update_repository_from_graphql, update_additional_user_stats, fetch_user_contribution_stats_direct};
+use super::types::{GraphQLRepository, GraphQLResponse};
+
+#[tauri::command]
 pub async fn scrape_github(
     db: State<'_, PosDb>,
     config: State<'_, PosConfig>,
@@ -366,4 +379,4 @@ async fn fetch_repos_details(
     Ok(results)
 }
 
-/// Insert new repository from GraphQL data
+

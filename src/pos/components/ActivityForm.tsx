@@ -199,41 +199,55 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium mb-2">Category</label>
-                    <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger className="material-glass-subtle border-none">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="material-glass max-h-[300px] overflow-y-auto">
-                            {Object.entries(ACTIVITY_CATEGORIES)
-                                .sort(([, a], [, b]) => a.localeCompare(b))
-                                .map(([key, value]) => (
-                                    <SelectItem key={key} value={value} className="capitalize">
-                                        {value.replace('_', ' ')}
-                                    </SelectItem>
-                                ))}
-                        </SelectContent>
-                    </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium">Category</label>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 h-10 px-2 rounded-md border border-input bg-(--bg-primary)">
+                            <input
+                                type="checkbox"
+                                id="isProductive"
+                                checked={isProductive}
+                                onChange={(e) => setIsProductive(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <label htmlFor="isProductive" className="text-xs font-medium cursor-pointer select-none whitespace-nowrap">
+                                Productive
+                            </label>
+                        </div>
+                        <Select value={category} onValueChange={setCategory}>
+                            <SelectTrigger className="material-glass-subtle border-none flex-1">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="material-glass max-h-60 overflow-y-auto">
+                                {Object.entries(ACTIVITY_CATEGORIES)
+                                    .sort(([, a], [, b]) => a.localeCompare(b))
+                                    .map(([key, value]) => (
+                                        <SelectItem key={key} value={value} className="capitalize">
+                                            {value.replace('_', ' ')}
+                                        </SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {!editingActivity && (
-                    <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
                         <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                            <SelectTrigger className="material-glass-subtle border-none">
+                            <SelectTrigger className="material-glass-subtle border-none w-full">
                                 <SelectValue placeholder="Select a goal..." />
                             </SelectTrigger>
-                            <SelectContent className="material-glass">
+                            <SelectContent className="material-glass max-h-60 overflow-y-auto">
                                 <SelectItem value="none">-- No Goal --</SelectItem>
                                 {availableGoals.map((g) => (
                                     <SelectItem key={g.id} value={g.id}>
-                                        <span className="flex items-center gap-1">
+                                        <span className="flex items-center gap-1 max-w-[200px] truncate">
                                             {g.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{new Date(g.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}]</span> : null}
-                                            {g.text.substring(0, 35)}{g.text.length > 35 ? '...' : ''}
-                                            {g.urgent && <Flame className="w-3 h-3 text-orange-500" />}
-                                            {g.isDebt && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
+                                            <span className="truncate">{g.text}</span>
+                                            {g.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
+                                            {g.isDebt && <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />}
                                         </span>
                                     </SelectItem>
                                 ))}
@@ -293,19 +307,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                 />
             </div>
 
-            <div className="flex items-center gap-2">
-                <input
-                    type="checkbox"
-                    id="isProductive"
-                    checked={isProductive}
-                    onChange={(e) => setIsProductive(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                    style={{ backgroundColor: 'var(--bg-primary)' }}
-                />
-                <label htmlFor="isProductive" className="text-sm">
-                    Mark as productive
-                </label>
-            </div>
+
 
             <div className="flex gap-2">
                 {editingActivity && (

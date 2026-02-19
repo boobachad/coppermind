@@ -1,4 +1,5 @@
-use crate::{PosDb, PosError};
+use crate::PosDb;
+use crate::pos::error::PosError;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -11,6 +12,22 @@ pub struct ContextItem {
     pub relevance_score: f32,
 }
 
+#[derive(sqlx::FromRow)]
+struct GoalRow {
+    text: String,
+    #[allow(dead_code)]
+    category: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct ContextSearchRow {
+    id: String,
+    item_type: String,
+    content: String,
+    metadata: Option<serde_json::Value>,
+    relevance: Option<f32>,
+}
+
 /// Get relevant knowledge items for a goal based on keywords and tags
 #[tauri::command]
 pub async fn get_context_for_goal(
@@ -20,10 +37,11 @@ pub async fn get_context_for_goal(
     let pool = &db.0;
 
     // Get the goal to extract keywords
-    let goal = sqlx::query!(
-        "SELECT text, category FROM unified_goals WHERE id = $1",
-        goal_id
+    // Get the goal to extract keywords
+    let goal = sqlx::query_as::<_, GoalRow>(
+        "SELECT text, category FROM unified_goals WHERE id = $1"
     )
+    .bind(goal_id.clone())
     .fetch_optional(pool)
     .await
     .map_err(|e| PosError::Database(format!("Failed to fetch goal: {}", e)))?
@@ -47,7 +65,8 @@ pub async fn get_context_for_goal(
     let search_pattern = keywords.join(" | ");
 
     // Query knowledge items with full-text search and relevance scoring
-    let items = sqlx::query!(
+    // Query knowledge items with full-text search and relevance scoring
+    let items = sqlx::query_as::<_, ContextSearchRow>(
         r#"
         SELECT 
             id,
@@ -64,9 +83,9 @@ pub async fn get_context_for_goal(
             AND to_tsvector('english', content || ' ' || COALESCE((metadata->>'title')::text, '')) @@ to_tsquery('english', $1)
         ORDER BY relevance DESC
         LIMIT 5
-        "#,
-        search_pattern
+        "#
     )
+    .bind(search_pattern)
     .fetch_all(pool)
     .await
     .map_err(|e| PosError::Database(format!("Failed to search KB items: {}", e)))?;
@@ -76,9 +95,9 @@ pub async fn get_context_for_goal(
         .map(|row| {
             let title = row
                 .metadata
-                .and_then(|m| m.get("title"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+                .and_then(|m| {
+                    m.get("title").map(|v| v.as_str().unwrap_or("").to_string())
+                });
 
             ContextItem {
                 id: row.id,

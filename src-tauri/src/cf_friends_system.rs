@@ -1,8 +1,9 @@
-use crate::pos::db::PosDb;
+use crate::PosDb;
 use crate::pos::utils::gen_id;
-use crate::PosError;
+use crate::pos::error::PosError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
 use tauri::State;
 
@@ -45,7 +46,7 @@ pub struct SyncFriendRequest {
     pub friend_id: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct FriendsLadderProblem {
     pub problem_id: String,
     pub problem_name: String,
@@ -113,14 +114,14 @@ pub async fn add_cf_friend(
     db: State<'_, PosDb>,
     request: AddFriendRequest,
 ) -> Result<CFFriendRow, PosError> {
-    let pool = &db.pool;
+    let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
     
     // Verify handle exists via CF API
     let _ = fetch_cf_submissions(&request.cf_handle).await?;
     
-    let friend = sqlx::query_as::<_, CFFriendRow>(
+    let friend: CFFriendRow = sqlx::query_as(
         r#"
         INSERT INTO cf_friends (id, cf_handle, name, created_at)
         VALUES ($1, $2, $3, $4)
@@ -144,9 +145,9 @@ pub async fn add_cf_friend(
 pub async fn get_cf_friends(
     db: State<'_, PosDb>,
 ) -> Result<Vec<CFFriendRow>, PosError> {
-    let pool = &db.pool;
+    let pool = &db.0;
     
-    let friends = sqlx::query_as::<_, CFFriendRow>(
+    let friends: Vec<CFFriendRow> = sqlx::query_as(
         r#"
         SELECT * FROM cf_friends
         ORDER BY created_at DESC
@@ -164,10 +165,10 @@ pub async fn sync_cf_friend_submissions(
     db: State<'_, PosDb>,
     request: SyncFriendRequest,
 ) -> Result<i32, PosError> {
-    let pool = &db.pool;
+    let pool = &db.0;
     
     // Get friend
-    let friend = sqlx::query_as::<_, CFFriendRow>(
+    let friend: CFFriendRow = sqlx::query_as(
         "SELECT * FROM cf_friends WHERE id = $1"
     )
     .bind(&request.friend_id)
@@ -176,10 +177,10 @@ pub async fn sync_cf_friend_submissions(
     .map_err(|e| PosError::Database(format!("Friend not found: {}", e)))?;
     
     // Fetch submissions from CF API
-    let submissions = fetch_cf_submissions(&friend.cf_handle).await?;
+    let submissions: Vec<CFSubmission> = fetch_cf_submissions(&friend.cf_handle).await?;
     
     // Filter for AC (Accepted) submissions only
-    let ac_submissions: Vec<_> = submissions
+    let ac_submissions: Vec<CFSubmission> = submissions
         .into_iter()
         .filter(|s| s.verdict.as_deref() == Some("OK"))
         .collect();
@@ -199,7 +200,7 @@ pub async fn sync_cf_friend_submissions(
                 .unwrap_or(Utc::now());
             
             // Insert submission (ignore if duplicate)
-            let result = sqlx::query(
+            let result: PgQueryResult = sqlx::query(
                 r#"
                 INSERT INTO cf_friend_submissions 
                 (id, friend_id, problem_id, problem_name, problem_url, contest_id, problem_index, difficulty, solved_at, created_at)
@@ -218,9 +219,9 @@ pub async fn sync_cf_friend_submissions(
             .bind(solved_at)
             .bind(Utc::now())
             .execute(pool)
-            .await;
+            .await?;
             
-            if result.is_ok() && result.unwrap().rows_affected() > 0 {
+            if result.rows_affected() > 0 {
                 imported_count += 1;
             }
         }
@@ -242,7 +243,7 @@ pub async fn delete_cf_friend(
     db: State<'_, PosDb>,
     friend_id: String,
 ) -> Result<(), PosError> {
-    let pool = &db.pool;
+    let pool = &db.0;
     
     // Delete submissions first
     sqlx::query("DELETE FROM cf_friend_submissions WHERE friend_id = $1")
@@ -269,7 +270,7 @@ pub async fn generate_friends_ladder(
     max_difficulty: Option<i32>,
     limit: Option<i32>,
 ) -> Result<Vec<FriendsLadderProblem>, PosError> {
-    let pool = &db.pool;
+    let pool = &db.0;
     let limit = limit.unwrap_or(100);
     
     // Build query with optional difficulty filters
@@ -308,7 +309,7 @@ pub async fn generate_friends_ladder(
     );
     
     // Execute query (simplified - would need proper parameter binding)
-    let problems = sqlx::query_as::<_, FriendsLadderProblem>(&query)
+    let problems: Vec<FriendsLadderProblem> = sqlx::query_as(&query)
         .bind(&friend_ids[..])
         .bind(min_difficulty.unwrap_or(0))
         .bind(max_difficulty.unwrap_or(4000))

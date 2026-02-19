@@ -1,4 +1,14 @@
-async fn insert_repository_from_graphql(
+// ─── Database Operations for GitHub Scraper ────────────────────────
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use std::collections::HashMap;
+
+// use crate::PosDb; // Unused
+use crate::pos::error::{PosError, db_context};
+use crate::pos::utils::gen_id;
+use super::types::GraphQLRepository;
+
+pub(crate) async fn insert_repository_from_graphql(
     pool: &sqlx::PgPool,
     username: &str,
     repo: &GraphQLRepository,
@@ -58,7 +68,7 @@ async fn insert_repository_from_graphql(
 }
 
 /// Update existing repository from GraphQL data
-async fn update_repository_from_graphql(
+pub(crate) async fn update_repository_from_graphql(
     pool: &sqlx::PgPool,
     id: &str,
     repo: &GraphQLRepository,
@@ -187,7 +197,7 @@ async fn calculate_user_stats(
 }
 
 /// Update additional user stats (stars, languages, top repos) WITHOUT overwriting commit counts
-async fn update_additional_user_stats(
+pub(crate) async fn update_additional_user_stats(
     pool: &sqlx::PgPool,
     username: &str,
 ) -> Result<(), PosError> {
@@ -254,7 +264,7 @@ async fn update_additional_user_stats(
 
 /// Fetch user contribution stats directly from GitHub (separate from repo sync)
 /// This gets accurate all-time stats from GitHub's contribution calendar
-async fn fetch_user_contribution_stats_direct(
+pub(crate) async fn fetch_user_contribution_stats_direct(
     client: &reqwest::Client,
     token: &str,
 ) -> Result<UserContributionStats, PosError> {
@@ -355,12 +365,38 @@ async fn fetch_user_contribution_stats_direct(
     })
 }
 
+#[derive(Debug, Deserialize)]
+struct StatsResponse {
+    data: Option<StatsData>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StatsData {
+    viewer: StatsViewer,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StatsViewer {
+    contributions_collection: YearStats,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct YearStats {
+    total_commit_contributions: i32,
+    total_issue_contributions: i32,
+    total_pull_request_contributions: i32,
+    total_pull_request_review_contributions: i32,
+    total_repositories_with_contributed_commits: i32,
+}
+
 #[derive(Debug)]
-struct UserContributionStats {
-    total_commits: i32,
-    total_prs: i32,
-    total_issues: i32,
-    total_reviews: i32,
-    total_repos: i32,
+pub(crate) struct UserContributionStats {
+    pub total_commits: i32,
+    pub total_prs: i32,
+    pub total_issues: i32,
+    pub total_reviews: i32,
+    pub total_repos: i32,
 }
 

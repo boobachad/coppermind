@@ -283,7 +283,12 @@ pub fn run() {
 
                 match pool_result {
                     Ok(pool) => {
-                        log::info!("[POS] Step 3b: PostgreSQL connected, initializing tables");
+                        log::info!("[POS] Step 3b: PostgreSQL connected, managing PosDb state immediately");
+                        
+                        // Store pool in managed state IMMEDIATELY to prevent "state not managed" panics
+                        handle.manage(PosDb(pool.clone()));
+
+                        log::info!("[POS] Step 3c: Initializing tables (Migrations)");
                         
                         // Create POS tables with retry
                         let init_result = pos::retry::retry_db_operation(
@@ -296,13 +301,7 @@ pub fn run() {
                             return;
                         }
                         
-                        log::info!("[POS] Step 3c: Tables initialized, managing PosDb state");
-                        
-                        // Store pool in managed state
-                        handle.manage(PosDb(pool));
-                        
-                        log::info!("[POS] Step 3d: PosDb state managed successfully");
-                        log::info!("[POS] ✓ PostgreSQL pool ready - all commands should work now");
+                        log::info!("[POS] ✓ Tables initialized successfully");
                     }
                     Err(e) => {
                         log::error!("[POS] Failed to connect to PostgreSQL after retries: {e}");
@@ -332,7 +331,7 @@ pub fn run() {
             pos::submissions::get_submissions,
             pos::scrapers::leetcode::scrape_leetcode,
             pos::scrapers::codeforces::scrape_codeforces,
-            pos::scrapers::github::scrape_github,
+            pos::scrapers::github::fetcher::scrape_github,
             pos::github::get_github_repositories,
             pos::github::get_github_user_stats,
             pos::config::get_pos_config,

@@ -1,15 +1,15 @@
 // Retrospectives System - SPACE Framework Implementation
 // Periodic surveys for qualitative progress tracking
 
-use crate::pos::db::PosDb;
+use crate::PosDb;
 use crate::pos::utils::gen_id;
-use crate::PosError;
+use crate::pos::error::PosError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgQueryResult;
 use tauri::State;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Retrospective {
     pub id: String,
     pub period_type: String, // "weekly" | "monthly"
@@ -37,7 +37,7 @@ pub struct RetrospectiveStats {
 
 // Table creation query
 pub async fn ensure_retrospectives_table(db: &PosDb) -> Result<PgQueryResult, PosError> {
-    sqlx::query(
+    sqlx::query::<sqlx::Postgres>(
         r#"
         CREATE TABLE IF NOT EXISTS retrospectives (
             id TEXT PRIMARY KEY,
@@ -55,12 +55,12 @@ pub async fn ensure_retrospectives_table(db: &PosDb) -> Result<PgQueryResult, Po
 }
 
 pub async fn ensure_retrospectives_indexes(db: &PosDb) -> Result<(), PosError> {
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_retrospectives_period_type ON retrospectives(period_type)")
+    sqlx::query::<sqlx::Postgres>("CREATE INDEX IF NOT EXISTS idx_retrospectives_period_type ON retrospectives(period_type)")
         .execute(&db.0)
         .await
         .map_err(|e| PosError::Database(format!("Failed to create period_type index: {}", e)))?;
 
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_retrospectives_period_start ON retrospectives(period_start)")
+    sqlx::query::<sqlx::Postgres>("CREATE INDEX IF NOT EXISTS idx_retrospectives_period_start ON retrospectives(period_start)")
         .execute(&db.0)
         .await
         .map_err(|e| PosError::Database(format!("Failed to create period_start index: {}", e)))?;
@@ -80,10 +80,10 @@ pub async fn create_retrospective(
         ));
     }
 
-    let id = gen_id("r"); // r = retrospective
+    let id = gen_id(); // r = retrospective
     let now = Utc::now();
 
-    let retrospective = sqlx::query_as::<_, Retrospective>(
+    let retrospective = sqlx::query_as::<sqlx::Postgres, Retrospective>(
         r#"
         INSERT INTO retrospectives (id, period_type, period_start, period_end, questions_data, created_at)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -111,8 +111,8 @@ pub async fn get_retrospectives(
 ) -> Result<Vec<Retrospective>, PosError> {
     let limit = limit.unwrap_or(50).min(100);
 
-    let retrospectives = if let Some(pt) = period_type {
-        sqlx::query_as::<_, Retrospective>(
+    let retrospectives: Vec<Retrospective> = if let Some(pt) = period_type {
+        sqlx::query_as::<sqlx::Postgres, Retrospective>(
             r#"
             SELECT * FROM retrospectives
             WHERE period_type = $1
@@ -125,7 +125,7 @@ pub async fn get_retrospectives(
         .fetch_all(&db.0)
         .await
     } else {
-        sqlx::query_as::<_, Retrospective>(
+        sqlx::query_as::<sqlx::Postgres, Retrospective>(
             r#"
             SELECT * FROM retrospectives
             ORDER BY period_start DESC
@@ -150,7 +150,14 @@ pub async fn get_retrospective_stats(
     // Extract energy and satisfaction from questions_data JSONB
     // Expected format: { "energy": 7, "satisfaction": 8, "deep_work_hours": 25 }
     
-    let result = sqlx::query!(
+    #[derive(sqlx::FromRow)]
+    struct StatsRow {
+        avg_energy: Option<f64>,
+        avg_satisfaction: Option<f64>,
+        total_deep_work: Option<f64>,
+    }
+
+    let result = sqlx::query_as::<_, StatsRow>(
         r#"
         SELECT 
             AVG((questions_data->>'energy')::float) as "avg_energy",
@@ -159,9 +166,9 @@ pub async fn get_retrospective_stats(
         FROM retrospectives
         WHERE period_start >= $1 AND period_end <= $2
         "#,
-        start_date,
-        end_date
     )
+    .bind(start_date)
+    .bind(end_date)
     .fetch_one(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to calculate stats: {}", e)))?;
@@ -183,8 +190,14 @@ async fn calculate_correlation(
     start_date: DateTime<Utc>,
     end_date: DateTime<Utc>,
 ) -> Result<f64, PosError> {
+    #[derive(sqlx::FromRow)]
+    struct CorrelationRow {
+        deep_work: Option<f64>,
+        satisfaction: Option<f64>,
+    }
+
     // Fetch pairs of deep_work_hours and satisfaction
-    let pairs = sqlx::query!(
+    let pairs = sqlx::query_as::<_, CorrelationRow>(
         r#"
         SELECT 
             (questions_data->>'deep_work_hours')::float as "deep_work",
@@ -194,9 +207,9 @@ async fn calculate_correlation(
         AND questions_data->>'deep_work_hours' IS NOT NULL
         AND questions_data->>'satisfaction' IS NOT NULL
         "#,
-        start_date,
-        end_date
     )
+    .bind(start_date)
+    .bind(end_date)
     .fetch_all(pool)
     .await
     .map_err(|e| PosError::Database(format!("Failed to fetch correlation data: {}", e)))?;
@@ -237,7 +250,7 @@ pub async fn delete_retrospective(
     db: State<'_, PosDb>,
     retrospective_id: String,
 ) -> Result<bool, PosError> {
-    let result = sqlx::query("DELETE FROM retrospectives WHERE id = $1")
+    let result: PgQueryResult = sqlx::query::<sqlx::Postgres>("DELETE FROM retrospectives WHERE id = $1")
         .bind(&retrospective_id)
         .execute(&db.0)
         .await

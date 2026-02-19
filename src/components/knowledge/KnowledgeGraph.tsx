@@ -59,8 +59,8 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
         // Create zoom behavior
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
-            .on('zoom', (event) => {
-                g.attr('transform', event.transform);
+            .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+                g.attr('transform', event.transform.toString());
                 setZoomLevel(event.transform.k);
             });
 
@@ -73,7 +73,9 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
             id: item.id,
             label: item.content.substring(0, 30),
             type: item.itemType,
-            item
+            item,
+            x: 0,
+            y: 0
         }));
 
         // Prepare links
@@ -84,15 +86,15 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
         }));
 
         // Create force simulation
-        const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink<GraphNode, GraphLink>(graphLinks).id(d => d.id).distance(100))
+        const simulation = d3.forceSimulation<GraphNode>(nodes)
+            .force('link', d3.forceLink<GraphNode, GraphLink>(graphLinks).id((d: GraphNode) => d.id).distance(100))
             .force('charge', d3.forceManyBody().strength(-300))
             .force('center', d3.forceCenter(width / 2, height / 2))
             .force('collision', d3.forceCollide().radius(40));
 
         // Draw links
         const link = g.append('g')
-            .selectAll('line')
+            .selectAll<SVGLineElement, GraphLink>('line')
             .data(graphLinks)
             .join('line')
             .attr('stroke', 'var(--glass-border)')
@@ -122,8 +124,8 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
 
         // Node circles
         node.append('circle')
-            .attr('r', d => d.id === selectedItemId ? 20 : 15)
-            .attr('fill', d => {
+            .attr('r', (d: GraphNode) => d.id === selectedItemId ? 20 : 15)
+            .attr('fill', (d: GraphNode) => {
                 if (d.id === selectedItemId) return 'var(--color-accent-primary)';
                 switch (d.type) {
                     case 'Link': return 'var(--pos-activity-coding-leetcode)';
@@ -133,9 +135,9 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
                 }
             })
             .attr('stroke', 'var(--glass-border-highlight)')
-            .attr('stroke-width', d => d.id === selectedItemId ? 3 : 1.5)
+            .attr('stroke-width', (d: GraphNode) => d.id === selectedItemId ? 3 : 1.5)
             .style('cursor', 'pointer')
-            .on('click', (_, d) => {
+            .on('click', (_event: MouseEvent, d: GraphNode) => {
                 if (onNodeClick) {
                     onNodeClick(d.item);
                 }
@@ -143,7 +145,7 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
 
         // Node labels
         node.append('text')
-            .text(d => d.label)
+            .text((d: GraphNode) => d.label)
             .attr('x', 0)
             .attr('y', 25)
             .attr('text-anchor', 'middle')
@@ -154,13 +156,13 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick }: KnowledgeGraphPr
         // Update positions on tick
         simulation.on('tick', () => {
             link
-                .attr('x1', d => (d.source as GraphNode).x || 0)
-                .attr('y1', d => (d.source as GraphNode).y || 0)
-                .attr('x2', d => (d.target as GraphNode).x || 0)
-                .attr('y2', d => (d.target as GraphNode).y || 0);
+                .attr('x1', (d: GraphLink) => (d.source as GraphNode).x || 0)
+                .attr('y1', (d: GraphLink) => (d.source as GraphNode).y || 0)
+                .attr('x2', (d: GraphLink) => (d.target as GraphNode).x || 0)
+                .attr('y2', (d: GraphLink) => (d.target as GraphNode).y || 0);
 
             node
-                .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
+                .attr('transform', (d: GraphNode) => `translate(${d.x || 0},${d.y || 0})`);
         });
     }, [items, links, selectedItemId, onNodeClick]);
 

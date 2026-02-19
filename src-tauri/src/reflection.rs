@@ -1,4 +1,4 @@
-use crate::pos::db::PosDb;
+use crate::PosDb;
 use crate::pos::error::{PosError, PosResult};
 use crate::pos::utils::gen_id;
 use chrono::{DateTime, Utc};
@@ -25,7 +25,7 @@ pub struct CreateReflectionInput {
 
 /// Initialize the reflections table
 pub async fn init_reflections_table(db: &PosDb) -> PosResult<()> {
-    sqlx::query(
+    sqlx::query::<sqlx::Postgres>(
         r#"
         CREATE TABLE IF NOT EXISTS goal_reflections (
             id TEXT PRIMARY KEY,
@@ -37,17 +37,17 @@ pub async fn init_reflections_table(db: &PosDb) -> PosResult<()> {
         )
         "#,
     )
-    .execute(&db.pool)
+    .execute(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to create goal_reflections table: {}", e)))?;
 
     // Create index on goal_id for fast lookups
-    sqlx::query(
+    sqlx::query::<sqlx::Postgres>(
         r#"
         CREATE INDEX IF NOT EXISTS idx_reflections_goal_id ON goal_reflections(goal_id)
         "#,
     )
-    .execute(&db.pool)
+    .execute(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to create goal_reflections index: {}", e)))?;
 
@@ -60,15 +60,15 @@ pub async fn create_goal_reflection(
     db: tauri::State<'_, PosDb>,
     input: CreateReflectionInput,
 ) -> PosResult<GoalReflection> {
-    let id = gen_id("r");
+    let id = gen_id();
     let now = Utc::now();
 
     // Check if goal exists
-    let goal_exists: bool = sqlx::query_scalar(
+    let goal_exists: bool = sqlx::query_scalar::<sqlx::Postgres, bool>(
         "SELECT EXISTS(SELECT 1 FROM unified_goals WHERE id = $1)"
     )
     .bind(&input.goal_id)
-    .fetch_one(&db.pool)
+    .fetch_one(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to check goal existence: {}", e)))?;
 
@@ -80,9 +80,9 @@ pub async fn create_goal_reflection(
 
     // Create KB item if requested
     if input.create_kb_item {
-        let kb_id = gen_id("k");
+        let kb_id = gen_id();
         
-        sqlx::query(
+        sqlx::query::<sqlx::Postgres>(
             r#"
             INSERT INTO knowledge_items (id, type, source, content, metadata, status, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -98,7 +98,7 @@ pub async fn create_goal_reflection(
         }).to_string())
         .bind("Completed")
         .bind(&now)
-        .execute(&db.pool)
+        .execute(&db.0)
         .await
         .map_err(|e| PosError::Database(format!("Failed to create KB item: {}", e)))?;
 
@@ -106,7 +106,7 @@ pub async fn create_goal_reflection(
     }
 
     // Insert reflection
-    sqlx::query(
+    sqlx::query::<sqlx::Postgres>(
         r#"
         INSERT INTO goal_reflections (id, goal_id, learning_text, created_at, kb_item_id)
         VALUES ($1, $2, $3, $4, $5)
@@ -117,7 +117,7 @@ pub async fn create_goal_reflection(
     .bind(&input.learning_text)
     .bind(&now)
     .bind(&kb_item_id)
-    .execute(&db.pool)
+    .execute(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to insert reflection: {}", e)))?;
 
@@ -136,7 +136,7 @@ pub async fn get_goal_reflections(
     db: tauri::State<'_, PosDb>,
     goal_id: String,
 ) -> PosResult<Vec<GoalReflection>> {
-    let rows = sqlx::query(
+    let rows: Vec<sqlx::postgres::PgRow> = sqlx::query::<sqlx::Postgres>(
         r#"
         SELECT id, goal_id, learning_text, created_at, kb_item_id
         FROM goal_reflections
@@ -145,13 +145,13 @@ pub async fn get_goal_reflections(
         "#,
     )
     .bind(&goal_id)
-    .fetch_all(&db.pool)
+    .fetch_all(&db.0)
     .await
     .map_err(|e| PosError::Database(format!("Failed to fetch reflections: {}", e)))?;
 
     let reflections = rows
         .into_iter()
-        .map(|row| {
+        .map(|row: sqlx::postgres::PgRow| {
             Ok(GoalReflection {
                 id: row.try_get("id")?,
                 goal_id: row.try_get("goal_id")?,
@@ -172,9 +172,9 @@ pub async fn delete_goal_reflection(
     db: tauri::State<'_, PosDb>,
     reflection_id: String,
 ) -> PosResult<()> {
-    let result = sqlx::query("DELETE FROM goal_reflections WHERE id = $1")
+    let result: sqlx::postgres::PgQueryResult = sqlx::query::<sqlx::Postgres>("DELETE FROM goal_reflections WHERE id = $1")
         .bind(&reflection_id)
-        .execute(&db.pool)
+        .execute(&db.0)
         .await
         .map_err(|e| PosError::Database(format!("Failed to delete reflection: {}", e)))?;
 

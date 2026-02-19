@@ -49,7 +49,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [detectedUrls, setDetectedUrls] = useState<string[]>([]);
     const [urlDuplicates, setUrlDuplicates] = useState<DuplicateCheckResult | null>(null);
     const [showUrlPrompt, setShowUrlPrompt] = useState(false);
-    const [temporalInfo, setTemporalInfo] = useState<{date?: Date; keyword?: string} | null>(null);
+    const [temporalInfo, setTemporalInfo] = useState<{ date?: Date; keyword?: string } | null>(null);
 
     // Existing useEffect hooks (PRESERVED)
     useEffect(() => {
@@ -148,7 +148,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             const urlType = detectUrlType(url);
             // Map lowercase types to proper case
             const itemType = (urlType === 'leetcode' || urlType === 'codeforces') ? 'Problem' : 'Link';
-            
+
             await invoke('create_knowledge_item', {
                 itemType,
                 source: 'ActivityLog',
@@ -365,23 +365,50 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             </div>
 
             {/* EXISTING: Category (UNCHANGED) */}
-            <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
-                <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {Object.entries(ACTIVITY_CATEGORIES).map(([key, value]) => (
-                            <SelectItem key={value} value={value}>
-                                {key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            {/* Row 1: Category & Goal Link */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium">Category</label>
+                    <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger className="material-glass-subtle border-none">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent className="material-glass max-h-60 overflow-y-auto">
+                            {Object.entries(ACTIVITY_CATEGORIES)
+                                .sort(([, a], [, b]) => a.localeCompare(b))
+                                .map(([key, value]) => (
+                                    <SelectItem key={value} value={value} className="capitalize">
+                                        {value.replace('_', ' ')}
+                                    </SelectItem>
+                                ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
+                    <Select value={selectedGoalId} onValueChange={handleGoalChange}>
+                        <SelectTrigger className="material-glass-subtle border-none w-full">
+                            <SelectValue placeholder="Select a goal" />
+                        </SelectTrigger>
+                        <SelectContent className="material-glass max-h-60 overflow-y-auto">
+                            <SelectItem value="none">-- No Goal --</SelectItem>
+                            {availableGoals.map(goal => (
+                                <SelectItem key={goal.id} value={goal.id}>
+                                    <span className="flex items-center gap-1 max-w-[200px] truncate">
+                                        {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{new Date(goal.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}]</span> : null}
+                                        <span className="truncate">{goal.text}</span>
+                                        {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
+                                        {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
+                                    </span>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            {/* ENHANCED: Title with URL detection */}
+            {/* Row 2: Title */}
             <div>
                 <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                     Title
@@ -400,7 +427,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 />
             </div>
 
-            {/* ENHANCED: Description with temporal keywords */}
+            {/* Row 3: Description */}
             <div>
                 <label className="block text-sm font-medium mb-2">Description (Optional)</label>
                 <Textarea
@@ -411,22 +438,19 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 />
             </div>
 
-            {/* EXISTING: Link to Goal (UNCHANGED) */}
-            <div>
-                <label className="block text-sm font-medium mb-2">Link to Goal (Optional)</label>
-                <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select a goal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {availableGoals.map(goal => (
-                            <SelectItem key={goal.id} value={goal.id}>
-                                {goal.text}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            {/* Row 4: Productive Checkbox */}
+            <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    id="isProductive"
+                    checked={isProductive}
+                    onChange={(e) => setIsProductive(e.target.checked)}
+                    className="w-4 h-4 rounded border-input"
+                    style={{ backgroundColor: 'var(--bg-primary)' }}
+                />
+                <label htmlFor="isProductive" className="text-sm cursor-pointer select-none">
+                    Mark as productive
+                </label>
             </div>
 
             {/* EXISTING: Metrics (UNCHANGED) */}
@@ -451,27 +475,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     ))}
                 </div>
             )}
-
-            {/* EXISTING: Productive Toggle (UNCHANGED) */}
-            <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4" style={{ color: isProductive ? 'var(--color-success)' : 'var(--text-tertiary)' }} />
-                    <span className="text-sm font-medium">Productive Activity</span>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setIsProductive(!isProductive)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        isProductive ? 'bg-green-600' : 'bg-gray-300'
-                    }`}
-                >
-                    <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            isProductive ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                    />
-                </button>
-            </div>
 
             {/* EXISTING: Submit Buttons (UNCHANGED) */}
             <div className="flex gap-2">

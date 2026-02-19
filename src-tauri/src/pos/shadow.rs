@@ -171,7 +171,7 @@ pub async fn process_submissions(
 /// Finds an unverified goal with matching category AND has metrics that need completion.
 /// Returns (goal_id, metric_id) for the best match, or None.
 async fn match_goal_by_keyword(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    conn: &mut sqlx::PgConnection,
     date: &str,
     category: &str,
 ) -> Result<Option<(String, String)>, PosError> {
@@ -199,7 +199,7 @@ async fn match_goal_by_keyword(
     )
     .bind(date)
     .bind(format!("%{}%", keyword))
-    .fetch_optional(&mut **tx)
+    .fetch_optional(&mut *conn)
     .await
     .map_err(|e| db_context("match_goal_by_keyword", e))?;
 

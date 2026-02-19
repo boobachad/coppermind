@@ -140,19 +140,12 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0"
-        style={{ backgroundColor: 'var(--glass-bg)' }}
+        className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-all duration-300"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div
-        className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-xl p-6 border shadow-2xl"
-        style={{
-          backgroundColor: 'var(--surface-primary)',
-          borderColor: 'var(--glass-border)',
-        }}
-      >
+      <div className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-xl p-6 material-glass animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>

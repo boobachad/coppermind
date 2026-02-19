@@ -68,6 +68,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         category          TEXT,
         created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
+    "ALTER TABLE pos_goals ADD COLUMN IF NOT EXISTS category TEXT",
     "CREATE INDEX IF NOT EXISTS idx_pos_goals_date       ON pos_goals (date)",
     "CREATE INDEX IF NOT EXISTS idx_pos_goals_problem_id ON pos_goals (problem_id)",
     "CREATE INDEX IF NOT EXISTS idx_pos_goals_category   ON pos_goals (category) WHERE category IS NOT NULL",
@@ -149,6 +150,12 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_due_date ON unified_goals(due_date)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS parent_goal_id TEXT",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS metrics JSONB",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS linked_activity_ids JSONB",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS labels JSONB",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS original_date TEXT",
+    "ALTER TABLE unified_goals ADD COLUMN IF NOT EXISTS is_debt BOOLEAN DEFAULT FALSE",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_parent ON unified_goals(parent_goal_id) WHERE parent_goal_id IS NOT NULL",
     // Unique constraint: one recurring instance per template per local date
     // Uses DO block because ADD CONSTRAINT IF NOT EXISTS is only available in PG 17+
