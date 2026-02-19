@@ -362,10 +362,27 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         id              TEXT PRIMARY KEY,
         friend_id       TEXT NOT NULL REFERENCES cf_friends(id) ON DELETE CASCADE,
         problem_id      TEXT NOT NULL,
-        verdict         TEXT NOT NULL,
+        problem_name    TEXT NOT NULL DEFAULT '',
+        problem_url     TEXT NOT NULL DEFAULT '',
+        contest_id      INTEGER,
+        problem_index   TEXT NOT NULL DEFAULT '',
+        difficulty      INTEGER,
+        verdict         TEXT NOT NULL DEFAULT 'OK',
         submission_time TIMESTAMPTZ NOT NULL,
-        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_friend_problem UNIQUE (friend_id, problem_id)
     )",
+    // Migrate existing tables (safe: IF NOT EXISTS / IF NOT ALREADY EXISTS)
+    "ALTER TABLE cf_friend_submissions ADD COLUMN IF NOT EXISTS problem_name TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE cf_friend_submissions ADD COLUMN IF NOT EXISTS problem_url TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE cf_friend_submissions ADD COLUMN IF NOT EXISTS contest_id INTEGER",
+    "ALTER TABLE cf_friend_submissions ADD COLUMN IF NOT EXISTS problem_index TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE cf_friend_submissions ADD COLUMN IF NOT EXISTS difficulty INTEGER",
+    r#"DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_friend_problem') THEN
+            ALTER TABLE cf_friend_submissions ADD CONSTRAINT uq_friend_problem UNIQUE (friend_id, problem_id);
+        END IF;
+    END $$"#,
     "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_friend_id ON cf_friend_submissions(friend_id)",
     "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_problem_id ON cf_friend_submissions(problem_id)",
     "CREATE INDEX IF NOT EXISTS idx_cf_friend_submissions_time ON cf_friend_submissions(submission_time DESC)",
@@ -391,4 +408,15 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
     "CREATE INDEX IF NOT EXISTS idx_cf_daily_recommendations_date ON cf_daily_recommendations(date DESC)",
+
+    // ─── Category Progress Tracking ─────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS cf_category_progress (
+        id              TEXT PRIMARY KEY,
+        category_id     TEXT NOT NULL REFERENCES cf_categories(id) ON DELETE CASCADE,
+        problem_id      TEXT NOT NULL,
+        solved_at       TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT unique_category_problem UNIQUE (category_id, problem_id)
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_cf_category_progress_category_id ON cf_category_progress(category_id)",
 ];

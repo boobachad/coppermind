@@ -71,8 +71,41 @@ pub struct TrackProgressRequest {
 #[serde(rename_all = "camelCase")]
 pub struct LadderStats {
     pub total_problems: i32,
-    pub solved_count: i32,
+    pub solved: i32,
+    pub attempted: i32,
+    pub unsolved: i32,
     pub progress_percentage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CFCategoryRow {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub problem_count: i32,
+    pub created_at: DateTime<Utc>,
+    #[sqlx(default)]
+    pub solved_count: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCategoryRequest {
+    pub html_content: String,
+    pub category_name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyRecommendation {
+    pub problem_id: String,
+    pub problem_name: String,
+    pub problem_url: String,
+    pub online_judge: String,
+    pub difficulty: Option<i32>,
+    pub reason: String,
+    pub strategy: String,
 }
 
 // ─── HTML Parser ────────────────────────────────────────────────────
