@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
 import { Loader } from '@/components/Loader';
-import { JournalEntry } from '../types';
 import { getLocalDateString, formatDateDDMMYYYY } from '../../pos/lib/time';
+import { JournalEntry } from '../types';
 import { getDb } from '../../lib/db';
 
 function genId(): string {
@@ -60,7 +60,7 @@ export default function JournalPage() {
       return;
     }
 
-    const isPast = new Date(today) < new Date(new Date().toISOString().split('T')[0]);
+    const isPast = new Date(today) < new Date(getLocalDateString());
     if (isPast) {
       toast.error('Cannot create entries for past dates');
       return;

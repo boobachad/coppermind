@@ -35,8 +35,6 @@ export const PDFExtension = Node.create({
   addNodeView() {
     return ReactNodeViewRenderer(({ node }) => {
       const openPdf = () => {
-        // Mock opening for now
-        console.log("Opening PDF:", node.attrs.src);
         if (node.attrs.src) {
           window.open(node.attrs.src, '_blank');
         }

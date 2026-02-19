@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { AlertTriangle, Calendar, ArrowRight, CheckCircle, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnifiedGoal } from '../lib/types';
-import { formatDateDDMMYYYY } from '../lib/time';
+import { formatDateDDMMYYYY, getLocalDateString } from '../lib/time';
 
 interface DebtTrailItem {
     date: string;
@@ -38,7 +38,7 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
     const loadDebtTrail = async () => {
         setLoading(true);
         try {
-            const end = endDate || new Date().toISOString().split('T')[0];
+            const end = endDate || getLocalDateString();
             const result = await invoke<DebtTrailItem[]>('get_debt_trail', {
                 endDate: end,
                 daysBack,

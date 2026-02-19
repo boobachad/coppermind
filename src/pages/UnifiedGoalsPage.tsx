@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { getLocalDateString } from '../pos/lib/time';
 import clsx from 'clsx';
 import { UnifiedGoal } from '../pos/lib/types';
 import { Loader } from '../components/Loader';
@@ -23,7 +23,7 @@ export function UnifiedGoalsPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'priority' | 'due'>('newest');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
   const [editingGoal, setEditingGoal] = useState<UnifiedGoal | null>(null);
 
   useEffect(() => {
@@ -173,7 +173,7 @@ export function UnifiedGoalsPage() {
             <div className="w-[180px]">
               <DatePicker
                 date={selectedDate ? new Date(selectedDate) : undefined}
-                setDate={(date) => setSelectedDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                setDate={(date) => setSelectedDate(date ? `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}` : '')}
                 placeholder="Filter by date"
               />
             </div>

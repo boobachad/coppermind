@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
 import type { Activity } from '../lib/types';
+import { getLocalDateString } from '../lib/time';
 
 interface HeatmapData {
   date: string;
@@ -191,7 +192,7 @@ export function ActivityHeatmap() {
         <div className="grid grid-flow-col gap-6 auto-cols-max overflow-x-auto custom-scrollbar pb-4 px-2">
           {monthsData.map((month, monthIndex) => {
             const columns = chunkedDays(month.days, 7);
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateString();
             return (
               <div key={`${month.name}-${monthIndex}`} className="flex flex-col gap-1">
                 <div className="text-[10px] uppercase font-bold text-(--text-tertiary) mb-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">{month.name}</div>

@@ -342,7 +342,8 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         position        INTEGER NOT NULL,
         difficulty      INTEGER,
         online_judge    TEXT NOT NULL DEFAULT 'Codeforces',
-        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_category_problem UNIQUE (category_id, problem_id)
     )",
     "CREATE INDEX IF NOT EXISTS idx_cf_category_problems_category_id ON cf_category_problems(category_id)",
 

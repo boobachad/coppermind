@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../lib/ThemeContext';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { syncAllTables, isPgConnected } from '../lib/pgSync';
+import { getDb } from '../lib/db';
 import {
   Monitor,
   Download,
@@ -13,6 +14,7 @@ import {
   DatabaseZap,
   RefreshCw
 } from 'lucide-react';
+import { formatTime } from '../pos/lib/time';
 
 
 export function SettingsPage() {
@@ -24,7 +26,6 @@ export function SettingsPage() {
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('md');
-  const { alert } = useConfirmDialog();
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
@@ -33,7 +34,7 @@ export function SettingsPage() {
     try {
       await syncAllTables();
       if (isPgConnected()) {
-        setLastSyncTime(new Date().toLocaleTimeString());
+        setLastSyncTime(formatTime(new Date()));
       }
     } catch (err) {
       console.error('[Settings] Manual sync failed:', err);
@@ -48,8 +49,46 @@ export function SettingsPage() {
   }, [uiScale]);
 
   const handleExport = async () => {
-    await alert(`Exporting as .${exportFormat} (Feature coming soon!)`, 'Export');
-    setShowExportModal(false);
+    try {
+      const db = await getDb();
+      const notes = await db.select<Array<{ title: string; content: string; updated_at: string }>>(
+        'SELECT title, content, updated_at FROM notes ORDER BY updated_at DESC'
+      );
+
+      let content = '';
+      let filename = 'notes-export';
+      let mimeType = 'text/plain';
+
+      if (exportFormat === 'md') {
+        content = notes.map(n => `# ${n.title || 'Untitled'}\n\n${n.content || ''}\n\n---\n`).join('\n');
+        filename += '.md';
+        mimeType = 'text/markdown';
+      } else if (exportFormat === 'txt') {
+        content = notes.map(n => `${n.title || 'Untitled'}\n${'='.repeat((n.title || 'Untitled').length)}\n\n${n.content || ''}\n\n`).join('\n');
+        filename += '.txt';
+      } else if (exportFormat === 'json') {
+        content = JSON.stringify(notes, null, 2);
+        filename += '.json';
+        mimeType = 'application/json';
+      } else if (exportFormat === 'html') {
+        content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Notes Export</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:2rem;color:var(--text-primary)}h1{border-bottom:1px solid var(--border-primary)}hr{border:1px solid var(--border-primary)}</style></head><body>${notes.map(n => `<h1>${n.title || 'Untitled'}</h1><div>${n.content || ''}</div><hr>`).join('')}</body></html>`;
+        filename += '.html';
+        mimeType = 'text/html';
+      }
+
+      // Use browser download API (works in Tauri webview without extra plugins)
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[Settings] Export failed:', err);
+    } finally {
+      setShowExportModal(false);
+    }
   };
 
   return (
@@ -94,7 +133,7 @@ export function SettingsPage() {
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       )}
-                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: '#FDF6E3', borderColor: '#D6D0C0' }}></div>
+                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-solarized-bg)', borderColor: 'var(--theme-preview-solarized-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'solarized-light' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Solarized</span>
                     </div>
                   </button>
@@ -114,7 +153,7 @@ export function SettingsPage() {
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       )}
-                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: '#F0F7FF', borderColor: '#E2E8F0' }}></div>
+                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-blue-bg)', borderColor: 'var(--theme-preview-blue-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'blue-light' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Blue Light</span>
                     </div>
                   </button>
@@ -134,7 +173,7 @@ export function SettingsPage() {
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       )}
-                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: '#0a0a0a', borderColor: '#262626' }}></div>
+                      <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-dark-bg)', borderColor: 'var(--theme-preview-dark-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'dark' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Dark</span>
                     </div>
                   </button>
@@ -237,7 +276,7 @@ export function SettingsPage() {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} onClick={() => setShowExportModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'var(--overlay-bg)' }} onClick={() => setShowExportModal(false)}>
           <div className="rounded-lg shadow-xl max-w-md w-full overflow-hidden border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }} onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-color)' }}>
               <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Export Notes</h3>
@@ -246,14 +285,13 @@ export function SettingsPage() {
               </button>
             </div>
             <div className="p-5">
-              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Select the format you'd like to export your notes in:</p>
-
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Select the format to export your notes:</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { id: 'md', label: 'Markdown', ext: '.md' },
-                  { id: 'pdf', label: 'PDF Document', ext: '.pdf' },
-                  { id: 'txt', label: 'Plain Text', ext: '.txt' },
-                  { id: 'img', label: 'Image', ext: '.png' },
+                  { id: 'md',   label: 'Markdown',   ext: '.md'   },
+                  { id: 'txt',  label: 'Plain Text',  ext: '.txt'  },
+                  { id: 'json', label: 'JSON',        ext: '.json' },
+                  { id: 'html', label: 'HTML',        ext: '.html' },
                 ].map(fmt => (
                   <button
                     key={fmt.id}
@@ -263,7 +301,6 @@ export function SettingsPage() {
                       borderColor: exportFormat === fmt.id ? 'var(--pos-info-border)' : 'var(--border-color)',
                       backgroundColor: exportFormat === fmt.id ? 'var(--pos-info-bg)' : 'var(--bg-primary)',
                       color: exportFormat === fmt.id ? 'var(--pos-info-text)' : 'var(--text-primary)',
-                      ...(exportFormat === fmt.id && { ringColor: 'var(--pos-info-border)' })
                     }}
                   >
                     <div className="font-bold text-lg">{fmt.ext}</div>

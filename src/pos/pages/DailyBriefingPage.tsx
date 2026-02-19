@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Sun, Target, Book, Clock, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnifiedGoal, KnowledgeItem } from '../lib/types';
-import { getLocalDateString, formatDateDDMMYYYY } from '../lib/time';
+import { getLocalDateString, formatDateDDMMYYYY, getDayName } from '../lib/time';
 import { Loader } from '@/components/Loader';
 import { ReflectionPrompt } from '@/components/goal/ReflectionPrompt';
 
@@ -117,7 +117,7 @@ export function DailyBriefingPage() {
                         Good Morning
                     </h1>
                     <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
-                        {formatDateDDMMYYYY(new Date())} - {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+                        {formatDateDDMMYYYY(new Date())} - {getDayName(getLocalDateString())}
                     </p>
                 </div>
 

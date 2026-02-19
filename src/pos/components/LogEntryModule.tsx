@@ -8,7 +8,7 @@ import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, Link2, Calendar, AlertCircle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal, Activity, DuplicateCheckResult } from '../lib/types';
-import { formatLocalAsUTC } from '../lib/time';
+import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
 import { extractUrls, detectUrlType, parseTemporalKeywords } from '@/lib/kb-utils';
 import { toast } from 'sonner';
 
@@ -135,7 +135,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         if (temporal) {
             setTemporalInfo(temporal);
             toast.info(`Detected temporal keyword: "${temporal.keyword}"`, {
-                description: `Will create goal for ${temporal.date.toLocaleDateString()}`,
+                description: `Will create goal for ${formatDateDDMMYYYY(temporal.date)}`,
             });
         } else {
             setTemporalInfo(null);
@@ -249,7 +249,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 // NEW: Create goal from temporal keyword
                 if (temporalInfo?.date) {
                     try {
-                        const goalDate = temporalInfo.date.toISOString().split('T')[0];
+                        const d = temporalInfo.date;
+                        const goalDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                         await invoke('create_unified_goal', {
                             req: {
                                 text: title,

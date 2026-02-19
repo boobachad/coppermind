@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
 import { Loader } from '@/components/Loader';
+import { getLocalDateString } from '../../pos/lib/time';
 import { JournalEntry, NapchartData } from '../types';
 import ScheduleViewer from '../components/ScheduleViewer';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -138,7 +139,7 @@ export default function EntryPage() {
 
   if (!entry) return null;
 
-  const isPast = new Date(date!) < new Date(new Date().toISOString().split('T')[0]);
+  const isPast = new Date(date!) < new Date(getLocalDateString());
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>

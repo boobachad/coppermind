@@ -112,6 +112,25 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
 
+  /* Semantic overlay & subtle-tint variables (derived from above) */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-bg-heavy: rgba(0, 0, 0, 0.6);
+  --color-error-subtle: rgba(239, 68, 68, 0.1);
+  --color-error-subtle-heavy: rgba(239, 68, 68, 0.8);
+  --color-error-subtle-faint: rgba(239, 68, 68, 0.05);
+  --color-success-subtle: rgba(16, 185, 129, 0.1);
+  --color-accent-subtle: rgba(79, 70, 229, 0.1);
+  --color-shadow-subtle: rgba(0, 0, 0, 0.1);
+  --color-shadow-line: rgba(0, 0, 0, 0.05);
+
+  /* Theme-swatch preview colors (fixed per-theme, used in SettingsPage only) */
+  --theme-preview-solarized-bg: #fdf6e3;
+  --theme-preview-solarized-border: #d6d0c0;
+  --theme-preview-blue-bg: #f0f7ff;
+  --theme-preview-blue-border: #e2e8f0;
+  --theme-preview-dark-bg: #0a0a0a;
+  --theme-preview-dark-border: #262626;
+
   /* Legacy POS Colors (Mapped to Variables) */
   --pos-heatmap-level-1: #0e4429;
   --pos-heatmap-level-2: #006d32;
