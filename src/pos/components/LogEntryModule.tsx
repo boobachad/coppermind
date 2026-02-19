@@ -376,7 +376,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         <SelectContent className="material-glass max-h-60 overflow-y-auto">
                             {Object.entries(ACTIVITY_CATEGORIES)
                                 .sort(([, a], [, b]) => a.localeCompare(b))
-                                .map(([key, value]) => (
+                                .map(([_key, value]) => (
                                     <SelectItem key={value} value={value} className="capitalize">
                                         {value.replace('_', ' ')}
                                     </SelectItem>

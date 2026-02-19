@@ -16,6 +16,7 @@ mod reflection;
 mod retrospectives;
 mod cf_ladder_system;
 mod cf_friends_system;
+mod cf_recommendations;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -347,6 +348,7 @@ pub fn run() {
             knowledge_base::delete_knowledge_item,
             knowledge_base::create_knowledge_link,
             knowledge_base::get_knowledge_links,
+            knowledge_base::delete_knowledge_link,
             knowledge_base::check_knowledge_duplicates,
             monthly_goals::create_monthly_goal,
             monthly_goals::get_monthly_goals,
@@ -377,6 +379,10 @@ pub fn run() {
             cf_ladder_system::get_ladder_problems,
             cf_ladder_system::track_ladder_progress,
             cf_ladder_system::get_ladder_stats,
+            cf_ladder_system::get_ladder_by_id,
+            cf_recommendations::get_categories,
+            cf_recommendations::import_categories_from_html,
+            cf_recommendations::get_daily_recommendations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

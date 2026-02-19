@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Plus, RefreshCw, Trash2, Users, AlertCircle } from 'lucide-react';
 import type { CFFriend } from '../../pos/lib/types';
+import { formatDateDDMMYYYY } from '../../pos/lib/time';
 
 export function FriendsManager() {
   const [friends, setFriends] = useState<CFFriend[]>([]);
@@ -39,8 +40,10 @@ export function FriendsManager() {
     try {
       setError(null);
       await invoke('add_cf_friend', {
-        handle: newHandle.trim(),
-        displayName: newDisplayName.trim() || newHandle.trim(),
+        request: {
+          cfHandle: newHandle.trim(),
+          displayName: newDisplayName.trim() || newHandle.trim(),
+        },
       });
       setNewHandle('');
       setNewDisplayName('');
@@ -242,14 +245,14 @@ export function FriendsManager() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>
-                    {friend.display_name}
+                    {friend.displayName}
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                    @{friend.cf_handle}
+                    @{friend.cfHandle}
                   </p>
                 </div>
                 <button
-                  onClick={() => handleDelete(friend.id, friend.display_name)}
+                  onClick={() => handleDelete(friend.id, friend.displayName ?? friend.cfHandle)}
                   className="p-2 rounded-lg hover:scale-110 transition-transform"
                   style={{
                     backgroundColor: 'var(--surface-secondary)',
@@ -264,14 +267,14 @@ export function FriendsManager() {
                 <div className="flex justify-between text-sm">
                   <span style={{ color: 'var(--text-secondary)' }}>Submissions:</span>
                   <span style={{ color: 'var(--text-primary)' }}>
-                    {friend.submission_count || 0}
+                    {friend.submissionCount || 0}
                   </span>
                 </div>
-                {friend.last_synced_at && (
+                {friend.lastSynced && (
                   <div className="flex justify-between text-sm">
                     <span style={{ color: 'var(--text-secondary)' }}>Last synced:</span>
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                      {new Date(friend.last_synced_at).toLocaleDateString()}
+                      {formatDateDDMMYYYY(new Date(friend.lastSynced))}
                     </span>
                   </div>
                 )}

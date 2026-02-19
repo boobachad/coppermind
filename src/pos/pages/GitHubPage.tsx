@@ -15,14 +15,32 @@ export default function GitHubPage() {
     const [syncing, setSyncing] = useState(false);
     const [sortBy, setSortBy] = useState<'commits' | 'stars' | 'updated'>('commits');
     const [languageFilter, setLanguageFilter] = useState<string>('all');
-
-    const username = 'boobachad'; // TODO: Get from config
+    const [username, setUsername] = useState<string | null>(null);
 
     useEffect(() => {
-        loadData();
-    }, [sortBy, languageFilter]);
+        // Load GitHub username from config first, then fetch data
+        invoke<{ githubUsername: string | null }>('get_pos_config')
+            .then((cfg) => {
+                setUsername(cfg.githubUsername);
+            })
+            .catch((err) => {
+                console.error('Failed to load config:', err);
+                setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        if (username !== null) {
+            loadData();
+        }
+    }, [username, sortBy, languageFilter]);
 
     async function loadData() {
+        if (!username) {
+            toast.error('GitHub username not configured', { description: 'Set GITHUB_USERNAME in your environment.' });
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
 

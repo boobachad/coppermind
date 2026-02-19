@@ -314,6 +314,28 @@ pub async fn get_knowledge_links(
     Ok(rows)
 }
 
+/// Delete a knowledge link
+#[tauri::command]
+pub async fn delete_knowledge_link(
+    db: State<'_, PosDb>,
+    link_id: String,
+) -> Result<(), PosError> {
+    let pool = &db.0;
+
+    let result = sqlx::query("DELETE FROM knowledge_links WHERE id = $1")
+        .bind(&link_id)
+        .execute(pool)
+        .await
+        .map_err(|e| db_context("delete_knowledge_link", e))?;
+
+    if result.rows_affected() == 0 {
+        return Err(PosError::NotFound(format!("Link not found: {}", link_id)));
+    }
+
+    log::info!("[KB] Deleted knowledge link {}", link_id);
+    Ok(())
+}
+
 /// Check for duplicate URLs in knowledge items
 #[tauri::command]
 pub async fn check_knowledge_duplicates(

@@ -384,35 +384,43 @@ export interface RetrospectiveStats {
 
 // ─── Codeforces Ladder System ────────────────────────────────────
 
+/** Matches Rust CFLadderRow (serde camelCase) */
 export interface CFLadder {
     id: string;
-    title: string;
-    description: string;
-    difficulty: number;
+    name: string;
+    description: string | null;
+    ratingMin: number | null;
+    ratingMax: number | null;
+    difficulty: number | null;
+    source: string;
+    problemCount: number;
     createdAt: string;
 }
 
+/** Matches Rust CFLadderProblemRow (serde camelCase) */
 export interface CFLadderProblem {
     id: string;
     ladderId: string;
     position: number;
-    name: string;
-    url: string;
+    problemId: string;
+    problemName: string;
+    problemUrl: string;
+    difficulty: number | null;
     onlineJudge: string;
-    difficulty: number;
-    problemId: string | null; // Extracted from URL for CF problems
-    status?: 'unsolved' | 'attempted' | 'solved'; // From progress join
+    createdAt: string;
+    status?: 'unsolved' | 'attempted' | 'solved'; // enriched client-side
 }
 
 export interface CFLadderProgress {
     id: string;
     ladderId: string;
     problemId: string;
-    status: 'unsolved' | 'attempted' | 'solved';
-    attemptedAt: string | null;
     solvedAt: string | null;
+    attempts: number;
+    createdAt: string;
 }
 
+/** Matches Rust LadderStats (serde camelCase) */
 export interface LadderStats {
     totalProblems: number;
     solved: number;
@@ -423,13 +431,49 @@ export interface LadderStats {
 
 export interface ImportLadderRequest {
     htmlContent: string;
+    source: string;
 }
 
+/** Matches Rust CFFriendRow (serde camelCase) */
 export interface CFFriend {
     id: string;
-    cf_handle: string;
-    display_name: string;
-    submission_count: number;
-    last_synced_at: string | null;
-    created_at: string;
+    cfHandle: string;
+    displayName: string | null;
+    currentRating: number | null;
+    maxRating: number | null;
+    lastSynced: string | null;
+    createdAt: string;
+    submissionCount: number | null;
+}
+
+/** Matches Rust CFCategoryRow (serde camelCase) */
+export interface CFCategory {
+    id: string;
+    name: string;
+    description: string | null;
+    problemCount: number;
+    createdAt: string;
+    solvedCount: number;
+}
+
+/** Matches Rust DailyRecommendation (serde camelCase) */
+export interface DailyRecommendation {
+    problemId: string;
+    problemName: string;
+    problemUrl: string;
+    onlineJudge: string;
+    difficulty: number | null;
+    reason: string;
+    strategy: string;
+}
+
+/** Matches Rust FriendsLadderProblem (serde camelCase) */
+export interface FriendsLadderProblem {
+    problemId: string;
+    problemName: string;
+    problemUrl: string;
+    difficulty: number | null;
+    solveCount: number;
+    solvedBy: string[];
+    mostRecentSolve: string | null;
 }

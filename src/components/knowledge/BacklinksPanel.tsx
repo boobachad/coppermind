@@ -14,13 +14,19 @@ interface BacklinksPanelProps {
 export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
     const [incomingLinks, setIncomingLinks] = useState<KnowledgeItem[]>([]);
     const [outgoingLinks, setOutgoingLinks] = useState<KnowledgeItem[]>([]);
+    const [rawLinks, setRawLinks] = useState<KnowledgeLink[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [targetId, setTargetId] = useState('');
+    const [linkType, setLinkType] = useState<'related' | 'blocks' | 'requires'>('related');
+    const [adding, setAdding] = useState(false);
 
     const loadBacklinks = useCallback(async () => {
         setLoading(true);
         try {
             // Get all links for this item
             const links = await invoke<KnowledgeLink[]>('get_knowledge_links', { itemId });
+            setRawLinks(links);
             
             // Separate incoming and outgoing
             const incomingIds = links
@@ -52,16 +58,39 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
         loadBacklinks();
     }, [itemId, loadBacklinks]);
 
-    const handleRemoveLink = async () => {
+    const handleRemoveLink = async (linkId: string) => {
         try {
-            // Note: Delete link command to be implemented in next phase
-            toast.info('Remove link functionality coming soon');
+            await invoke('delete_knowledge_link', { linkId });
+            toast.success('Link removed');
+            await loadBacklinks();
         } catch (err) {
             toast.error('Failed to remove link', { description: String(err) });
         }
     };
 
-    const renderLinkItem = (item: KnowledgeItem, direction: 'incoming' | 'outgoing') => (
+    const handleAddLink = async () => {
+        if (!targetId.trim()) return;
+        setAdding(true);
+        try {
+            await invoke('create_knowledge_link', {
+                req: { sourceId: itemId, targetId: targetId.trim(), linkType },
+            });
+            toast.success('Link created');
+            setTargetId('');
+            setShowAddForm(false);
+            await loadBacklinks();
+        } catch (err) {
+            toast.error('Failed to create link', { description: String(err) });
+        } finally {
+            setAdding(false);
+        }
+    };
+
+    const renderLinkItem = (item: KnowledgeItem, direction: 'incoming' | 'outgoing') => {
+        const link = rawLinks.find(l =>
+            direction === 'incoming' ? l.sourceId === item.id : l.targetId === item.id
+        );
+        return (
         <div
             key={item.id}
             className="group p-3 rounded transition-all hover:shadow-md cursor-pointer"
@@ -105,7 +134,7 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                     size="sm"
                     onClick={(e) => {
                         e.stopPropagation();
-                        handleRemoveLink();
+                        if (link) handleRemoveLink(link.id);
                     }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{
@@ -118,7 +147,8 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                 </Button>
             </div>
         </div>
-    );
+        );
+    };
 
     return (
         <div className="h-full flex flex-col">
@@ -140,7 +170,7 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                     </h3>
                     <Button
                         size="sm"
-                        onClick={() => toast.info('Add link UI coming soon')}
+                        onClick={() => setShowAddForm((v) => !v)}
                         style={{
                             background: 'transparent',
                             border: '1px solid var(--glass-border)',
@@ -158,6 +188,43 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                     {incomingLinks.length + outgoingLinks.length} total links
                 </div>
             </div>
+
+            {/* Add Link Form */}
+            {showAddForm && (
+                <div
+                    className="p-3 border-b space-y-2"
+                    style={{ background: 'var(--surface-secondary)', borderColor: 'var(--glass-border)' }}
+                >
+                    <input
+                        type="text"
+                        placeholder="Target item ID"
+                        value={targetId}
+                        onChange={(e) => setTargetId(e.target.value)}
+                        className="w-full px-2 py-1 rounded text-sm"
+                        style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)' }}
+                    />
+                    <select
+                        value={linkType}
+                        onChange={(e) => setLinkType(e.target.value as 'related' | 'blocks' | 'requires')}
+                        className="w-full px-2 py-1 rounded text-sm"
+                        style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)' }}
+                    >
+                        <option value="related">Related</option>
+                        <option value="blocks">Blocks</option>
+                        <option value="requires">Requires</option>
+                    </select>
+                    <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAddLink} disabled={adding || !targetId.trim()}
+                            style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', flex: 1 }}>
+                            {adding ? 'Adding…' : 'Create Link'}
+                        </Button>
+                        <Button size="sm" onClick={() => setShowAddForm(false)}
+                            style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }}>
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

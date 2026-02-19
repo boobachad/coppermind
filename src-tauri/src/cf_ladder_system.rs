@@ -350,7 +350,6 @@ pub async fn get_ladder_stats(
     ladder_id: String,
     db: State<'_, PosDb>,
 ) -> Result<LadderStats, PosError> {
-    // Get total problems
     let total: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
         "SELECT COUNT(*) FROM cf_ladder_problems WHERE ladder_id = $1"
     )
@@ -358,26 +357,51 @@ pub async fn get_ladder_stats(
     .fetch_one(&db.0)
     .await
     .map_err(|e| db_context("count cf_ladder_problems", e))?;
-    
-    // Get solved count
+
     let solved: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
-        "SELECT COUNT(*) FROM cf_ladder_progress 
-         WHERE ladder_id = $1 AND solved_at IS NOT NULL"
+        "SELECT COUNT(*) FROM cf_ladder_progress WHERE ladder_id = $1 AND solved_at IS NOT NULL"
     )
     .bind(&ladder_id)
     .fetch_one(&db.0)
     .await
-    .map_err(|e| db_context("count solved problems", e))?;
-    
-    let percentage = if total > 0 {
-        (solved as f64 / total as f64) * 100.0
-    } else {
-        0.0
-    };
-    
+    .map_err(|e| db_context("count solved", e))?;
+
+    let attempted: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
+        "SELECT COUNT(*) FROM cf_ladder_progress WHERE ladder_id = $1 AND solved_at IS NULL"
+    )
+    .bind(&ladder_id)
+    .fetch_one(&db.0)
+    .await
+    .map_err(|e| db_context("count attempted", e))?;
+
+    let unsolved = (total - solved - attempted).max(0);
+    let percentage = if total > 0 { (solved as f64 / total as f64) * 100.0 } else { 0.0 };
+
     Ok(LadderStats {
         total_problems: total as i32,
-        solved_count: solved as i32,
+        solved: solved as i32,
+        attempted: attempted as i32,
+        unsolved: unsolved as i32,
         progress_percentage: percentage,
     })
 }
+
+// ─── Ladder by ID ────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn get_ladder_by_id(
+    ladder_id: String,
+    db: State<'_, PosDb>,
+) -> Result<CFLadderRow, PosError> {
+    let ladder = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
+        "SELECT * FROM cf_ladders WHERE id = $1"
+    )
+    .bind(&ladder_id)
+    .fetch_optional(&db.0)
+    .await
+    .map_err(|e| db_context("fetch cf_ladder_by_id", e))?
+    .ok_or_else(|| PosError::NotFound(format!("Ladder not found: {}", ladder_id)))?;
+
+    Ok(ladder)
+}
+

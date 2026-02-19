@@ -196,7 +196,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
         </button>
       )}
 
-      {/* Details Toggle (optional for Phase 2) */}
+      {/* Details Toggle */}
       <button
         onClick={() => setShowDetails(!showDetails)}
         className="w-full mt-2 text-xs underline"
