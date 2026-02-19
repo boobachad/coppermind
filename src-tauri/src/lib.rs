@@ -17,6 +17,7 @@ mod retrospectives;
 mod cf_ladder_system;
 mod cf_friends_system;
 mod cf_recommendations;
+mod date_summary;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -384,6 +385,7 @@ pub fn run() {
             cf_recommendations::import_categories_from_html,
             cf_recommendations::get_category_problems,
             cf_recommendations::get_daily_recommendations,
+            date_summary::get_yearly_graph_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -477,3 +477,83 @@ export interface FriendsLadderProblem {
     solvedBy: string[];
     mostRecentSolve: string | null;
 }
+
+// ─── Yearly Graph Data (from get_yearly_graph_data backend command) ───────
+// Pre-flight O: all field names match Rust #[serde(rename_all = "camelCase")]
+
+export interface ActivitySummary {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    title: string;
+    category: string;
+    startTime: string;      // ISO UTC
+    endTime: string;        // ISO UTC
+    isProductive: boolean;
+}
+
+export interface GoalSummary {
+    id: string;
+    date: string;           // YYYY-MM-DD (from due_date)
+    text: string;
+    completed: boolean;
+    priority: string;
+}
+
+export interface SubmissionSummary {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    platform: string;
+    problemTitle: string;
+    verdict: string;
+    submittedTime: string;  // ISO UTC
+    difficulty: string | null;
+}
+
+export interface KbGraphItem {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    itemType: string;
+    content: string;
+    status: string;
+    createdAt: string;      // ISO UTC
+    metadataTitle: string | null;
+}
+
+export interface KbGraphLink {
+    id: string;
+    sourceId: string;
+    targetId: string;
+    linkType: string;
+}
+
+export interface RetroSummary {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    periodType: string;
+    periodStart: string;    // ISO UTC
+    periodEnd: string;      // ISO UTC
+}
+
+export interface JournalSummary {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    reflectionText: string;
+}
+
+export interface NoteSummary {
+    id: string;
+    date: string;           // YYYY-MM-DD
+    title: string | null;
+    createdAtMs: number;    // BIGINT Unix ms
+}
+
+export interface YearlyGraphData {
+    activities:     ActivitySummary[];
+    goals:          GoalSummary[];
+    submissions:    SubmissionSummary[];
+    kbItems:        KbGraphItem[];
+    kbLinks:        KbGraphLink[];
+    retrospectives: RetroSummary[];
+    journalEntries: JournalSummary[];
+    notes:          NoteSummary[];
+}
