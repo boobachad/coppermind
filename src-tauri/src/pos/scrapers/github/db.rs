@@ -350,7 +350,7 @@ pub(crate) async fn fetch_user_contribution_stats_direct(
             total_repos = total_repos.max(stats.total_repositories_with_contributed_commits);
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(200));
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     }
 
     log::info!("[GITHUB] Fetched all-time stats: {} commits, {} PRs, {} issues, {} reviews across {} repos",

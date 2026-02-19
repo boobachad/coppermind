@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search } from 'lucide-react';
+import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -62,6 +62,14 @@ export function Sidebar() {
     { to: "/journal", icon: BookOpen, label: "Journal" },
   ];
 
+  const cfNavItems = [
+    { to: "/cf/ladders",      icon: List,     label: "Ladders" },
+    { to: "/cf/categories",   icon: Tag,      label: "Categories" },
+    { to: "/cf/friends",      icon: Users,    label: "CF Friends" },
+    { to: "/cf/friends-ladder", icon: Code,   label: "Friends Ladder" },
+    { to: "/cf/daily",        icon: Sparkles, label: "Daily Pick" },
+  ];
+
   const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => (
     <NavLink
       to={to}
@@ -93,6 +101,12 @@ export function Sidebar() {
         <div className="space-y-1">
           <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Menu</div>
           {mainNavItems.map(item => <NavItem key={item.to} {...item} />)}
+        </div>
+
+        {/* Codeforces Section */}
+        <div className="space-y-1">
+          <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Codeforces</div>
+          {cfNavItems.map(item => <NavItem key={item.to} {...item} />)}
         </div>
 
         {/* Notes Section */}

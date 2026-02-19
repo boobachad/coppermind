@@ -6,7 +6,7 @@ import type { CFLadder, CFLadderProblem, LadderStats } from '../../pos/lib/types
 import { getLocalDateString } from '../../pos/lib/time';
 
 export default function LadderView() {
-  const { ladderId } = useParams<{ ladderId: string }>();
+  const { id: ladderId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [ladder, setLadder] = useState<CFLadder | null>(null);
   const [problems, setProblems] = useState<CFLadderProblem[]>([]);

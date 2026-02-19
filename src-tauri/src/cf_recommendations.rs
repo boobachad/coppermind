@@ -110,6 +110,37 @@ pub async fn import_categories_from_html(
     Ok(category)
 }
 
+#[tauri::command]
+pub async fn get_category_problems(
+    db: State<'_, PosDb>,
+    category_id: String,
+) -> PosResult<Vec<CFLadderProblemRow>> {
+    // Reuse CFLadderProblemRow — same shape as cf_category_problems
+    let problems = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
+        r#"
+        SELECT
+            p.id,
+            p.category_id   AS ladder_id,
+            p.problem_id,
+            p.problem_name,
+            p.problem_url,
+            p.position,
+            p.difficulty,
+            p.online_judge,
+            p.created_at
+        FROM cf_category_problems p
+        WHERE p.category_id = $1
+        ORDER BY p.position
+        "#,
+    )
+    .bind(&category_id)
+    .fetch_all(&db.0)
+    .await
+    .map_err(|e| db_context("get_category_problems", e))?;
+
+    Ok(problems)
+}
+
 // ─── Daily Recommendations ───────────────────────────────────────────
 
 #[tauri::command]

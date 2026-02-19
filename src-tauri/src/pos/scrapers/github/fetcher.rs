@@ -229,7 +229,7 @@ async fn fetch_user_contributions(
         }
 
         // Rate limiting between years
-        std::thread::sleep(std::time::Duration::from_millis(200));
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     }
 
     log::info!("[GITHUB] Found total contributions in {} repos across all years", all_contributions.len());
@@ -329,7 +329,7 @@ async fn fetch_repos_details(
             if (status.as_u16() == 502 || status.as_u16() == 503) && attempts < max_attempts {
                 let backoff_ms = 1000 * (2_u64.pow(attempts - 1)); // Exponential backoff
                 log::warn!("[GITHUB] Got {}, retrying in {}ms (attempt {}/{})", status, backoff_ms, attempts, max_attempts);
-                std::thread::sleep(std::time::Duration::from_millis(backoff_ms));
+                tokio::time::sleep(std::time::Duration::from_millis(backoff_ms)).await;
                 continue;
             }
 
@@ -372,7 +372,7 @@ async fn fetch_repos_details(
         page += 1;
 
         // Rate limiting
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
     log::info!("[GITHUB] Matched {} repos with user contributions", results.len());

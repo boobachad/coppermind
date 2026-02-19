@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useNavigate } from 'react-router-dom';
 import { List, Upload, ChevronRight, Code } from 'lucide-react';
 import type { CFLadder, LadderStats } from '../../pos/lib/types';
-import { getLocalDateString } from '../../pos/lib/time';
+import { formatDateDDMMYYYY } from '../../pos/lib/time';
 
 interface LadderWithStats extends CFLadder {
   stats: LadderStats | null;
@@ -14,6 +15,7 @@ export function LadderBrowser() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadLadders();
@@ -136,7 +138,7 @@ export function LadderBrowser() {
               key={ladder.id}
               className="p-6 rounded-xl transition-all hover:scale-[1.02] cursor-pointer"
               style={{ backgroundColor: 'var(--glass-bg)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(8px)' }}
-              onClick={() => { window.location.href = `/ladders/${ladder.id}`; }}
+              onClick={() => navigate(`/cf/ladders/${ladder.id}`)}
             >
               <div className="flex items-center justify-between mb-4">
                 {ladder.difficulty != null && (
@@ -157,7 +159,7 @@ export function LadderBrowser() {
                 <p className="text-sm mb-4 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{ladder.description}</p>
               )}
               <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                {ladder.problemCount} problems · imported {getLocalDateString()}
+                {ladder.problemCount} problems · imported {formatDateDDMMYYYY(new Date(ladder.createdAt))}
               </p>
               {ladder.stats && (
                 <div className="pt-4 border-t" style={{ borderColor: 'var(--border-primary)' }}>

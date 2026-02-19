@@ -48,7 +48,7 @@ where
                 log::warn!("[RETRY] Attempt {}/{} failed: {}. Retrying in {}ms", 
                     attempts, max_attempts, e, delay_ms);
                 
-                std::thread::sleep(Duration::from_millis(delay_ms));
+                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 delay_ms = (delay_ms * 2).min(5000); // Cap at 5 seconds
             }
         }

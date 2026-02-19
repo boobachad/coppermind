@@ -134,7 +134,7 @@ pub async fn add_cf_friend(
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (cf_handle) DO UPDATE
         SET display_name = EXCLUDED.display_name
-        RETURNING *, NULL::bigint AS submission_count
+        RETURNING id, cf_handle, display_name, current_rating, max_rating, last_synced, created_at, NULL::bigint AS submission_count
         "#,
     )
     .bind(&id)
@@ -156,7 +156,8 @@ pub async fn get_cf_friends(
 
     let friends: Vec<CFFriendRow> = sqlx::query_as(
         r#"
-        SELECT f.*,
+        SELECT f.id, f.cf_handle, f.display_name, f.current_rating, f.max_rating,
+               f.last_synced, f.created_at,
                COUNT(s.id)::bigint AS submission_count
         FROM cf_friends f
         LEFT JOIN cf_friend_submissions s ON s.friend_id = f.id

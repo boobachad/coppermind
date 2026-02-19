@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { useNavigate } from 'react-router-dom';
-import { Tag, CheckCircle, TrendingUp, Upload } from 'lucide-react';
-import type { CFCategory } from '../../pos/lib/types';
+import { Tag, CheckCircle, TrendingUp, Upload, ChevronDown, ChevronRight as ChevronRightIcon, ExternalLink } from 'lucide-react';
+import type { CFCategory, CFLadderProblem } from '../../pos/lib/types';
 
 export default function CategoryBrowser() {
-  const navigate = useNavigate();
   const [categories, setCategories] = useState<CFCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [categoryProblems, setCategoryProblems] = useState<Record<string, CFLadderProblem[]>>({});
+  const [loadingProblems, setLoadingProblems] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -35,7 +36,6 @@ export default function CategoryBrowser() {
     setImporting(true);
     try {
       const html = await file.text();
-      // Category name defaults to the HTML title; user can rename later
       await invoke('import_categories_from_html', {
         req: { htmlContent: html, categoryName: null },
       });
@@ -45,6 +45,25 @@ export default function CategoryBrowser() {
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const toggleExpand = async (categoryId: string) => {
+    if (expanded === categoryId) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(categoryId);
+    if (!categoryProblems[categoryId]) {
+      try {
+        setLoadingProblems(categoryId);
+        const problems = await invoke<CFLadderProblem[]>('get_category_problems', { categoryId });
+        setCategoryProblems(prev => ({ ...prev, [categoryId]: problems || [] }));
+      } catch (err) {
+        setError('Failed to load problems: ' + String(err));
+      } finally {
+        setLoadingProblems(null);
+      }
     }
   };
 
@@ -110,54 +129,100 @@ export default function CategoryBrowser() {
       </div>
 
       {categories.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {categories.map((category) => {
             const progress = category.problemCount > 0
               ? Math.round((category.solvedCount / category.problemCount) * 100)
               : 0;
+            const isExpanded = expanded === category.id;
+            const problems = categoryProblems[category.id] || [];
 
             return (
               <div
                 key={category.id}
-                onClick={() => navigate(`/codeforces/categories/${category.id}`)}
                 style={{
                   background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-                  borderRadius: '1rem', padding: '1.5rem', cursor: 'pointer',
-                  transition: 'all 0.2s ease', backdropFilter: 'blur(10px)',
+                  borderRadius: '1rem', overflow: 'hidden', backdropFilter: 'blur(10px)',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.02)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ padding: '0.5rem', background: 'var(--surface-secondary)', borderRadius: '0.5rem' }}>
+                {/* Card header — click to expand */}
+                <div
+                  onClick={() => toggleExpand(category.id)}
+                  style={{ padding: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
+                  <div style={{ padding: '0.5rem', background: 'var(--surface-secondary)', borderRadius: '0.5rem', flexShrink: 0 }}>
                     <Tag size={20} style={{ color: 'var(--color-accent-primary)' }} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
-                      {category.name}
-                    </h3>
-                    {category.description && (
-                      <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.4', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {category.description}
-                      </p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                        {category.name}
+                      </h3>
+                      {progress === 100 && (
+                        <CheckCircle size={16} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                        {category.solvedCount} / {category.problemCount} solved
+                      </span>
+                      <div style={{ flex: 1, height: '6px', background: 'var(--surface-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${progress}%`, background: getProgressColor(progress), transition: 'width 0.3s ease' }} />
+                      </div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: getProgressColor(progress), flexShrink: 0 }}>{progress}%</span>
+                    </div>
+                  </div>
+                  {isExpanded
+                    ? <ChevronDown size={20} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                    : <ChevronRightIcon size={20} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />}
+                </div>
+
+                {/* Expanded problem list */}
+                {isExpanded && (
+                  <div style={{ borderTop: '1px solid var(--border-primary)' }}>
+                    {loadingProblems === category.id ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        Loading problems…
+                      </div>
+                    ) : problems.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        No problems found in this category.
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--surface-secondary)' }}>
+                            {['#', 'Problem', 'Rating', 'Judge', ''].map(h => (
+                              <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {problems.map((p, idx) => (
+                            <tr key={p.id} style={{ borderTop: '1px solid var(--border-secondary)' }}>
+                              <td style={{ padding: '0.75rem 1rem', color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>{idx + 1}</td>
+                              <td style={{ padding: '0.75rem 1rem', color: 'var(--text-primary)', fontWeight: '500' }}>{p.problemName}</td>
+                              <td style={{ padding: '0.75rem 1rem' }}>
+                                {p.difficulty != null && (
+                                  <span style={{ padding: '0.2rem 0.5rem', background: 'var(--surface-secondary)', borderRadius: '0.375rem', fontSize: '0.75rem', color: 'var(--text-primary)' }}>
+                                    {p.difficulty}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{p.onlineJudge}</td>
+                              <td style={{ padding: '0.75rem 1rem' }}>
+                                <button
+                                  onClick={() => window.open(p.problemUrl, '_blank')}
+                                  style={{ padding: '0.375rem 0.5rem', background: 'var(--surface-secondary)', border: 'none', borderRadius: '0.375rem', color: 'var(--color-accent-primary)', cursor: 'pointer' }}
+                                >
+                                  <ExternalLink size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     )}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>{category.solvedCount} / {category.problemCount} solved</span>
-                    <span style={{ fontWeight: '600', color: getProgressColor(progress) }}>{progress}%</span>
-                  </div>
-                  <div style={{ height: '6px', background: 'var(--surface-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${progress}%`, background: getProgressColor(progress), transition: 'width 0.3s ease' }} />
-                  </div>
-                </div>
-
-                {progress === 100 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', border: '1px solid var(--color-success)', borderRadius: '0.5rem' }}>
-                    <CheckCircle size={16} style={{ color: 'var(--color-success)' }} />
-                    <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '500' }}>Completed!</span>
                   </div>
                 )}
               </div>

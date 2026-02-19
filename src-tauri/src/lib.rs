@@ -382,6 +382,7 @@ pub fn run() {
             cf_ladder_system::get_ladder_by_id,
             cf_recommendations::get_categories,
             cf_recommendations::import_categories_from_html,
+            cf_recommendations::get_category_problems,
             cf_recommendations::get_daily_recommendations,
         ])
         .run(tauri::generate_context!())
