@@ -1,5 +1,5 @@
 use crate::PosDb;
-use crate::pos::error::PosError;
+use crate::pos::error::{PosError, PosResult};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -33,7 +33,7 @@ struct ContextSearchRow {
 pub async fn get_context_for_goal(
     db: State<'_, PosDb>,
     goal_id: String,
-) -> Result<Vec<ContextItem>, PosError> {
+) -> PosResult<Vec<ContextItem>> {
     let pool = &db.0;
 
     // Get the goal to extract keywords

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 
-use super::error::{PosError, db_context};
+use super::error::{PosError, PosResult, db_context};
 use super::utils::gen_id;
 
 /// Submission data needed by the shadow logger.
@@ -21,7 +21,7 @@ pub async fn process_shadow_log(
     pool: &PgPool,
     sub: &ShadowInput,
     duration_minutes: i64,
-) -> Result<Option<String>, PosError> {
+) -> PosResult<Option<String>> {
     let dur = Duration::minutes(duration_minutes);
     let start_time = sub.submitted_time - dur;
     let end_time = sub.submitted_time;
@@ -156,7 +156,7 @@ pub async fn process_submissions(
     pool: &PgPool,
     submissions: &[ShadowInput],
     duration_minutes: i64,
-) -> Result<i32, PosError> {
+) -> PosResult<i32> {
     let mut count = 0;
     for sub in submissions {
         if let Some(_) = process_shadow_log(pool, sub, duration_minutes).await? {
@@ -174,7 +174,7 @@ async fn match_goal_by_keyword(
     conn: &mut sqlx::PgConnection,
     date: &str,
     category: &str,
-) -> Result<Option<(String, String)>, PosError> {
+) -> PosResult<Option<(String, String)>> {
     // Extract keyword from category (e.g., "coding_leetcode" → "leetcode")
     let keyword = if category.contains('_') {
         category.split('_').last().unwrap_or(category)

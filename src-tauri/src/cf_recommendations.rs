@@ -5,7 +5,7 @@ use chrono::Utc;
 use tauri::State;
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 use crate::cf_ladder_system::{
     CFCategoryRow, CFLadderProblemRow, DailyRecommendation,
@@ -17,7 +17,7 @@ use crate::cf_ladder_system::{
 #[tauri::command]
 pub async fn get_categories(
     db: State<'_, PosDb>,
-) -> Result<Vec<CFCategoryRow>, PosError> {
+) -> PosResult<Vec<CFCategoryRow>> {
     let categories = sqlx::query_as::<sqlx::Postgres, CFCategoryRow>(
         r#"
         SELECT c.*,
@@ -39,7 +39,7 @@ pub async fn get_categories(
 pub async fn import_categories_from_html(
     req: ImportCategoryRequest,
     db: State<'_, PosDb>,
-) -> Result<CFCategoryRow, PosError> {
+) -> PosResult<CFCategoryRow> {
     // Reuse parse_ladder_html — same table format, category name from title or override
     let (parsed_title, description, problems) = parse_ladder_html(&req.html_content)?;
     let category_name = req.category_name.unwrap_or(parsed_title);
@@ -117,7 +117,7 @@ pub async fn get_daily_recommendations(
     db: State<'_, PosDb>,
     strategy: String,
     count: Option<i32>,
-) -> Result<Vec<DailyRecommendation>, PosError> {
+) -> PosResult<Vec<DailyRecommendation>> {
     let n = count.unwrap_or(5);
     let mut recs: Vec<DailyRecommendation> = Vec::new();
 

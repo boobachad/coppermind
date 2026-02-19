@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tauri::State;
 
 use crate::{PosDb, PosConfig};
-use super::super::error::{PosError, db_context};
+use super::super::error::{PosError, PosResult, db_context};
 use super::super::shadow::{self, ShadowInput};
 use super::super::utils::gen_id;
 use super::{build_http_client, ScraperResponse};
@@ -65,7 +65,7 @@ struct LeetCodeTag {
 pub async fn scrape_leetcode(
     db: State<'_, PosDb>,
     config: State<'_, PosConfig>,
-) -> Result<ScraperResponse, PosError> {
+) -> PosResult<ScraperResponse> {
     let pool = &db.0;
     let username = config.0.require_leetcode_username()
         .map_err(|e| PosError::InvalidInput(e))?;

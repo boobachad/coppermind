@@ -8,7 +8,7 @@ import { Loader } from '@/components/Loader';
 import { AlertCircle } from 'lucide-react';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
-import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot } from '../lib/time';
+import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot, formatMonthYear } from '../lib/time';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -76,7 +76,7 @@ export function GridPage() {
             return {
                 year: d.getFullYear(),
                 month: d.getMonth(),
-                label: d.toLocaleString('default', { month: 'long', year: 'numeric' }),
+                label: formatMonthYear(d),
             };
         });
         setAvailableMonths(months);

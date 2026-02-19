@@ -180,7 +180,7 @@ export const getSuggestionItems = ({ query }: { query: string }) => {
       searchTerms: ['background', 'bg', 'yellow'],
       icon: PaintBucket,
       command: ({ editor, range }: any) => {
-        editor.chain().focus().deleteRange(range).toggleHighlight({ color: '#fef08a' }).run(); // Soft Yellow
+        editor.chain().focus().deleteRange(range).toggleHighlight({ color: 'var(--color-highlight-yellow)' }).run();
       },
     },
   ].filter((item) =>

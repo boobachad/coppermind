@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use super::error::{PosError, db_context};
+use super::error::{PosError, PosResult, db_context};
 use super::utils::gen_id;
 
 // ─── Row type ───────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ pub struct DateRange {
 pub async fn get_activities(
     db: State<'_, PosDb>,
     date: String,
-) -> Result<ActivityResponse, PosError> {
+) -> PosResult<ActivityResponse> {
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, ActivityRow>(
@@ -119,7 +119,7 @@ pub async fn get_activities(
 pub async fn create_activity(
     db: State<'_, PosDb>,
     req: CreateActivityRequest,
-) -> Result<ActivityRow, PosError> {
+) -> PosResult<ActivityRow> {
     let pool = &db.0;
 
     // Parse ISO 8601 strings from frontend into chrono DateTime<Utc>
@@ -236,7 +236,7 @@ pub async fn update_activity(
     db: State<'_, PosDb>,
     id: String,
     req: CreateActivityRequest,
-) -> Result<ActivityRow, PosError> {
+) -> PosResult<ActivityRow> {
     let pool = &db.0;
 
     let start: DateTime<Utc> = req.start_time.parse::<DateTime<chrono::FixedOffset>>()
@@ -294,7 +294,7 @@ pub async fn patch_activity(
     db: State<'_, PosDb>,
     id: String,
     goal_id: String,
-) -> Result<ActivityRow, PosError> {
+) -> PosResult<ActivityRow> {
     let pool = &db.0;
     let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
@@ -331,7 +331,7 @@ pub async fn patch_activity(
 #[tauri::command]
 pub async fn get_activity_range(
     db: State<'_, PosDb>,
-) -> Result<DateRange, PosError> {
+) -> PosResult<DateRange> {
     let pool = &db.0;
 
     let row: (Option<String>, Option<String>) = sqlx::query_as(
@@ -353,7 +353,7 @@ pub async fn get_activity_range(
 pub async fn get_activities_batch(
     db: State<'_, PosDb>,
     dates: Vec<String>,
-) -> Result<std::collections::HashMap<String, ActivityResponse>, PosError> {
+) -> PosResult<std::collections::HashMap<String, ActivityResponse>> {
     log::info!("[CMD] get_activities_batch called with {} dates", dates.len());
     let pool = &db.0;
 

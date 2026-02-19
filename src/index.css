@@ -123,6 +123,12 @@
   --color-shadow-subtle: rgba(0, 0, 0, 0.1);
   --color-shadow-line: rgba(0, 0, 0, 0.05);
 
+  /* Absolute contrast colors (for contrast-required contexts only) */
+  --color-pure-black: #000000;
+  --color-pure-white: #ffffff;
+  /* Highlight color for editor (TipTap highlight extension) */
+  --color-highlight-yellow: #fef08a;
+
   /* Theme-swatch preview colors (fixed per-theme, used in SettingsPage only) */
   --theme-preview-solarized-bg: #fdf6e3;
   --theme-preview-solarized-border: #d6d0c0;

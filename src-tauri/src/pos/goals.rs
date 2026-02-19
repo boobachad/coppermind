@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use super::error::{PosError, db_context};
+use super::error::{PosError, PosResult, db_context};
 use super::utils::gen_id;
 
 // ─── Row types (native chrono for TIMESTAMPTZ) ──────────────────────
@@ -152,7 +152,7 @@ fn normalize_problem_id(problem_id: &str) -> String {
 pub async fn get_goals(
     db: State<'_, PosDb>,
     date: String,
-) -> Result<Vec<GoalWithDetails>, PosError> {
+) -> PosResult<Vec<GoalWithDetails>> {
     log::info!("[CMD] get_goals called for date: {}", date);
     let pool = &db.0;
 
@@ -318,7 +318,7 @@ pub async fn get_goals(
 pub async fn create_goal(
     db: State<'_, PosDb>,
     req: CreateGoalRequest,
-) -> Result<serde_json::Value, PosError> {
+) -> PosResult<serde_json::Value> {
     let pool = &db.0;
 
     let final_problem_id = req.problem_id.as_deref().map(normalize_problem_id);
@@ -496,7 +496,7 @@ pub async fn create_goal(
 #[tauri::command]
 pub async fn get_debt_goals(
     db: State<'_, PosDb>,
-) -> Result<Vec<DebtGoalRow>, PosError> {
+) -> PosResult<Vec<DebtGoalRow>> {
     log::info!("[CMD] get_debt_goals called");
     let pool = &db.0;
 
@@ -521,7 +521,7 @@ pub async fn update_goal_metric(
     db: State<'_, PosDb>,
     metric_id: String,
     increment: i32,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     // Verify metric exists

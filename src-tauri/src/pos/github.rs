@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use super::error::{PosError, db_context};
+use super::error::{PosError, PosResult, db_context};
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ pub async fn get_github_repositories(
     min_commits: Option<i32>,
     sort_by: Option<String>, // "commits", "stars", "updated"
     limit: Option<i64>,
-) -> Result<Vec<GitHubRepository>, PosError> {
+) -> PosResult<Vec<GitHubRepository>> {
     let pool = &db.0;
     
     let mut query = String::from(
@@ -164,7 +164,7 @@ pub async fn get_github_repositories(
 pub async fn get_github_user_stats(
     db: State<'_, PosDb>,
     username: String,
-) -> Result<GitHubUserStats, PosError> {
+) -> PosResult<GitHubUserStats> {
     let pool = &db.0;
     
     let row = sqlx::query(

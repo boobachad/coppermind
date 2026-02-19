@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 
 // ─── Row types ──────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ pub struct BalancerResult {
 pub async fn create_monthly_goal(
     db: State<'_, PosDb>,
     req: CreateMonthlyGoalRequest,
-) -> Result<MonthlyGoalRow, PosError> {
+) -> PosResult<MonthlyGoalRow> {
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
@@ -101,14 +101,13 @@ pub async fn create_monthly_goal(
 pub async fn get_monthly_goals(
     db: State<'_, PosDb>,
     active_only: Option<bool>,
-) -> Result<Vec<MonthlyGoalRow>, PosError> {
+) -> PosResult<Vec<MonthlyGoalRow>> {
     let pool = &db.0;
 
     let query = if active_only.unwrap_or(false) {
-        // Active = period hasn't ended yet
-        "SELECT * FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
     } else {
-        "SELECT * FROM goal_periods ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods ORDER BY period_start DESC"
     };
 
     let rows = sqlx::query_as::<_, MonthlyGoalRow>(query)
@@ -125,7 +124,7 @@ pub async fn update_monthly_goal(
     db: State<'_, PosDb>,
     id: String,
     req: UpdateMonthlyGoalRequest,
-) -> Result<MonthlyGoalRow, PosError> {
+) -> PosResult<MonthlyGoalRow> {
     let pool = &db.0;
     let now = Utc::now();
 
@@ -171,12 +170,12 @@ pub async fn run_balancer_engine(
     db: State<'_, PosDb>,
     monthly_goal_id: String,
     timezone_offset: Option<i32>, // Minutes from UTC
-) -> Result<BalancerResult, PosError> {
+) -> PosResult<BalancerResult> {
     let pool = &db.0;
 
     // 1. Fetch monthly goal
     let monthly_goal = sqlx::query_as::<_, MonthlyGoalRow>(
-        "SELECT * FROM goal_periods WHERE id = $1"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods WHERE id = $1"
     )
     .bind(&monthly_goal_id)
     .fetch_one(pool)
@@ -321,7 +320,7 @@ pub async fn run_balancer_engine(
 pub async fn delete_monthly_goal(
     db: State<'_, PosDb>,
     id: String,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     sqlx::query("DELETE FROM goal_periods WHERE id = $1")

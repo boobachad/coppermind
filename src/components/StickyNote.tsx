@@ -109,7 +109,7 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
           ref={contentRef}
           className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting text-gray-800 leading-8"
           style={{
-            backgroundImage: 'linear-gradient(transparent 31px, rgba(0,0,0,0.05) 32px)',
+            backgroundImage: 'linear-gradient(transparent 31px, var(--color-shadow-line) 32px)',
             backgroundSize: '100% 32px',
             backgroundAttachment: 'local'
           }}

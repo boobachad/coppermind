@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
 import type { Activity } from '../lib/types';
-import { getLocalDateString } from '../lib/time';
+import { getLocalDateString, getMonthShort } from '../lib/time';
 
 interface HeatmapData {
   date: string;
@@ -91,7 +91,7 @@ export function ActivityHeatmap() {
         }
 
         months.push({
-          name: monthDate.toLocaleString('default', { month: 'short' }),
+          name: getMonthShort(monthDate),
           days: monthDays,
         });
 
@@ -149,7 +149,7 @@ export function ActivityHeatmap() {
     }
     return {
       backgroundColor: `var(--pos-heatmap-level-${level})`,
-      boxShadow: '0 0 4px 0 rgba(0,0,0,0.1)' // Add subtle glow to active cells
+      boxShadow: '0 0 4px 0 var(--color-shadow-subtle)'
     };
   };
 

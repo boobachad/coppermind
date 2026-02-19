@@ -1,5 +1,6 @@
 // ─── Knowledge Base Utilities ──────────────────────────────────────
 // Reusable functions for KB item management, URL parsing, and spaced repetition.
+import { formatDateDDMMYYYY } from '../pos/lib/time';
 
 /**
  * Extract URLs from text using regex
@@ -156,7 +157,7 @@ export function formatReviewDate(nextReviewDate: string | null): string {
     } else if (diffDays < 7) {
         return `Due in ${diffDays} days`;
     } else {
-        return reviewDate.toLocaleDateString();
+        return formatDateDDMMYYYY(reviewDate);
     }
 }
 

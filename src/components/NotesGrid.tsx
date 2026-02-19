@@ -330,7 +330,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
                 className="px-4 py-2 text-sm font-medium rounded-lg shadow-lg transition-all"
                 style={{
                   color: 'white',
-                  backgroundColor: 'rgba(239, 68, 68, 0.8)'
+                  backgroundColor: 'var(--color-error-subtle-heavy)'
                 }}
               >
                 Delete

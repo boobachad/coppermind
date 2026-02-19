@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { KnowledgeItem, DuplicateCheckResult } from '@/pos/lib/types';
 import { extractUrls, parseTemporalKeywords } from '@/lib/kb-utils';
+import { formatDateDDMMYYYY } from '@/pos/lib/time';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +111,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 const temporal = parseTemporalKeywords(content);
                 if (temporal) {
                     toast.success(`Detected: ${temporal.keyword}`, {
-                        description: `Would schedule for ${temporal.date.toLocaleDateString()}`
+                        description: `Would schedule for ${formatDateDDMMYYYY(temporal.date)}`
                     });
                 }
             }

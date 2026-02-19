@@ -227,7 +227,7 @@ export function DailyPage() {
                             <div 
                                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
                                 style={{
-                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    backgroundColor: 'var(--color-error-subtle)',
                                     border: '1px solid var(--color-error)',
                                     color: 'var(--color-error)',
                                 }}

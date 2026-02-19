@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 // use crate::PosDb; // Unused
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 use super::types::GraphQLRepository;
 
@@ -13,7 +13,7 @@ pub(crate) async fn insert_repository_from_graphql(
     username: &str,
     repo: &GraphQLRepository,
     commit_count: i32,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let id = gen_id();
     let full_name = format!("{}/{}", repo.owner.login, repo.name);
     
@@ -73,7 +73,7 @@ pub(crate) async fn update_repository_from_graphql(
     id: &str,
     repo: &GraphQLRepository,
     commit_count: i32,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let full_name = format!("{}/{}", repo.owner.login, repo.name);
     
     let repo_updated_at = DateTime::parse_from_rfc3339(&repo.updated_at)
@@ -119,7 +119,7 @@ pub(crate) async fn update_repository_from_graphql(
 async fn calculate_user_stats(
     pool: &sqlx::PgPool,
     username: &str,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     // Aggregate from github_repositories table
     let stats: (i64, i64, i64, i64, i64, i64) = sqlx::query_as(
         r#"SELECT 
@@ -200,7 +200,7 @@ async fn calculate_user_stats(
 pub(crate) async fn update_additional_user_stats(
     pool: &sqlx::PgPool,
     username: &str,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     // Aggregate stars from github_repositories table
     let total_stars: (i64,) = sqlx::query_as(
         "SELECT COALESCE(SUM(stars), 0) FROM github_repositories WHERE username = $1"
@@ -267,7 +267,7 @@ pub(crate) async fn update_additional_user_stats(
 pub(crate) async fn fetch_user_contribution_stats_direct(
     client: &reqwest::Client,
     token: &str,
-) -> Result<UserContributionStats, PosError> {
+) -> PosResult<UserContributionStats> {
     // Fetch all years of contributions to get accurate totals (starting from 2021)
     let current_year = 2026;
     let start_year = 2021;

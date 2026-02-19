@@ -135,7 +135,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                     key={goal.id}
                                     className="p-2 rounded text-xs"
                                     style={{
-                                        backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                                        backgroundColor: 'var(--color-error-subtle-faint)',
                                         border: '1px solid var(--color-error)',
                                     }}
                                 >

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../lib/ThemeContext';
-import { useConfirmDialog } from '../components/ConfirmDialog';
 import { syncAllTables, isPgConnected } from '../lib/pgSync';
 import { getDb } from '../lib/db';
 import {

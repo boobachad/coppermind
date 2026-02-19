@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { GoalReflection, CreateReflectionInput } from '../../pos/lib/types';
 import { X, CheckCircle, Sparkles, Book } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../../pos/lib/time';
 
 interface ReflectionPromptProps {
     goalId: string;
@@ -52,7 +53,7 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-bg-heavy)' }}>
             <div 
                 className="w-full max-w-2xl rounded-xl p-6 shadow-2xl"
                 style={{
@@ -104,7 +105,7 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
                         }}
                         onFocus={(e) => {
                             e.target.style.borderColor = 'var(--color-accent-primary)';
-                            e.target.style.boxShadow = '0 0 0 3px rgba(79, 70, 229, 0.1)';
+                            e.target.style.boxShadow = '0 0 0 3px var(--color-accent-subtle)';
                         }}
                         onBlur={(e) => {
                             e.target.style.borderColor = 'var(--border-primary)';
@@ -142,7 +143,7 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
                     <div 
                         className="mb-4 rounded-lg p-3 text-sm"
                         style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
+                            background: 'var(--color-error-subtle)',
                             border: '1px solid var(--color-error)',
                             color: 'var(--color-error)',
                         }}
@@ -243,7 +244,7 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
                         {reflection.learningText}
                     </p>
                     <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        <span>{new Date(reflection.createdAt).toLocaleDateString()}</span>
+                        <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
                         {reflection.kbItemId && (
                             <span
                                 className="flex items-center gap-1 px-2 py-1 rounded"

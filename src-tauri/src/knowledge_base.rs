@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 
 // ─── Row types ──────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ pub struct DuplicateCheckResult {
 pub async fn create_knowledge_item(
     db: State<'_, PosDb>,
     req: CreateKnowledgeItemRequest,
-) -> Result<KnowledgeItemRow, PosError> {
+) -> PosResult<KnowledgeItemRow> {
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
@@ -124,10 +124,10 @@ pub async fn create_knowledge_item(
 pub async fn get_knowledge_items(
     db: State<'_, PosDb>,
     filters: Option<KnowledgeItemFilters>,
-) -> Result<Vec<KnowledgeItemRow>, PosError> {
+) -> PosResult<Vec<KnowledgeItemRow>> {
     let pool = &db.0;
 
-    let mut query = "SELECT * FROM knowledge_items WHERE 1=1".to_string();
+    let mut query = "SELECT id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at FROM knowledge_items WHERE 1=1".to_string();
     let mut bindings: Vec<String> = Vec::new();
 
     if let Some(f) = filters {
@@ -172,7 +172,7 @@ pub async fn update_knowledge_item(
     db: State<'_, PosDb>,
     id: String,
     req: UpdateKnowledgeItemRequest,
-) -> Result<KnowledgeItemRow, PosError> {
+) -> PosResult<KnowledgeItemRow> {
     let pool = &db.0;
     let now = Utc::now();
 
@@ -243,7 +243,7 @@ pub async fn update_knowledge_item(
 pub async fn delete_knowledge_item(
     db: State<'_, PosDb>,
     id: String,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     sqlx::query("DELETE FROM knowledge_items WHERE id = $1")
@@ -261,7 +261,7 @@ pub async fn delete_knowledge_item(
 pub async fn create_knowledge_link(
     db: State<'_, PosDb>,
     req: CreateKnowledgeLinkRequest,
-) -> Result<KnowledgeLinkRow, PosError> {
+) -> PosResult<KnowledgeLinkRow> {
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
@@ -290,18 +290,18 @@ pub async fn get_knowledge_links(
     db: State<'_, PosDb>,
     item_id: String,
     direction: Option<String>, // "outgoing" | "incoming" | "both" (default)
-) -> Result<Vec<KnowledgeLinkRow>, PosError> {
+) -> PosResult<Vec<KnowledgeLinkRow>> {
     let pool = &db.0;
 
     let query = match direction.as_deref() {
         Some("outgoing") => {
-            "SELECT * FROM knowledge_links WHERE source_id = $1 ORDER BY created_at DESC"
+            "SELECT id, source_id, target_id, link_type, created_at FROM knowledge_links WHERE source_id = $1 ORDER BY created_at DESC"
         }
         Some("incoming") => {
-            "SELECT * FROM knowledge_links WHERE target_id = $1 ORDER BY created_at DESC"
+            "SELECT id, source_id, target_id, link_type, created_at FROM knowledge_links WHERE target_id = $1 ORDER BY created_at DESC"
         }
         _ => {
-            "SELECT * FROM knowledge_links WHERE source_id = $1 OR target_id = $1 ORDER BY created_at DESC"
+            "SELECT id, source_id, target_id, link_type, created_at FROM knowledge_links WHERE source_id = $1 OR target_id = $1 ORDER BY created_at DESC"
         }
     };
 
@@ -319,7 +319,7 @@ pub async fn get_knowledge_links(
 pub async fn delete_knowledge_link(
     db: State<'_, PosDb>,
     link_id: String,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     let result = sqlx::query("DELETE FROM knowledge_links WHERE id = $1")
@@ -341,12 +341,12 @@ pub async fn delete_knowledge_link(
 pub async fn check_knowledge_duplicates(
     db: State<'_, PosDb>,
     content: String,
-) -> Result<DuplicateCheckResult, PosError> {
+) -> PosResult<DuplicateCheckResult> {
     let pool = &db.0;
 
     // Check exact content match
     let rows = sqlx::query_as::<_, KnowledgeItemRow>(
-        "SELECT * FROM knowledge_items WHERE content = $1"
+        "SELECT id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at FROM knowledge_items WHERE content = $1"
     )
     .bind(&content)
     .fetch_all(pool)

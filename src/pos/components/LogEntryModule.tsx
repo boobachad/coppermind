@@ -340,7 +340,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 >
                     <Calendar className="w-4 h-4" style={{ color: 'var(--color-accent-primary)' }} />
                     <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                        Will create goal for <strong>{temporalInfo.date.toLocaleDateString()}</strong> ({temporalInfo.keyword})
+                        Will create goal for <strong>{formatDateDDMMYYYY(temporalInfo.date)}</strong> ({temporalInfo.keyword})
                     </p>
                 </div>
             )}
@@ -397,7 +397,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                             {availableGoals.map(goal => (
                                 <SelectItem key={goal.id} value={goal.id}>
                                     <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                        {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{new Date(goal.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}]</span> : null}
+                                        {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{formatDateDDMMYYYY(new Date(goal.dueDate))}]</span> : null}
                                         <span className="truncate">{goal.text}</span>
                                         {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
                                         {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}

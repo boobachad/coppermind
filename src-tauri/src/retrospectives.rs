@@ -3,7 +3,7 @@
 
 use crate::PosDb;
 use crate::pos::utils::gen_id;
-use crate::pos::error::PosError;
+use crate::pos::error::{PosError, PosResult};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgQueryResult;
@@ -36,7 +36,7 @@ pub struct RetrospectiveStats {
 }
 
 // Table creation query
-pub async fn ensure_retrospectives_table(db: &PosDb) -> Result<PgQueryResult, PosError> {
+pub async fn ensure_retrospectives_table(db: &PosDb) -> PosResult<PgQueryResult> {
     sqlx::query::<sqlx::Postgres>(
         r#"
         CREATE TABLE IF NOT EXISTS retrospectives (
@@ -54,7 +54,7 @@ pub async fn ensure_retrospectives_table(db: &PosDb) -> Result<PgQueryResult, Po
     .map_err(|e| PosError::Database(format!("Failed to create retrospectives table: {}", e)))
 }
 
-pub async fn ensure_retrospectives_indexes(db: &PosDb) -> Result<(), PosError> {
+pub async fn ensure_retrospectives_indexes(db: &PosDb) -> PosResult<()> {
     sqlx::query::<sqlx::Postgres>("CREATE INDEX IF NOT EXISTS idx_retrospectives_period_type ON retrospectives(period_type)")
         .execute(&db.0)
         .await
@@ -72,7 +72,7 @@ pub async fn ensure_retrospectives_indexes(db: &PosDb) -> Result<(), PosError> {
 pub async fn create_retrospective(
     db: State<'_, PosDb>,
     input: CreateRetrospectiveInput,
-) -> Result<Retrospective, PosError> {
+) -> PosResult<Retrospective> {
     // Validate period_type
     if input.period_type != "weekly" && input.period_type != "monthly" {
         return Err(PosError::InvalidInput(
@@ -108,13 +108,14 @@ pub async fn get_retrospectives(
     db: State<'_, PosDb>,
     period_type: Option<String>,
     limit: Option<i64>,
-) -> Result<Vec<Retrospective>, PosError> {
+) -> PosResult<Vec<Retrospective>> {
     let limit = limit.unwrap_or(50).min(100);
 
     let retrospectives: Vec<Retrospective> = if let Some(pt) = period_type {
         sqlx::query_as::<sqlx::Postgres, Retrospective>(
             r#"
-            SELECT * FROM retrospectives
+            SELECT id, period_type, period_start, period_end, questions_data, created_at
+            FROM retrospectives
             WHERE period_type = $1
             ORDER BY period_start DESC
             LIMIT $2
@@ -127,7 +128,8 @@ pub async fn get_retrospectives(
     } else {
         sqlx::query_as::<sqlx::Postgres, Retrospective>(
             r#"
-            SELECT * FROM retrospectives
+            SELECT id, period_type, period_start, period_end, questions_data, created_at
+            FROM retrospectives
             ORDER BY period_start DESC
             LIMIT $1
             "#,
@@ -146,7 +148,7 @@ pub async fn get_retrospective_stats(
     db: State<'_, PosDb>,
     start_date: DateTime<Utc>,
     end_date: DateTime<Utc>,
-) -> Result<RetrospectiveStats, PosError> {
+) -> PosResult<RetrospectiveStats> {
     // Extract energy and satisfaction from questions_data JSONB
     // Expected format: { "energy": 7, "satisfaction": 8, "deep_work_hours": 25 }
     
@@ -189,7 +191,7 @@ async fn calculate_correlation(
     pool: &sqlx::PgPool,
     start_date: DateTime<Utc>,
     end_date: DateTime<Utc>,
-) -> Result<f64, PosError> {
+) -> PosResult<f64> {
     #[derive(sqlx::FromRow)]
     struct CorrelationRow {
         deep_work: Option<f64>,
@@ -249,7 +251,7 @@ async fn calculate_correlation(
 pub async fn delete_retrospective(
     db: State<'_, PosDb>,
     retrospective_id: String,
-) -> Result<bool, PosError> {
+) -> PosResult<bool> {
     let result: PgQueryResult = sqlx::query::<sqlx::Postgres>("DELETE FROM retrospectives WHERE id = $1")
         .bind(&retrospective_id)
         .execute(&db.0)

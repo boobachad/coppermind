@@ -2,6 +2,7 @@
 // Helper functions for monthly goal distribution and progress calculation.
 
 import { MonthlyGoal, UnifiedGoal } from '@/pos/lib/types';
+import { formatMonthYear } from './time';
 
 /**
  * Calculate daily target based on strategy
@@ -186,7 +187,7 @@ export function formatMonth(monthString: string): string {
     const [year, month] = monthString.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
     
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return formatMonthYear(date);
 }
 
 /**
@@ -248,7 +249,7 @@ export function getDistributionPreview(
     let remainingTarget = monthlyGoal.targetValue - monthlyGoal.currentValue;
     let remainingDays = calculateRemainingDays(monthlyGoal.periodEnd);
     
-    const today = new Date(); // For comparing past vs future dates
+    const today = new Date(); // new Date() required here: comparing local midnight boundary for distribution algorithm (not display)
     today.setHours(0, 0, 0, 0);
     
     for (let i = 0; i < dates.length; i++) {

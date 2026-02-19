@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 use crate::{PosDb, PosConfig};
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::scrapers::ScraperResponse;
 use super::super::build_http_client;
 use super::db::{insert_repository_from_graphql, update_repository_from_graphql, update_additional_user_stats, fetch_user_contribution_stats_direct};
@@ -14,7 +14,7 @@ use super::types::{GraphQLRepository, GraphQLResponse};
 pub async fn scrape_github(
     db: State<'_, PosDb>,
     config: State<'_, PosConfig>,
-) -> Result<ScraperResponse, PosError> {
+) -> PosResult<ScraperResponse> {
     let pool = &db.0;
     let username = config.0.require_github_username()
         .map_err(|e| PosError::InvalidInput(e))?;
@@ -114,7 +114,7 @@ pub async fn scrape_github(
 async fn fetch_user_contributions(
     client: &reqwest::Client,
     token: &str,
-) -> Result<HashMap<String, i32>, PosError> {
+) -> PosResult<HashMap<String, i32>> {
     let mut all_contributions: HashMap<String, i32> = HashMap::new();
     
     // Fetch contributions year by year (starting from 2021)
@@ -241,7 +241,7 @@ async fn fetch_repos_details(
     client: &reqwest::Client,
     token: &str,
     user_commits: &HashMap<String, i32>,
-) -> Result<Vec<(GraphQLRepository, i32)>, PosError> {
+) -> PosResult<Vec<(GraphQLRepository, i32)>> {
     let mut results = Vec::new();
     
     // Fetch repos in batches via GraphQL with retry logic

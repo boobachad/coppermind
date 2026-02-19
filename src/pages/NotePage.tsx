@@ -11,6 +11,7 @@ import { getDb } from '../lib/db';
 import { setActiveNote } from '../lib/CaptureService';
 import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { formatDateDDMMYYYY } from '../pos/lib/time';
 
 export function NotePage() {
   const { id } = useParams<{ id: string }>();
@@ -334,7 +335,7 @@ export function NotePage() {
             />
             <div className="flex-1"></div>
             <span className="text-xs opacity-60">
-              {note.updated_at ? new Date(note.updated_at).toLocaleDateString() : ''}
+              {note.updated_at ? formatDateDDMMYYYY(new Date(note.updated_at)) : ''}
             </span>
           </div>
 

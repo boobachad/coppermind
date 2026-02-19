@@ -4,7 +4,7 @@ use tauri::State;
 use scraper::{Html, Selector, ElementRef};
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 
 // ─── Row Types ──────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ pub struct DailyRecommendation {
 
 // ─── HTML Parser ────────────────────────────────────────────────────
 
-pub fn parse_ladder_html(html: &str) -> Result<(String, Option<String>, Vec<ParsedProblem>), PosError> {
+pub fn parse_ladder_html(html: &str) -> PosResult<(String, Option<String>, Vec<ParsedProblem>)> {
     let document = Html::parse_document(html);
     
     // Extract title
@@ -215,7 +215,7 @@ fn extract_problem_id(url: &str) -> Option<String> {
 pub async fn import_ladder_from_html(
     req: ImportLadderRequest,
     db: State<'_, PosDb>,
-) -> Result<CFLadderRow, PosError> {
+) -> PosResult<CFLadderRow> {
     let (title, description, problems) = parse_ladder_html(&req.html_content)?;
     
     let ladder_id = gen_id();
@@ -260,7 +260,7 @@ pub async fn import_ladder_from_html(
     
     // Fetch and return
     let ladder = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
-        "SELECT * FROM cf_ladders WHERE id = $1"
+        "SELECT id, name, description, rating_min, rating_max, difficulty, source, problem_count, created_at FROM cf_ladders WHERE id = $1"
     )
     .bind(&ladder_id)
     .fetch_one(&db.0)
@@ -273,9 +273,9 @@ pub async fn import_ladder_from_html(
 #[tauri::command]
 pub async fn get_ladders(
     db: State<'_, PosDb>,
-) -> Result<Vec<CFLadderRow>, PosError> {
+) -> PosResult<Vec<CFLadderRow>> {
     let ladders = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
-        "SELECT * FROM cf_ladders ORDER BY created_at DESC"
+        "SELECT id, name, description, rating_min, rating_max, difficulty, source, problem_count, created_at FROM cf_ladders ORDER BY created_at DESC"
     )
     .fetch_all(&db.0)
     .await
@@ -288,9 +288,9 @@ pub async fn get_ladders(
 pub async fn get_ladder_problems(
     ladder_id: String,
     db: State<'_, PosDb>,
-) -> Result<Vec<CFLadderProblemRow>, PosError> {
+) -> PosResult<Vec<CFLadderProblemRow>> {
     let problems = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
-        "SELECT * FROM cf_ladder_problems WHERE ladder_id = $1 ORDER BY position"
+        "SELECT id, ladder_id, problem_id, problem_name, problem_url, position, difficulty, online_judge, created_at FROM cf_ladder_problems WHERE ladder_id = $1 ORDER BY position"
     )
     .bind(&ladder_id)
     .fetch_all(&db.0)
@@ -304,7 +304,7 @@ pub async fn get_ladder_problems(
 pub async fn track_ladder_progress(
     req: TrackProgressRequest,
     db: State<'_, PosDb>,
-) -> Result<CFLadderProgressRow, PosError> {
+) -> PosResult<CFLadderProgressRow> {
     let progress_id = gen_id();
     let now = Utc::now();
     
@@ -349,7 +349,7 @@ pub async fn track_ladder_progress(
 pub async fn get_ladder_stats(
     ladder_id: String,
     db: State<'_, PosDb>,
-) -> Result<LadderStats, PosError> {
+) -> PosResult<LadderStats> {
     let total: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(
         "SELECT COUNT(*) FROM cf_ladder_problems WHERE ladder_id = $1"
     )
@@ -392,9 +392,9 @@ pub async fn get_ladder_stats(
 pub async fn get_ladder_by_id(
     ladder_id: String,
     db: State<'_, PosDb>,
-) -> Result<CFLadderRow, PosError> {
+) -> PosResult<CFLadderRow> {
     let ladder = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
-        "SELECT * FROM cf_ladders WHERE id = $1"
+        "SELECT id, name, description, rating_min, rating_max, difficulty, source, problem_count, created_at FROM cf_ladders WHERE id = $1"
     )
     .bind(&ladder_id)
     .fetch_optional(&db.0)

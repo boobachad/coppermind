@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tauri::State;
 
 use crate::{PosDb, PosConfig};
-use super::super::error::{PosError, db_context};
+use super::super::error::{PosError, PosResult, db_context};
 use super::super::shadow::{self, ShadowInput};
 use super::super::utils::gen_id;
 use super::{build_http_client, ScraperResponse};
@@ -49,7 +49,7 @@ struct CodeforcesProblem {
 pub async fn scrape_codeforces(
     db: State<'_, PosDb>,
     config: State<'_, PosConfig>,
-) -> Result<ScraperResponse, PosError> {
+) -> PosResult<ScraperResponse> {
     let pool = &db.0;
     let handle = config.0.require_codeforces_handle()
         .map_err(|e| PosError::InvalidInput(e))?;

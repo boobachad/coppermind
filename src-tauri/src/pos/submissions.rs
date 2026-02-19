@@ -3,7 +3,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::PosDb;
-use super::error::{PosError, db_context};
+use super::error::{PosError, PosResult, db_context};
 
 // ─── Row type ───────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ pub struct SubmissionRow {
 #[tauri::command]
 pub async fn get_submissions(
     db: State<'_, PosDb>,
-) -> Result<Vec<SubmissionRow>, PosError> {
+) -> PosResult<Vec<SubmissionRow>> {
     let pool = &db.0;
 
     let rows = sqlx::query_as::<_, SubmissionRow>(

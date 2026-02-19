@@ -1,6 +1,6 @@
 use crate::PosDb;
 use crate::pos::utils::gen_id;
-use crate::pos::error::PosError;
+use crate::pos::error::{PosError, PosResult};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -92,7 +92,7 @@ struct CFProblem {
     rating: Option<i32>,
 }
 
-async fn fetch_cf_submissions(handle: &str) -> Result<Vec<CFSubmission>, PosError> {
+async fn fetch_cf_submissions(handle: &str) -> PosResult<Vec<CFSubmission>> {
     let url = format!("https://codeforces.com/api/user.status?handle={}", handle);
 
     let response = reqwest::get(&url)
@@ -119,7 +119,7 @@ async fn fetch_cf_submissions(handle: &str) -> Result<Vec<CFSubmission>, PosErro
 pub async fn add_cf_friend(
     db: State<'_, PosDb>,
     request: AddFriendRequest,
-) -> Result<CFFriendRow, PosError> {
+) -> PosResult<CFFriendRow> {
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
@@ -151,7 +151,7 @@ pub async fn add_cf_friend(
 #[tauri::command]
 pub async fn get_cf_friends(
     db: State<'_, PosDb>,
-) -> Result<Vec<CFFriendRow>, PosError> {
+) -> PosResult<Vec<CFFriendRow>> {
     let pool = &db.0;
 
     let friends: Vec<CFFriendRow> = sqlx::query_as(
@@ -175,12 +175,12 @@ pub async fn get_cf_friends(
 pub async fn sync_cf_friend_submissions(
     db: State<'_, PosDb>,
     friend_id: String,
-) -> Result<i32, PosError> {
+) -> PosResult<i32> {
     let pool = &db.0;
 
     // Get friend
     let friend: CFFriendRow = sqlx::query_as(
-        "SELECT *, NULL::bigint AS submission_count FROM cf_friends WHERE id = $1"
+        "SELECT id, cf_handle, display_name, current_rating, max_rating, last_synced, created_at, NULL::bigint AS submission_count FROM cf_friends WHERE id = $1"
     )
     .bind(&friend_id)
     .fetch_one(pool)
@@ -253,7 +253,7 @@ pub async fn sync_cf_friend_submissions(
 pub async fn delete_cf_friend(
     db: State<'_, PosDb>,
     friend_id: String,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     // CASCADE DELETE on cf_friend_submissions via FK constraint handles child rows
@@ -273,7 +273,7 @@ pub async fn generate_friends_ladder(
     max_difficulty: Option<i32>,
     days_back: Option<i32>,
     limit: Option<i32>,
-) -> Result<Vec<FriendsLadderProblem>, PosError> {
+) -> PosResult<Vec<FriendsLadderProblem>> {
     let pool = &db.0;
     let limit = limit.unwrap_or(50);
     let min_diff = min_difficulty.unwrap_or(800);

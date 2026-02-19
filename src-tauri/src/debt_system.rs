@@ -3,9 +3,13 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 use crate::unified_goals::UnifiedGoalRow;
+
+const UNIFIED_GOAL_COLS: &str = "id, text, description, completed, completed_at, verified, due_date, \
+    recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, \
+    linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt";
 
 // ─── Row types ──────────────────────────────────────────────────────
 
@@ -47,7 +51,7 @@ pub async fn get_accumulated_debt(
     db: State<'_, PosDb>,
     date: String,                  // YYYY-MM-DD
     timezone_offset: Option<i32>,
-) -> Result<Vec<UnifiedGoalRow>, PosError> {
+) -> PosResult<Vec<UnifiedGoalRow>> {
     let pool = &db.0;
 
     // Parse the date and get all debt goals before this date
@@ -59,12 +63,12 @@ pub async fn get_accumulated_debt(
     // 2. Are not completed
     // 3. Have original_date before target_date
     let rows = sqlx::query_as::<_, UnifiedGoalRow>(
-        r#"SELECT * FROM unified_goals 
-           WHERE is_debt = true 
-           AND completed = false 
-           AND original_date IS NOT NULL
-           AND original_date < $1
-           ORDER BY original_date ASC, created_at ASC"#
+        &format!("SELECT {} FROM unified_goals \
+           WHERE is_debt = true \
+           AND completed = false \
+           AND original_date IS NOT NULL \
+           AND original_date < $1 \
+           ORDER BY original_date ASC, created_at ASC", UNIFIED_GOAL_COLS)
     )
     .bind(&date)
     .fetch_all(pool)
@@ -81,7 +85,7 @@ pub async fn get_debt_trail(
     db: State<'_, PosDb>,
     end_date: String,              // YYYY-MM-DD
     days_back: Option<i32>,        // How many days to look back (default 30)
-) -> Result<Vec<DebtTrailItem>, PosError> {
+) -> PosResult<Vec<DebtTrailItem>> {
     let pool = &db.0;
 
     let days = days_back.unwrap_or(30);
@@ -93,13 +97,13 @@ pub async fn get_debt_trail(
 
     // Get all debt goals in the range
     let all_debt = sqlx::query_as::<_, UnifiedGoalRow>(
-        r#"SELECT * FROM unified_goals 
-           WHERE is_debt = true 
-           AND completed = false
-           AND original_date IS NOT NULL
-           AND original_date >= $1
-           AND original_date <= $2
-           ORDER BY original_date ASC"#
+        &format!("SELECT {} FROM unified_goals \
+           WHERE is_debt = true \
+           AND completed = false \
+           AND original_date IS NOT NULL \
+           AND original_date >= $1 \
+           AND original_date <= $2 \
+           ORDER BY original_date ASC", UNIFIED_GOAL_COLS)
     )
     .bind(&start_str)
     .bind(&end_date)
@@ -138,7 +142,7 @@ pub async fn get_debt_trail(
 pub async fn transition_monthly_debt(
     db: State<'_, PosDb>,
     req: TransitionDebtRequest,
-) -> Result<i32, PosError> {
+) -> PosResult<i32> {
     let pool = &db.0;
 
     // Parse month (YYYY-MM)
@@ -171,12 +175,12 @@ pub async fn transition_monthly_debt(
 
     // Find all uncompleted goals in this month
     let uncompleted_goals = sqlx::query_as::<_, UnifiedGoalRow>(
-        r#"SELECT * FROM unified_goals 
-           WHERE completed = false
-           AND due_date IS NOT NULL
-           AND due_date_local >= $1
-           AND due_date_local <= $2
-           AND is_debt = false"#
+        &format!("SELECT {} FROM unified_goals \
+           WHERE completed = false \
+           AND due_date IS NOT NULL \
+           AND due_date_local >= $1 \
+           AND due_date_local <= $2 \
+           AND is_debt = false", UNIFIED_GOAL_COLS)
     )
     .bind(&start_str)
     .bind(&end_str)
@@ -231,19 +235,19 @@ pub async fn transition_monthly_debt(
 pub async fn get_debt_archive(
     db: State<'_, PosDb>,
     month: Option<String>,         // YYYY-MM, if None returns all
-) -> Result<Vec<DebtArchiveRow>, PosError> {
+) -> PosResult<Vec<DebtArchiveRow>> {
     let pool = &db.0;
 
     let rows = if let Some(m) = month {
         sqlx::query_as::<_, DebtArchiveRow>(
-            "SELECT * FROM debt_archive WHERE original_month = $1 ORDER BY archived_at DESC"
+            "SELECT id, goal_id, original_month, archived_at, reason, goal_text, goal_data FROM debt_archive WHERE original_month = $1 ORDER BY archived_at DESC"
         )
         .bind(&m)
         .fetch_all(pool)
         .await
     } else {
         sqlx::query_as::<_, DebtArchiveRow>(
-            "SELECT * FROM debt_archive ORDER BY archived_at DESC LIMIT 100"
+            "SELECT id, goal_id, original_month, archived_at, reason, goal_text, goal_data FROM debt_archive ORDER BY archived_at DESC LIMIT 100"
         )
         .fetch_all(pool)
         .await
@@ -259,7 +263,7 @@ pub async fn get_debt_archive(
 pub async fn reset_debt_for_month(
     db: State<'_, PosDb>,
     goal_ids: Vec<String>,
-) -> Result<i32, PosError> {
+) -> PosResult<i32> {
     let pool = &db.0;
 
     if goal_ids.is_empty() {

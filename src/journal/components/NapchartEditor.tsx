@@ -196,7 +196,7 @@ export default function NapchartEditor({ data, onChange, readOnly }: NapchartEdi
                 style={{
                   backgroundColor: color.hex,
                   borderColor: currentColor === color.value ? 'var(--text-primary)' : 'transparent',
-                  color: ['yellow'].includes(color.value) ? '#000' : '#fff',
+                  color: ['yellow'].includes(color.value) ? 'var(--color-pure-black)' : 'var(--color-pure-white)',
                 }}
               >
                 {color.name}
@@ -268,7 +268,7 @@ export default function NapchartEditor({ data, onChange, readOnly }: NapchartEdi
                   style={{
                     backgroundColor: color.hex,
                     borderColor: 'var(--border-color)',
-                    color: ['yellow'].includes(color.value) ? '#000' : '#fff',
+                    color: ['yellow'].includes(color.value) ? 'var(--color-pure-black)' : 'var(--color-pure-white)',
                   }}
                 >
                   {color.name}

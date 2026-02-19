@@ -8,7 +8,7 @@ import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, AlertTriangle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal, Activity } from '../lib/types';
-import { formatLocalAsUTC } from '../lib/time';
+import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
 import { toast } from 'sonner';
 
 interface ActivityFormProps {
@@ -244,7 +244,7 @@ export function ActivityForm({ date, onSuccess, editingActivity, onCancelEdit }:
                                 {availableGoals.map((g) => (
                                     <SelectItem key={g.id} value={g.id}>
                                         <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                            {g.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{new Date(g.dueDate).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}]</span> : null}
+                                            {g.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{formatDateDDMMYYYY(new Date(g.dueDate))}]</span> : null}
                                             <span className="truncate">{g.text}</span>
                                             {g.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
                                             {g.isDebt && <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />}

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::PosDb;
-use crate::pos::error::{PosError, db_context};
+use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
@@ -89,7 +89,7 @@ pub struct GoalFilters {
 pub async fn create_unified_goal(
     db: State<'_, PosDb>,
     req: CreateGoalRequest,
-) -> Result<UnifiedGoalRow, PosError> {
+) -> PosResult<UnifiedGoalRow> {
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
@@ -130,10 +130,10 @@ pub async fn create_unified_goal(
 pub async fn get_unified_goals(
     db: State<'_, PosDb>,
     filters: Option<GoalFilters>,
-) -> Result<Vec<UnifiedGoalRow>, PosError> {
+) -> PosResult<Vec<UnifiedGoalRow>> {
     let pool = &db.0;
 
-    let mut query = "SELECT * FROM unified_goals WHERE 1=1".to_string();
+    let mut query = "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE 1=1".to_string();
 
     // ─── LAZY DEBT LOGIC ───
     // Automatically move overdue goals to Debt. 
@@ -186,7 +186,7 @@ pub async fn get_unified_goals(
 
     // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)
     let templates = sqlx::query_as::<_, UnifiedGoalRow>(
-        "SELECT * FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
+        "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
     )
     .fetch_all(pool)
     .await
@@ -308,7 +308,7 @@ pub async fn update_unified_goal(
     db: State<'_, PosDb>,
     id: String,
     req: UpdateGoalRequest,
-) -> Result<UnifiedGoalRow, PosError> {
+) -> PosResult<UnifiedGoalRow> {
     let pool = &db.0;
     let now = Utc::now();
 
@@ -424,7 +424,7 @@ pub async fn update_unified_goal(
 pub async fn delete_unified_goal(
     db: State<'_, PosDb>,
     id: String,
-) -> Result<(), PosError> {
+) -> PosResult<()> {
     let pool = &db.0;
 
     sqlx::query("DELETE FROM unified_goals WHERE id = $1")
@@ -440,7 +440,7 @@ pub async fn delete_unified_goal(
 pub async fn toggle_unified_goal_completion(
     db: State<'_, PosDb>,
     id: String,
-) -> Result<UnifiedGoalRow, PosError> {
+) -> PosResult<UnifiedGoalRow> {
     let pool = &db.0;
     let now = Utc::now();
 
@@ -466,12 +466,12 @@ pub async fn link_activity_to_unified_goal(
     db: State<'_, PosDb>,
     goal_id: String,
     activity_id: String,
-) -> Result<UnifiedGoalRow, PosError> {
+) -> PosResult<UnifiedGoalRow> {
     let pool = &db.0;
     let now = Utc::now();
 
     // First check if the goal has metrics
-    let goal = sqlx::query_as::<_, UnifiedGoalRow>("SELECT * FROM unified_goals WHERE id = $1")
+    let goal = sqlx::query_as::<_, UnifiedGoalRow>("SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE id = $1")
         .bind(&goal_id)
         .fetch_one(pool)
         .await

@@ -1,10 +1,14 @@
 // ─── Date Formatting ────────────────────────────────────────────
 
+const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 export function formatDateDDMMYYYY(date: Date): string {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${day}/${month}/${year}`;
 }
 
 export function formatTime(date: Date): string {
@@ -19,8 +23,18 @@ export function formatSlotTime(slotIndex: number): string {
 }
 
 export function getDayName(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
+    const date = new Date(dateStr + 'T00:00:00');
+    return DAYS_SHORT[date.getDay()];
+}
+
+/** Returns 3-letter month abbreviation, e.g. "Jan" */
+export function getMonthShort(date: Date): string {
+    return MONTHS_SHORT[date.getMonth()];
+}
+
+/** Returns "January 2026" style string */
+export function formatMonthYear(date: Date): string {
+    return `${MONTHS_LONG[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 export function getLocalDateString(): string {

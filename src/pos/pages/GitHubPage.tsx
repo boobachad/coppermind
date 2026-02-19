@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../lib/time';
 
 export default function GitHubPage() {
     const [repos, setRepos] = useState<GitHubRepository[]>([]);
@@ -251,7 +252,7 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
             {/* Footer */}
             {repo.repoUpdatedAt && (
                 <div className="mt-3 pt-3 border-t text-xs text-foreground opacity-60" style={{ borderColor: 'var(--border-color)' }}>
-                    Updated {new Date(repo.repoUpdatedAt).toLocaleDateString()}
+                    Updated {formatDateDDMMYYYY(new Date(repo.repoUpdatedAt))}
                 </div>
             )}
         </div>

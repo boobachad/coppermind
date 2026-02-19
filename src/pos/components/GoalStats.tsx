@@ -16,8 +16,8 @@ export function GoalStats({ goals }: GoalStatsProps) {
     };
 
     const chartData = [
-        { name: 'Completed', value: stats.completed, color: '#10B981' },
-        { name: 'Pending', value: stats.pending, color: '#EF4444' },
+        { name: 'Completed', value: stats.completed, color: 'var(--color-success)' },
+        { name: 'Pending', value: stats.pending, color: 'var(--color-error)' },
     ];
 
     return (
@@ -71,7 +71,7 @@ export function GoalStats({ goals }: GoalStatsProps) {
                             stroke="none"
                         >
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                <Cell key={`cell-${index}`} style={{ fill: entry.color }} />
                             ))}
                         </Pie>
                         <Tooltip
