@@ -20,7 +20,7 @@ pub async fn get_categories(
 ) -> PosResult<Vec<CFCategoryRow>> {
     let categories = sqlx::query_as::<sqlx::Postgres, CFCategoryRow>(
         r#"
-        SELECT c.*,
+        SELECT c.id, c.name, c.description, c.problem_count, c.created_at,
                COUNT(CASE WHEN cp.solved_at IS NOT NULL THEN 1 END)::bigint AS solved_count
         FROM cf_categories c
         LEFT JOIN cf_category_progress cp ON cp.category_id = c.id
@@ -98,7 +98,7 @@ pub async fn import_categories_from_html(
 
     let category = sqlx::query_as::<sqlx::Postgres, CFCategoryRow>(
         r#"
-        SELECT c.*, 0::bigint AS solved_count
+        SELECT c.id, c.name, c.description, c.problem_count, c.created_at, 0::bigint AS solved_count
         FROM cf_categories c WHERE c.id = $1
         "#,
     )
@@ -156,7 +156,9 @@ pub async fn get_daily_recommendations(
         "ladder" => {
             let rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
                 r#"
-                SELECT p.* FROM cf_ladder_problems p
+                SELECT p.id, p.ladder_id, p.problem_id, p.problem_name, p.problem_url,
+                       p.position, p.difficulty, p.online_judge, p.created_at
+                FROM cf_ladder_problems p
                 LEFT JOIN cf_ladder_progress pr
                   ON pr.ladder_id = p.ladder_id AND pr.problem_id = p.problem_id
                 WHERE pr.id IS NULL
@@ -265,7 +267,9 @@ pub async fn get_daily_recommendations(
 
             let rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
                 r#"
-                SELECT p.* FROM cf_ladder_problems p
+                SELECT p.id, p.ladder_id, p.problem_id, p.problem_name, p.problem_url,
+                       p.position, p.difficulty, p.online_judge, p.created_at
+                FROM cf_ladder_problems p
                 LEFT JOIN cf_ladder_progress pr
                   ON pr.ladder_id = p.ladder_id AND pr.problem_id = p.problem_id
                 WHERE pr.id IS NULL
@@ -299,7 +303,9 @@ pub async fn get_daily_recommendations(
             let per = (n / 3).max(1);
 
             let ladder_rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
-                r#"SELECT p.* FROM cf_ladder_problems p
+                r#"SELECT p.id, p.ladder_id, p.problem_id, p.problem_name, p.problem_url,
+                          p.position, p.difficulty, p.online_judge, p.created_at
+                   FROM cf_ladder_problems p
                    LEFT JOIN cf_ladder_progress pr ON pr.ladder_id = p.ladder_id AND pr.problem_id = p.problem_id
                    WHERE pr.id IS NULL ORDER BY p.position LIMIT $1"#,
             )

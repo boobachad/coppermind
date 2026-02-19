@@ -315,7 +315,7 @@ pub async fn track_ladder_progress(
              VALUES ($1, $2, $3, $4, 1, $5)
              ON CONFLICT (ladder_id, problem_id) 
              DO UPDATE SET solved_at = $4, attempts = cf_ladder_progress.attempts + 1
-             RETURNING *"
+             RETURNING id, ladder_id, problem_id, solved_at, attempts, created_at"
         )
         .bind(&progress_id)
         .bind(&req.ladder_id)
@@ -331,7 +331,7 @@ pub async fn track_ladder_progress(
              VALUES ($1, $2, $3, 1, $4)
              ON CONFLICT (ladder_id, problem_id) 
              DO UPDATE SET attempts = cf_ladder_progress.attempts + 1
-             RETURNING *"
+             RETURNING id, ladder_id, problem_id, solved_at, attempts, created_at"
         )
         .bind(&progress_id)
         .bind(&req.ladder_id)

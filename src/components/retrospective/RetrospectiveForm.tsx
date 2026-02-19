@@ -276,7 +276,7 @@ export const RetrospectiveForm: React.FC<RetrospectiveFormProps> = ({
 
                     {/* Error Message */}
                     {error && (
-                        <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-error)' }}>
+                        <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-error-subtle)', color: 'var(--color-error)' }}>
                             {error}
                         </div>
                     )}

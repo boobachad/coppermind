@@ -78,7 +78,7 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
       // Check computed style on html to catch 'dark' class variables safely
       const style = getComputedStyle(document.documentElement);
       const color = style.getPropertyValue('--text-primary').trim();
-      return color || (document.documentElement.classList.contains('dark') ? '#ffffff' : '#000000');
+      return color || 'var(--text-primary)';
     };
 
     try {

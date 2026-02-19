@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag } from 'lucide-react';
+import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -52,14 +52,17 @@ export function Sidebar() {
   );
 
   const mainNavItems = [
-    { to: "/", icon: FileText, label: "Home" },
-    { to: "/goals", icon: Target, label: "Goals" },
-    { to: "/nodes", icon: Share2, label: "Graph" },
-    { to: "/pos", icon: Box, label: "POS" },
-    { to: "/pos/grid", icon: Grid3x3, label: "Grid" },
-    { to: "/pos/sheets", icon: FileSpreadsheet, label: "Sheets" },
-    { to: "/pos/github", icon: Github, label: "GitHub" },
-    { to: "/journal", icon: BookOpen, label: "Journal" },
+    { to: "/",              icon: FileText,     label: "Notes" },
+    { to: "/goals",         icon: Target,       label: "Goals" },
+    { to: "/monthly-goals", icon: CalendarRange, label: "Monthly Goals" },
+    { to: "/knowledge",     icon: Brain,        label: "Knowledge Base" },
+    { to: "/briefing",      icon: Sun,          label: "Daily Briefing" },
+    { to: "/nodes",         icon: Share2,       label: "Graph" },
+    { to: "/pos",           icon: Box,          label: "POS" },
+    { to: "/pos/grid",      icon: Grid3x3,      label: "Grid" },
+    { to: "/pos/sheets",    icon: FileSpreadsheet, label: "Sheets" },
+    { to: "/pos/github",    icon: Github,       label: "GitHub" },
+    { to: "/journal",       icon: BookOpen,     label: "Journal" },
   ];
 
   const cfNavItems = [

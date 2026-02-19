@@ -15,6 +15,8 @@ import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
 import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
+import KnowledgePage from './pages/KnowledgePage';
+import MonthlyGoalsPage from './pages/MonthlyGoalsPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
 import LadderView from './components/codeforces/LadderView';
 import CategoryBrowser from './components/codeforces/CategoryBrowser';
@@ -50,14 +52,14 @@ function App() {
             <Route index element={<NotesGrid />} />
             <Route path="notes/new" element={<NewNotePage />} />
             <Route path="notes/:id" element={<NotePage />} />
-            {/* <Route path="todos" element={<TodosPage />} /> */}
             <Route path="goals" element={<UnifiedGoalsPage />} />
+            <Route path="monthly-goals" element={<MonthlyGoalsPage />} />
+            <Route path="knowledge" element={<KnowledgePage />} />
             <Route path="briefing" element={<DailyBriefingPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="pos" element={<HomePage />} />
             <Route path="pos/grid" element={<GridPage />} />
             <Route path="pos/grid/:date" element={<DailyPage />} />
-            {/* <Route path="pos/goals" element={<GoalsPage />} /> */}
             <Route path="pos/sheets" element={<SheetsPage />} />
             <Route path="pos/github" element={<GitHubPage />} />
             <Route path="journal" element={<JournalPage />} />

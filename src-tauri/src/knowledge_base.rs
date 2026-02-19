@@ -101,7 +101,7 @@ pub async fn create_knowledge_item(
         r#"INSERT INTO knowledge_items (
             id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-        RETURNING *"#,
+        RETURNING id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at"#,
     )
     .bind(&id)
     .bind(&req.item_type)
@@ -204,7 +204,7 @@ pub async fn update_knowledge_item(
     updates.push(format!("updated_at = ${}", bind_index));
 
     let query = format!(
-        "UPDATE knowledge_items SET {} WHERE id = ${} RETURNING *",
+        "UPDATE knowledge_items SET {} WHERE id = ${} RETURNING id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at",
         updates.join(", "),
         bind_index + 1
     );
@@ -269,7 +269,7 @@ pub async fn create_knowledge_link(
     let row = sqlx::query_as::<_, KnowledgeLinkRow>(
         r#"INSERT INTO knowledge_links (id, source_id, target_id, link_type, created_at)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING *"#,
+        RETURNING id, source_id, target_id, link_type, created_at"#,
     )
     .bind(&id)
     .bind(&req.source_id)

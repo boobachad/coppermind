@@ -79,7 +79,7 @@ pub async fn create_monthly_goal(
         r#"INSERT INTO goal_periods (
             id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $7)
-        RETURNING *"#,
+        RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at"#,
     )
     .bind(&id)
     .bind(&req.target_metric)
@@ -140,7 +140,7 @@ pub async fn update_monthly_goal(
     }
 
     let query = format!(
-        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING *",
+        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at",
         updates.join(", "),
         bind_idx + 1
     );

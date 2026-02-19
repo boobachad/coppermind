@@ -105,7 +105,7 @@ pub async fn create_unified_goal(
             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
             created_at, updated_at, original_date, is_debt
         ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
-        RETURNING *"#,
+        RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(&id)
     .bind(&req.text)
@@ -375,7 +375,7 @@ pub async fn update_unified_goal(
     }
 
     let query_str = format!(
-        "UPDATE unified_goals SET {} WHERE id = ${} RETURNING *",
+        "UPDATE unified_goals SET {} WHERE id = ${} RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt",
         updates.join(", "),
         bind_idx
     );
@@ -450,7 +450,7 @@ pub async fn toggle_unified_goal_completion(
                completed_at = CASE WHEN NOT completed THEN $1 ELSE NULL END,
                updated_at = $1
            WHERE id = $2
-           RETURNING *"#,
+           RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(now)
     .bind(id)
@@ -493,7 +493,7 @@ pub async fn link_activity_to_unified_goal(
                completed_at = CASE WHEN $1 THEN $2 ELSE completed_at END,
                updated_at = $2
            WHERE id = $3
-           RETURNING *"#,
+           RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(should_complete)
     .bind(now)

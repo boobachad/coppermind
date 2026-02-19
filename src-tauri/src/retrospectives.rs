@@ -87,7 +87,7 @@ pub async fn create_retrospective(
         r#"
         INSERT INTO retrospectives (id, period_type, period_start, period_end, questions_data, created_at)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
+        RETURNING id, period_type, period_start, period_end, questions_data, created_at
         "#,
     )
     .bind(&id)
