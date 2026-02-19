@@ -5,11 +5,7 @@ use tauri::State;
 use crate::PosDb;
 use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
-use crate::unified_goals::UnifiedGoalRow;
-
-const UNIFIED_GOAL_COLS: &str = "id, text, description, completed, completed_at, verified, due_date, \
-    recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, \
-    linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt";
+use crate::unified_goals::{UnifiedGoalRow, UNIFIED_GOAL_COLS};
 
 // ─── Row types ──────────────────────────────────────────────────────
 

@@ -6,6 +6,12 @@ use crate::PosDb;
 use crate::pos::error::{PosError, PosResult, db_context};
 use crate::pos::utils::gen_id;
 
+/// Reusable explicit column list for `unified_goals` table.
+/// Kept here (next to UnifiedGoalRow) so schema changes only need one update.
+pub const UNIFIED_GOAL_COLS: &str = "id, text, description, completed, completed_at, verified, \
+    due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, \
+    linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt";
+
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "jsonb")]
 pub struct UnifiedGoalMetric {

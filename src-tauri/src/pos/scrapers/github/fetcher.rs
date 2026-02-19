@@ -10,6 +10,11 @@ use super::super::build_http_client;
 use super::db::{insert_repository_from_graphql, update_repository_from_graphql, update_additional_user_stats, fetch_user_contribution_stats_direct};
 use super::types::{GraphQLRepository, GraphQLResponse};
 
+/// GitHub API rate-limit courtesy delay between paginated requests.
+const GITHUB_RATE_LIMIT_MS: u64 = 200;
+/// Shorter delay for details fetching (less aggressive endpoint).
+const GITHUB_DETAILS_RATE_LIMIT_MS: u64 = 100;
+
 #[tauri::command]
 pub async fn scrape_github(
     db: State<'_, PosDb>,
@@ -229,7 +234,7 @@ async fn fetch_user_contributions(
         }
 
         // Rate limiting between years
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(GITHUB_RATE_LIMIT_MS)).await;
     }
 
     log::info!("[GITHUB] Found total contributions in {} repos across all years", all_contributions.len());
@@ -372,7 +377,7 @@ async fn fetch_repos_details(
         page += 1;
 
         // Rate limiting
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(GITHUB_DETAILS_RATE_LIMIT_MS)).await;
     }
 
     log::info!("[GITHUB] Matched {} repos with user contributions", results.len());
