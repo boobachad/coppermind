@@ -13,133 +13,8 @@ use crate::cf_ladder_system::{
 };
 
 // ─── Categories ──────────────────────────────────────────────────────
+// (Moved to cf_ladder_system.rs to unify data ingestion logic and fix parsing)
 
-#[tauri::command]
-pub async fn get_categories(
-    db: State<'_, PosDb>,
-) -> PosResult<Vec<CFCategoryRow>> {
-    let categories = sqlx::query_as::<sqlx::Postgres, CFCategoryRow>(
-        r#"
-        SELECT c.id, c.name, c.description, c.problem_count, c.created_at,
-               COUNT(CASE WHEN cp.solved_at IS NOT NULL THEN 1 END)::bigint AS solved_count
-        FROM cf_categories c
-        LEFT JOIN cf_category_progress cp ON cp.category_id = c.id
-        GROUP BY c.id
-        ORDER BY c.name
-        "#,
-    )
-    .fetch_all(&db.0)
-    .await
-    .map_err(|e| db_context("fetch cf_categories", e))?;
-
-    Ok(categories)
-}
-
-#[tauri::command]
-pub async fn import_categories_from_html(
-    req: ImportCategoryRequest,
-    db: State<'_, PosDb>,
-) -> PosResult<CFCategoryRow> {
-    // Reuse parse_ladder_html — same table format, category name from title or override
-    let (parsed_title, description, problems) = parse_ladder_html(&req.html_content)?;
-    let category_name = req.category_name.unwrap_or(parsed_title);
-    let category_id = gen_id();
-    let now = Utc::now();
-
-    sqlx::query::<sqlx::Postgres>(
-        r#"
-        INSERT INTO cf_categories (id, name, description, problem_count, created_at)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (name) DO UPDATE
-        SET description = EXCLUDED.description, problem_count = EXCLUDED.problem_count
-        "#,
-    )
-    .bind(&category_id)
-    .bind(&category_name)
-    .bind(&description)
-    .bind(problems.len() as i32)
-    .bind(now)
-    .execute(&db.0)
-    .await
-    .map_err(|e| db_context("upsert cf_category", e))?;
-
-    // Fetch the canonical id (in case of conflict update the existing row was kept)
-    let row_id: String = sqlx::query_scalar::<sqlx::Postgres, String>(
-        "SELECT id FROM cf_categories WHERE name = $1"
-    )
-    .bind(&category_name)
-    .fetch_one(&db.0)
-    .await
-    .map_err(|e| db_context("fetch cf_category id", e))?;
-
-    for problem in &problems {
-        let prob_id = gen_id();
-        sqlx::query::<sqlx::Postgres>(
-            r#"
-            INSERT INTO cf_category_problems
-            (id, category_id, problem_id, problem_name, problem_url, position, difficulty, online_judge, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT DO NOTHING
-            "#,
-        )
-        .bind(&prob_id)
-        .bind(&row_id)
-        .bind(&problem.problem_id)
-        .bind(&problem.name)
-        .bind(&problem.url)
-        .bind(problem.position)
-        .bind(problem.difficulty)
-        .bind(&problem.judge)
-        .bind(now)
-        .execute(&db.0)
-        .await
-        .map_err(|e| db_context("insert cf_category_problem", e))?;
-    }
-
-    let category = sqlx::query_as::<sqlx::Postgres, CFCategoryRow>(
-        r#"
-        SELECT c.id, c.name, c.description, c.problem_count, c.created_at, 0::bigint AS solved_count
-        FROM cf_categories c WHERE c.id = $1
-        "#,
-    )
-    .bind(&row_id)
-    .fetch_one(&db.0)
-    .await
-    .map_err(|e| db_context("fetch cf_category", e))?;
-
-    Ok(category)
-}
-
-#[tauri::command]
-pub async fn get_category_problems(
-    db: State<'_, PosDb>,
-    category_id: String,
-) -> PosResult<Vec<CFLadderProblemRow>> {
-    // Reuse CFLadderProblemRow — same shape as cf_category_problems
-    let problems = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
-        r#"
-        SELECT
-            p.id,
-            p.category_id   AS ladder_id,
-            p.problem_id,
-            p.problem_name,
-            p.problem_url,
-            p.position,
-            p.difficulty,
-            p.online_judge,
-            p.created_at
-        FROM cf_category_problems p
-        WHERE p.category_id = $1
-        ORDER BY p.position
-        "#,
-    )
-    .bind(&category_id)
-    .fetch_all(&db.0)
-    .await
-    .map_err(|e| db_context("get_category_problems", e))?;
-
-    Ok(problems)
-}
 
 // ─── Daily Recommendations ───────────────────────────────────────────
 
@@ -225,7 +100,8 @@ pub async fn get_daily_recommendations(
                 LEFT JOIN cf_category_progress cp
                   ON cp.category_id = p.category_id AND cp.problem_id = p.problem_id
                 WHERE cp.id IS NULL
-                ORDER BY p.position
+                GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                ORDER BY MIN(p.position)
                 LIMIT $1
                 "#,
             )
@@ -249,7 +125,7 @@ pub async fn get_daily_recommendations(
 
         "rating" => {
             // Problems from ladder within a 200-point rating window of the user's last solved
-            let last_diff: Option<i64> = sqlx::query_scalar::<sqlx::Postgres, Option<i64>>(
+            let last_diff: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<i32>>(
                 r#"
                 SELECT MAX(p.difficulty)
                 FROM cf_ladder_progress pr
@@ -261,11 +137,28 @@ pub async fn get_daily_recommendations(
             .await
             .map_err(|e| db_context("get last difficulty", e))?;
 
-            let target = last_diff.unwrap_or(1200) as i32;
-            let min_r = target;
+            let mut target = 800;
+
+            if let Some(diff) = last_diff {
+                 target = diff;
+            } else {
+                // Fallback: Check if user has added themselves as a friend (use most recent friend as proxy)
+                let friend_rating: Option<i32> = sqlx::query_scalar("SELECT current_rating FROM cf_friends ORDER BY created_at DESC LIMIT 1")
+                    .fetch_optional(&db.0)
+                    .await
+                    .unwrap_or(None)
+                    .flatten();
+                
+                if let Some(rating) = friend_rating {
+                    target = rating;
+                }
+            }
+            // Search window: +/- 200 (min 800)
+            let min_r = (target - 200).max(800);
             let max_r = target + 200;
 
-            let rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
+            // 1. Try Ladder Problems
+            let ladder_rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
                 r#"
                 SELECT p.id, p.ladder_id, p.problem_id, p.problem_name, p.problem_url,
                        p.position, p.difficulty, p.online_judge, p.created_at
@@ -283,18 +176,57 @@ pub async fn get_daily_recommendations(
             .bind(n)
             .fetch_all(&db.0)
             .await
-            .map_err(|e| db_context("get rating recommendations", e))?;
+            .map_err(|e| db_context("get rating recommendations (ladder)", e))?;
 
-            for r in rows {
+            for r in ladder_rows {
                 recs.push(DailyRecommendation {
                     problem_id: r.problem_id.clone(),
                     problem_name: r.problem_name.clone(),
                     problem_url: r.problem_url.clone(),
                     online_judge: r.online_judge.clone(),
                     difficulty: r.difficulty,
-                    reason: format!("Matches your current level (~{})", target),
+                    reason: format!("Ladder problem at your level (~{})", target),
                     strategy: "rating".to_string(),
                 });
+            }
+
+            // 2. Fill gaps with Category Problems
+            if (recs.len() as i32) < n {
+                let needed = n - (recs.len() as i32);
+                let cat_rows = sqlx::query_as::<sqlx::Postgres, (String, String, String, String, Option<i32>)>(
+                    r#"
+                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    FROM cf_category_problems p
+                    LEFT JOIN cf_category_progress cp
+                      ON cp.category_id = p.category_id AND cp.problem_id = p.problem_id
+                    WHERE cp.id IS NULL
+                      AND p.difficulty >= $1 AND p.difficulty <= $2
+                    GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    ORDER BY p.difficulty
+                    LIMIT $3
+                    "#,
+                )
+                .bind(min_r)
+                .bind(max_r)
+                .bind(needed)
+                .fetch_all(&db.0)
+                .await
+                .map_err(|e| db_context("get rating recommendations (category)", e))?;
+
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in cat_rows {
+                    // Avoid duplicates if problem exists in both ladder and category
+                    if !recs.iter().any(|r| r.problem_id == problem_id) {
+                         recs.push(DailyRecommendation {
+                            problem_id,
+                            problem_name,
+                            problem_url,
+                            online_judge,
+                            difficulty,
+                            reason: format!("Category problem at your level (~{})", target),
+                            strategy: "rating".to_string(),
+                        });
+                    }
+                }
             }
         }
 
@@ -351,7 +283,10 @@ pub async fn get_daily_recommendations(
                 r#"SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
                    FROM cf_category_problems p
                    LEFT JOIN cf_category_progress cp ON cp.category_id = p.category_id AND cp.problem_id = p.problem_id
-                   WHERE cp.id IS NULL ORDER BY p.position LIMIT $1"#,
+                   WHERE cp.id IS NULL 
+                   GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                   ORDER BY MIN(p.position) 
+                   LIMIT $1"#,
             )
             .bind(per)
             .fetch_all(&db.0)

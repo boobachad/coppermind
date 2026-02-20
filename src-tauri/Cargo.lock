@@ -88,6 +88,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "log",
+ "open",
  "rdev",
  "regex",
  "reqwest 0.12.28",

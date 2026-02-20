@@ -87,7 +87,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 await invoke('update_knowledge_item', {
                     id: editingItem.id,
                     req: {
-                        item_type: itemType,
+                        itemType: itemType,
                         content: content.trim(),
                         status,
                     }
@@ -97,12 +97,12 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 // Create new item
                 await invoke('create_knowledge_item', {
                     req: {
-                        item_type: itemType,
+                        itemType: itemType,
                         source,
                         content: content.trim(),
                         status,
                         metadata: null,
-                        next_review_date: null,
+                        nextReviewDate: null,
                     }
                 });
                 toast.success('Knowledge item created');

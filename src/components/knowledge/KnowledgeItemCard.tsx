@@ -235,14 +235,6 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                     </Button>
                 </div>
             </div>
-
-            {/* Hover Overlay - using semantic variable */}
-            <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                style={{
-                    background: 'linear-gradient(135deg, var(--glass-bg-subtle) 0%, transparent 100%)',
-                }}
-            />
         </div>
     );
 }

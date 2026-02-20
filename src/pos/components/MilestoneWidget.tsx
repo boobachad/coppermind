@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { MonthlyGoal } from '../lib/types';
+import { Milestone } from '../lib/types';
 import { MonthlyGoalCard } from './MonthlyGoalCard';
 import { MonthlyGoalModal } from './MonthlyGoalModal';
 import { Loader } from '@/components/Loader';
 
-interface MonthlyGoalWidgetProps {
+interface MilestoneWidgetProps {
   /**
    * If provided, only show goals for this specific month (YYYY-MM format)
-   * Otherwise, shows all active monthly goals
+   * Otherwise, shows all active milestones
    */
   month?: string;
   /**
@@ -19,20 +19,20 @@ interface MonthlyGoalWidgetProps {
   showAll?: boolean;
 }
 
-export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetProps) {
-  const [goals, setGoals] = useState<MonthlyGoal[]>([]);
+export function MilestoneWidget({ month, showAll = false }: MilestoneWidgetProps) {
+  const [goals, setGoals] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<MonthlyGoal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<Milestone | null>(null);
 
   useEffect(() => {
-    loadMonthlyGoals();
+    loadMilestones();
   }, [month, showAll]);
 
-  const loadMonthlyGoals = async () => {
+  const loadMilestones = async () => {
     setLoading(true);
     try {
-      const result = await invoke<MonthlyGoal[]>('get_monthly_goals', {
+      const result = await invoke<Milestone[]>('get_milestones', {
         activeOnly: !showAll,
       });
 
@@ -48,7 +48,7 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
 
       setGoals(filtered);
     } catch (err) {
-      toast.error('Failed to load monthly goals', { description: String(err) });
+      toast.error('Failed to load milestones', { description: String(err) });
     } finally {
       setLoading(false);
     }
@@ -59,18 +59,18 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
     setIsModalOpen(true);
   };
 
-  const handleEditGoal = (goal: MonthlyGoal) => {
+  const handleEditGoal = (goal: Milestone) => {
     setEditingGoal(goal);
     setIsModalOpen(true);
   };
 
   const handleDeleteGoal = async (id: string) => {
     try {
-      await invoke('delete_monthly_goal', { id });
-      toast.success('Monthly goal deleted');
-      loadMonthlyGoals();
+      await invoke('delete_milestone', { id });
+      toast.success('Milestone deleted');
+      loadMilestones();
     } catch (err) {
-      toast.error('Failed to delete goal', { description: String(err) });
+      toast.error('Failed to delete milestone', { description: String(err) });
     }
   };
 
@@ -81,7 +81,7 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
 
   const handleModalSuccess = () => {
     handleModalClose();
-    loadMonthlyGoals();
+    loadMilestones();
   };
 
   if (loading) {
@@ -98,10 +98,10 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Monthly Goals
+            Milestones
           </h2>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Track long-term targets with automatic daily distribution
+            Track period-based targets with automatic daily distribution
           </p>
         </div>
         <button
@@ -113,7 +113,7 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
           }}
         >
           <Plus className="w-4 h-4" />
-          <span>New Monthly Goal</span>
+          <span>New Milestone</span>
         </button>
       </div>
 
@@ -127,10 +127,10 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
           }}
         >
           <p className="text-lg mb-2" style={{ color: 'var(--text-secondary)' }}>
-            No monthly goals yet
+            No milestones yet
           </p>
           <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-            Create a monthly goal to automatically distribute daily targets
+            Create a milestone to automatically distribute daily targets across any period
           </p>
           <button
             onClick={handleCreateGoal}
@@ -140,7 +140,7 @@ export function MonthlyGoalWidget({ month, showAll = false }: MonthlyGoalWidgetP
               color: 'var(--btn-primary-text)',
             }}
           >
-            Create Your First Monthly Goal
+            Create Your First Milestone
           </button>
         </div>
       ) : (

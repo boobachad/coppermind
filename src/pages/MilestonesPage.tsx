@@ -1,12 +1,12 @@
-import { MonthlyGoalWidget } from '../pos/components/MonthlyGoalWidget';
+import { MilestoneWidget } from '../pos/components/MilestoneWidget';
 
-export default function MonthlyGoalsPage() {
+export default function MilestonesPage() {
     return (
         <div style={{
             height: '100%', overflow: 'auto', padding: '2rem',
             backgroundColor: 'var(--bg-primary)',
         }}>
-            <MonthlyGoalWidget showAll />
+            <MilestoneWidget showAll />
         </div>
     );
 }

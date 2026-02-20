@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { BookOpen, Network, Link2 } from 'lucide-react';
 import { KnowledgeInbox } from '../components/knowledge/KnowledgeInbox';
 import { KnowledgeGraph } from '../components/knowledge/KnowledgeGraph';
@@ -24,8 +25,24 @@ export default function KnowledgePage() {
         { key: 'backlinks', label: 'Backlinks', icon: <Link2 size={16} /> },
     ];
 
-    const handleNodeClick = (item: KnowledgeItem) => {
-        setSelectedItem(item);
+    const handleNodeClick = async (item: KnowledgeItem) => {
+        // If we only have an ID, fetch the full item
+        if (!item.content) {
+            try {
+                const allItems = await invoke<KnowledgeItem[]>('get_knowledge_items', { filters: {} });
+                const fullItem = allItems.find(i => i.id === item.id);
+                if (fullItem) {
+                    setSelectedItem(fullItem);
+                } else {
+                    setSelectedItem(item); // Fallback to partial item
+                }
+            } catch (err) {
+                console.error('Failed to fetch full item:', err);
+                setSelectedItem(item); // Fallback to partial item
+            }
+        } else {
+            setSelectedItem(item);
+        }
         setActiveTab('backlinks');
     };
 

@@ -248,7 +248,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_kb_links_source ON knowledge_links(source_id)",
     "CREATE INDEX IF NOT EXISTS idx_kb_links_target ON knowledge_links(target_id)",
 
-    // ─── Monthly Goals (Goal Periods) ───────────────────────────────
+    // ─── Milestones (Goal Periods) ──────────────────────────────────
     "CREATE TABLE IF NOT EXISTS goal_periods (
         id              TEXT PRIMARY KEY,
         target_metric   TEXT NOT NULL,
@@ -263,7 +263,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_dates ON goal_periods(period_start, period_end)",
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_metric ON goal_periods(target_metric)",
 
-    // ─── Debt Archive (Monthly Reset) ───────────────────────────────
+    // ─── Debt Archive (Period Reset) ────────────────────────────────
     "CREATE TABLE IF NOT EXISTS debt_archive (
         id              TEXT PRIMARY KEY,
         goal_id         TEXT NOT NULL,
@@ -422,4 +422,12 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         CONSTRAINT unique_category_problem UNIQUE (category_id, problem_id)
     )",
     "CREATE INDEX IF NOT EXISTS idx_cf_category_progress_category_id ON cf_category_progress(category_id)",
+
+    // ─── User Stats (LeetCode/Codeforces/GitHub Self) ───────────────
+    "CREATE TABLE IF NOT EXISTS pos_user_stats (
+        platform        TEXT PRIMARY KEY,
+        username        TEXT NOT NULL,
+        data            JSONB NOT NULL,
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )",
 ];

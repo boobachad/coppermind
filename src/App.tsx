@@ -16,7 +16,7 @@ import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
 import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
 import KnowledgePage from './pages/KnowledgePage';
-import MonthlyGoalsPage from './pages/MonthlyGoalsPage';
+import MilestonesPage from './pages/MilestonesPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
 import LadderView from './components/codeforces/LadderView';
 import CategoryBrowser from './components/codeforces/CategoryBrowser';
@@ -53,7 +53,7 @@ function App() {
             <Route path="notes/new" element={<NewNotePage />} />
             <Route path="notes/:id" element={<NotePage />} />
             <Route path="goals" element={<UnifiedGoalsPage />} />
-            <Route path="monthly-goals" element={<MonthlyGoalsPage />} />
+            <Route path="milestones" element={<MilestonesPage />} />
             <Route path="knowledge" element={<KnowledgePage />} />
             <Route path="briefing" element={<DailyBriefingPage />} />
             <Route path="nodes" element={<NodesPage />} />

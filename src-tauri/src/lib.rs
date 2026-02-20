@@ -9,7 +9,7 @@ use sqlx::postgres::PgPoolOptions;
 mod pos;
 mod unified_goals;
 mod knowledge_base;
-mod monthly_goals;
+mod milestones;
 mod debt_system;
 mod context_engine;
 mod reflection;
@@ -84,6 +84,13 @@ fn read_primary_selection() -> Result<String, String> {
     }
 
     Err("No content found in Primary or Clipboard".to_string())
+}
+
+/// Open a URL in the default system browser
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    log::info!("Opening link: {}", url);
+    open::that(&url).map_err(|e| format!("Failed to open link: {}", e))
 }
 
 /// Read PRIMARY selection on Wayland using wl-clipboard-rs
@@ -319,6 +326,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            open_link,
             read_primary_selection,
             pos::activities::get_activities,
             pos::activities::get_activities_batch,
@@ -332,7 +340,9 @@ pub fn run() {
             pos::goals::update_goal_metric,
             pos::submissions::get_submissions,
             pos::scrapers::leetcode::scrape_leetcode,
+            pos::scrapers::leetcode::get_leetcode_user_stats,
             pos::scrapers::codeforces::scrape_codeforces,
+            pos::scrapers::codeforces::get_codeforces_user_stats,
             pos::scrapers::github::fetcher::scrape_github,
             pos::github::get_github_repositories,
             pos::github::get_github_user_stats,
@@ -351,11 +361,11 @@ pub fn run() {
             knowledge_base::get_knowledge_links,
             knowledge_base::delete_knowledge_link,
             knowledge_base::check_knowledge_duplicates,
-            monthly_goals::create_monthly_goal,
-            monthly_goals::get_monthly_goals,
-            monthly_goals::update_monthly_goal,
-            monthly_goals::run_balancer_engine,
-            monthly_goals::delete_monthly_goal,
+            milestones::create_milestone,
+            milestones::get_milestones,
+            milestones::update_milestone,
+            milestones::run_balancer_engine,
+            milestones::delete_milestone,
             debt_system::get_accumulated_debt,
             debt_system::get_debt_trail,
             debt_system::transition_monthly_debt,
@@ -381,9 +391,12 @@ pub fn run() {
             cf_ladder_system::track_ladder_progress,
             cf_ladder_system::get_ladder_stats,
             cf_ladder_system::get_ladder_by_id,
-            cf_recommendations::get_categories,
-            cf_recommendations::import_categories_from_html,
-            cf_recommendations::get_category_problems,
+            cf_ladder_system::get_categories,
+            cf_ladder_system::get_category_by_id,
+            cf_ladder_system::get_category_stats,
+            cf_ladder_system::import_category_from_html,
+            cf_ladder_system::get_category_problems,
+            cf_ladder_system::scan_and_import_public_data,
             cf_recommendations::get_daily_recommendations,
             date_summary::get_yearly_graph_data,
         ])

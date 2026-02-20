@@ -1,4 +1,9 @@
 // Pre-flight: C(db.0) E(no SELECT*) H(PosResult) K(explicit cols) L(Option<T>) M(#[tauri::command]) N(registered)
+// Timezone Standard: Backend stores TIMESTAMPTZ in UTC and returns both:
+//   1. date: String (YYYY-MM-DD in UTC) for backward compatibility
+//   2. *_time/*_at: DateTime<Utc> for frontend timezone conversion
+// Frontend converts UTC timestamps to local dates using toLocalDate() in graphUtils.ts
+// This matches the pattern in pos/activities.rs where frontend sends explicit local date.
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use tauri::State;
@@ -23,10 +28,11 @@ pub struct ActivitySummary {
 #[serde(rename_all = "camelCase")]
 pub struct GoalSummary {
     pub id: String,
-    pub date: String,           // due_date cast to YYYY-MM-DD
+    pub date: String,           // due_date cast to YYYY-MM-DD (UTC)
     pub text: String,
     pub completed: bool,
     pub priority: String,
+    pub due_date: DateTime<Utc>, // Full timestamp for frontend timezone conversion
 }
 
 #[derive(Debug, Serialize)]
@@ -114,7 +120,7 @@ struct ActivityRow {
 
 #[derive(sqlx::FromRow)]
 struct GoalRow {
-    id: String, date_str: String, text: String, completed: bool, priority: String,
+    id: String, date_str: String, text: String, completed: bool, priority: String, due_date: DateTime<Utc>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -179,7 +185,7 @@ pub async fn get_yearly_graph_data(
 
     // ── Unified Goals (due_date is TIMESTAMPTZ, cast to date) ───────────
     let goal_rows = sqlx::query_as::<_, GoalRow>(
-        r#"SELECT id, due_date::date::text AS date_str, text, completed, priority
+        r#"SELECT id, due_date::date::text AS date_str, text, completed, priority, due_date
            FROM unified_goals
            WHERE due_date IS NOT NULL
              AND EXTRACT(YEAR FROM due_date) = $1
@@ -190,7 +196,7 @@ pub async fn get_yearly_graph_data(
 
     let goals = goal_rows.into_iter().map(|r| GoalSummary {
         id: r.id, date: r.date_str, text: r.text,
-        completed: r.completed, priority: r.priority,
+        completed: r.completed, priority: r.priority, due_date: r.due_date,
     }).collect();
 
     // ── Submissions (submitted_time is TIMESTAMPTZ) ──────────────────────

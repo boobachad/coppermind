@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Sparkles, RefreshCw, Plus, ExternalLink } from 'lucide-react';
+import { Sparkles, RefreshCw, Plus, ExternalLink, Zap, Trophy, Users, BookOpen, Target, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { Loader } from '@/components/Loader';
 import type { DailyRecommendation } from '../../pos/lib/types';
 import { getLocalDateString } from '../../pos/lib/time';
 
 type RecommendationStrategy = 'ladder' | 'friends' | 'category' | 'rating' | 'hybrid';
 
-const STRATEGY_BUTTONS: { key: RecommendationStrategy; label: string; icon: string }[] = [
-  { key: 'hybrid',   label: 'Hybrid',    icon: '🎯' },
-  { key: 'ladder',   label: 'Ladder',    icon: '📊' },
-  { key: 'friends',  label: 'Friends',   icon: '👥' },
-  { key: 'category', label: 'Category',  icon: '📚' },
-  { key: 'rating',   label: 'Rating',    icon: '⭐' },
+const STRATEGIES: { key: RecommendationStrategy; label: string; icon: React.ReactNode; desc: string }[] = [
+  { key: 'hybrid', label: 'Hybrid', icon: <Zap size={20} />, desc: 'Smart mix' },
+  { key: 'ladder', label: 'Ladder', icon: <Trophy size={20} />, desc: 'Next up' },
+  { key: 'friends', label: 'Friends', icon: <Users size={20} />, desc: 'Community' },
+  { key: 'category', label: 'Category', icon: <BookOpen size={20} />, desc: 'Topical' },
+  { key: 'rating', label: 'Rating', icon: <Target size={20} />, desc: '+/- 200' },
 ];
 
 function diffLevel(difficulty: number | null): number {
@@ -26,7 +28,6 @@ function diffLevel(difficulty: number | null): number {
 export function DailyProblemsPicker() {
   const [recommendations, setRecommendations] = useState<DailyRecommendation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [strategy, setStrategy] = useState<RecommendationStrategy>('hybrid');
   const [goalAdded, setGoalAdded] = useState<string | null>(null);
 
@@ -37,7 +38,6 @@ export function DailyProblemsPicker() {
   const loadRecommendations = async () => {
     try {
       setLoading(true);
-      setError('');
       const data = await invoke<DailyRecommendation[]>('get_daily_recommendations', {
         strategy,
         count: 5,
@@ -45,7 +45,7 @@ export function DailyProblemsPicker() {
       setRecommendations(data || []);
     } catch (err) {
       console.error('Failed to load recommendations:', err);
-      setError(String(err));
+      toast.error('Failed to load recommendations', { description: String(err) });
       setRecommendations([]);
     } finally {
       setLoading(false);
@@ -64,135 +64,154 @@ export function DailyProblemsPicker() {
       });
       setGoalAdded(rec.problemId);
       setTimeout(() => setGoalAdded(null), 2000);
+      toast.success('Added to goals');
     } catch (err) {
+      toast.error('Failed to add to goals', { description: String(err) });
       console.error('Failed to add to goals:', err);
     }
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Sparkles size={28} style={{ color: 'var(--color-accent-primary)' }} />
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Daily Problem Recommendations
-          </h1>
-        </div>
-        <button
-          onClick={loadRecommendations}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
-          style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--color-error)', color: 'white' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Strategy Selector */}
-      <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: 'var(--glass-bg)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(10px)' }}>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Recommendation Strategy
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {STRATEGY_BUTTONS.map((btn) => (
-            <button
-              key={btn.key}
-              onClick={() => setStrategy(btn.key)}
-              className="px-4 py-2 rounded-lg transition-all hover:scale-105"
-              style={{
-                backgroundColor: strategy === btn.key ? 'var(--color-accent-primary)' : 'var(--surface-secondary)',
-                color: strategy === btn.key ? 'white' : 'var(--text-primary)',
-                border: '1px solid var(--border-primary)',
-              }}
-            >
-              <span className="mr-2">{btn.icon}</span>{btn.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Recommendations */}
-      {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: 'var(--color-accent-primary)', borderTopColor: 'transparent' }} />
-            <p style={{ color: 'var(--text-secondary)' }}>Finding problems…</p>
+    <div className="h-full overflow-y-auto custom-scrollbar">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 flex items-center" style={{ color: 'var(--text-primary)' }}>
+              <Sparkles className="mr-3" size={28} style={{ color: 'var(--color-warning)' }} />
+              Daily Training
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Curated problem set to push your limits today</p>
           </div>
+          <button
+            onClick={loadRecommendations}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: 'var(--glass-bg-subtle)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--glass-border)'
+            }}
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {recommendations.map((rec, idx) => (
-            <div
-              key={rec.problemId}
-              className="p-6 rounded-lg transition-all hover:scale-[1.01]"
-              style={{ backgroundColor: 'var(--glass-bg)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(10px)' }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--color-accent-primary)', color: 'white' }}>
-                      Problem {idx + 1}
-                    </span>
-                    {rec.difficulty != null && (
-                      <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: `var(--pos-heatmap-level-${diffLevel(rec.difficulty)})`, color: 'white' }}>
-                        {rec.difficulty}
+
+        {/* Strategy Selector */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+          {STRATEGIES.map((opt) => {
+            const isActive = strategy === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setStrategy(opt.key)}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all border ${isActive ? 'scale-105 shadow-lg' : 'hover:bg-(--glass-bg-subtle)'}`}
+                style={{
+                  backgroundColor: isActive ? 'var(--color-accent-primary)' : 'var(--glass-bg)',
+                  borderColor: isActive ? 'transparent' : 'var(--glass-border)',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-primary)',
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                <div className="mb-1 opacity-90">{opt.icon}</div>
+                <div className="font-medium text-sm">{opt.label}</div>
+                <div className="text-[10px] opacity-70 mt-0.5">{opt.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Recommendations List */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader />
+            <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>Analyzing your performance...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recommendations.map((rec, idx) => (
+              <div
+                key={rec.problemId}
+                className="group p-6 rounded-xl transition-all hover:scale-[1.01] hover:shadow-xl relative overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--glass-bg)',
+                  border: '1px solid var(--glass-border)',
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                        style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--text-secondary)' }}>
+                        {idx + 1}
                       </span>
-                    )}
-                    <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-                      {rec.strategy}
-                    </span>
+                      {rec.difficulty != null && (
+                        <span className="px-2.5 py-0.5 rounded-md text-xs font-medium"
+                          style={{
+                            backgroundColor: `var(--pos-heatmap-level-${diffLevel(rec.difficulty)})`,
+                            color: 'var(--text-primary)'
+                          }}>
+                          {rec.difficulty}
+                        </span>
+                      )}
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--text-tertiary)' }}>
+                        {rec.onlineJudge}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold mb-2 truncate pr-4" style={{ color: 'var(--text-primary)' }}>
+                      {rec.problemName}
+                    </h3>
+
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <Zap size={14} style={{ color: 'var(--color-warning)' }} />
+                      <span>{rec.reason}</span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                    {rec.problemName}
-                  </h3>
-                  <p className="text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-                    {rec.problemId} · {rec.onlineJudge}
-                  </p>
-                  <p className="text-sm px-3 py-1 rounded inline-block" style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-                    💡 {rec.reason}
-                  </p>
+
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button
+                      onClick={() => addToGoals(rec)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all font-medium min-w-[140px]"
+                      style={{
+                        backgroundColor: goalAdded === rec.problemId ? 'var(--color-success)' : 'var(--btn-primary-bg)',
+                        color: 'var(--btn-primary-text)'
+                      }}
+                    >
+                      {goalAdded === rec.problemId ? <CheckCircle size={18} /> : <Plus size={18} />}
+                      {goalAdded === rec.problemId ? 'Added' : 'Add Goal'}
+                    </button>
+
+                    <button
+                      onClick={() => invoke('open_link', { url: rec.problemUrl })}
+                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all font-medium hover:bg-(--glass-bg-subtle)"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      <ExternalLink size={18} />
+                      Solve
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => window.open(rec.problemUrl, '_blank')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105"
-                  style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--color-accent-primary)', border: '1px solid var(--border-primary)' }}
-                >
-                  <ExternalLink size={18} />Open Problem
-                </button>
-                <button
-                  onClick={() => addToGoals(rec)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105"
-                  style={{ backgroundColor: goalAdded === rec.problemId ? 'var(--color-success)' : 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
-                >
-                  <Plus size={18} />
-                  {goalAdded === rec.problemId ? 'Added!' : 'Add to Goals'}
-                </button>
+            {recommendations.length === 0 && (
+              <div className="text-center py-20">
+                <Target size={64} className="mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
+                <h3 className="text-xl font-medium" style={{ color: 'var(--text-secondary)' }}>No recommendations found</h3>
+                <p style={{ color: 'var(--text-tertiary)' }}>Try switching strategies or refreshing</p>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!loading && recommendations.length === 0 && !error && (
-        <div className="text-center p-12">
-          <Sparkles size={64} style={{ color: 'var(--text-tertiary)', margin: '0 auto 1rem' }} />
-          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No Recommendations</h3>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Try a different strategy, or import ladders and add friends first.
-          </p>
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

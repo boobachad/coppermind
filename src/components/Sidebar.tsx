@@ -52,10 +52,10 @@ export function Sidebar() {
   );
 
   const mainNavItems = [
-    { to: "/",              icon: FileText,     label: "Notes" },
-    { to: "/goals",         icon: Target,       label: "Goals" },
-    { to: "/monthly-goals", icon: CalendarRange, label: "Monthly Goals" },
-    { to: "/knowledge",     icon: Brain,        label: "Knowledge Base" },
+    { to: "/",           icon: FileText,     label: "Notes" },
+    { to: "/goals",      icon: Target,       label: "Goals" },
+    { to: "/milestones", icon: CalendarRange, label: "Milestones" },
+    { to: "/knowledge",  icon: Brain,        label: "Knowledge Base" },
     { to: "/briefing",      icon: Sun,          label: "Daily Briefing" },
     { to: "/nodes",         icon: Share2,       label: "Graph" },
     { to: "/pos",           icon: Box,          label: "POS" },

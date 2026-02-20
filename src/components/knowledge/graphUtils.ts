@@ -1,4 +1,4 @@
-// Pre-flight: A(formatMonthYear/getMonthShort for labels) D(no colors here - CSS vars in component)
+// Pre-flight: A(toLocalDate for timezone conversion) D(no colors - CSS vars in component)
 //             F(no mock) G(<600L) O(types match Rust camelCase)
 import type * as d3 from 'd3';
 import { formatMonthYear, getMonthShort } from '@/pos/lib/time';
@@ -111,36 +111,51 @@ export interface HierarchyResult {
 }
 
 /**
+ * Convert UTC timestamp to local date string (YYYY-MM-DD)
+ * This ensures items appear on the correct date in the user's timezone
+ */
+function toLocalDate(utcTimestamp: string): string {
+    const date = new Date(utcTimestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
  * Build the full Obsidian-style hierarchy:
  *   Year → Month → Date → All item nodes
  * KB knowledge links (related / blocks / requires) are returned separately
  * so the simulation can apply different force strengths.
+ * 
+ * Timestamps are converted to local dates to ensure items appear on the
+ * correct date in the user's timezone (not UTC).
  */
 export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyResult {
     const nodes: GraphNode[]          = [];
     const hierarchyLinks: GraphLink[] = [];
     const kbLinks: GraphLink[]        = [];
 
-    // Flatten all items with their date
+    // Flatten all items with their date (convert UTC timestamps to local dates)
     const allItems: DateItem[] = [
         ...data.activities.map(a => ({
             id: a.id, date: a.date, label: activityLabel(a),
             kind: 'activity' as NodeKind, sourceId: a.id,
         })),
         ...data.goals.map(g => ({
-            id: g.id, date: g.date, label: goalLabel(g),
+            id: g.id, date: toLocalDate(g.dueDate), label: goalLabel(g),
             kind: 'goal' as NodeKind, sourceId: g.id,
         })),
         ...data.submissions.map(s => ({
-            id: s.id, date: s.date, label: submissionLabel(s),
+            id: s.id, date: toLocalDate(s.submittedTime), label: submissionLabel(s),
             kind: 'submission' as NodeKind, sourceId: s.id,
         })),
         ...data.kbItems.map(k => ({
-            id: k.id, date: k.date, label: kbLabel(k),
+            id: k.id, date: toLocalDate(k.createdAt), label: kbLabel(k),
             kind: 'kb' as NodeKind, sourceId: k.id,
         })),
         ...data.retrospectives.map(r => ({
-            id: r.id, date: r.date, label: retroLabel(r),
+            id: r.id, date: toLocalDate(r.periodStart), label: retroLabel(r),
             kind: 'retro' as NodeKind, sourceId: r.id,
         })),
         ...data.journalEntries.map(j => ({
@@ -148,7 +163,7 @@ export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyRe
             kind: 'journal' as NodeKind, sourceId: j.id,
         })),
         ...data.notes.map(n => ({
-            id: `note-${n.id}`, date: n.date, label: noteLabel(n),
+            id: `note-${n.id}`, date: toLocalDate(new Date(n.createdAtMs).toISOString()), label: noteLabel(n),
             kind: 'note' as NodeKind, sourceId: n.id,
         })),
     ];

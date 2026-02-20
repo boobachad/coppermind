@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { X, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { MonthlyGoal } from '../lib/types';
+import { Milestone } from '../lib/types';
 
-interface MonthlyGoalModalProps {
+interface MilestoneModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  editingGoal: MonthlyGoal | null;
+  editingGoal: Milestone | null;
 }
 
-export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: MonthlyGoalModalProps) {
+export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: MilestoneModalProps) {
   const [targetMetric, setTargetMetric] = useState('');
   const [targetValue, setTargetValue] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -31,12 +31,14 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
         const now = new Date();
         const y = now.getFullYear();
         const m = now.getMonth();
+        const d = now.getDate();
         const lastDayNum = new Date(y, m + 1, 0).getDate();
         const mm = String(m + 1).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
         setTargetMetric('');
         setTargetValue('');
-        setPeriodStart(`${y}-${mm}-01`);
-        setPeriodEnd(`${y}-${mm}-${String(lastDayNum).padStart(2, '0')}`);
+        setPeriodStart(`${y}-${mm}-${dd}`); // Default to today
+        setPeriodEnd(`${y}-${mm}-${String(lastDayNum).padStart(2, '0')}`); // Default to end of month
         setStrategy('EvenDistribution');
       }
     }
@@ -59,7 +61,7 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
     setSaving(true);
     try {
       if (editingGoal) {
-        await invoke('update_monthly_goal', {
+        await invoke('update_milestone', {
           id: editingGoal.id,
           targetMetric,
           targetValue: value,
@@ -67,20 +69,20 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
           periodEnd: `${periodEnd}T23:59:59Z`,
           strategy,
         });
-        toast.success('Monthly goal updated');
+        toast.success('Milestone updated');
       } else {
-        await invoke('create_monthly_goal', {
+        await invoke('create_milestone', {
           targetMetric,
           targetValue: value,
           periodStart: `${periodStart}T00:00:00Z`,
           periodEnd: `${periodEnd}T23:59:59Z`,
           strategy,
         });
-        toast.success('Monthly goal created');
+        toast.success('Milestone created');
       }
       onSuccess();
     } catch (err) {
-      toast.error('Failed to save monthly goal', { description: String(err) });
+      toast.error('Failed to save milestone', { description: String(err) });
     } finally {
       setSaving(false);
     }
@@ -98,7 +100,7 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
       <div className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-xl p-6 material-glass animate-scale-in">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {editingGoal ? 'Edit Monthly Goal' : 'Create Monthly Goal'}
+            {editingGoal ? 'Edit Milestone' : 'Create Milestone'}
           </h2>
           <button
             onClick={onClose}
@@ -215,7 +217,7 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mo
               className="flex-1 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
             >
-              {saving ? 'Saving…' : editingGoal ? 'Update Goal' : 'Create Goal'}
+              {saving ? 'Saving…' : editingGoal ? 'Update Milestone' : 'Create Milestone'}
             </button>
           </div>
         </form>

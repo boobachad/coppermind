@@ -23,6 +23,8 @@ pub struct CFFriendRow {
     /// Computed: count of synced submissions (added via query, not a real column)
     #[sqlx(default)]
     pub submission_count: Option<i64>,
+    #[sqlx(default)]
+    pub total_submissions: Option<i64>,
 }
 
 /// Matches DB schema: cf_friend_submissions(id, friend_id, problem_id, problem_name, problem_url,
@@ -92,6 +94,19 @@ struct CFProblem {
     rating: Option<i32>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CFUser {
+    handle: String,
+    rating: Option<i32>,
+    max_rating: Option<i32>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    country: Option<String>,
+    rank: Option<String>,
+    max_rank: Option<String>,
+}
+
 async fn fetch_cf_submissions(handle: &str) -> PosResult<Vec<CFSubmission>> {
     let url = format!("https://codeforces.com/api/user.status?handle={}", handle);
 
@@ -111,6 +126,28 @@ async fn fetch_cf_submissions(handle: &str) -> PosResult<Vec<CFSubmission>> {
     Ok(api_response.result.unwrap_or_default())
 }
 
+async fn verify_cf_handle(handle: &str) -> PosResult<CFUser> {
+    let url = format!("https://codeforces.com/api/user.info?handles={}", handle);
+
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|e| PosError::External(format!("CF API request failed: {}", e)))?;
+
+    let api_response: CFApiResponse<Vec<CFUser>> = response
+        .json()
+        .await
+        .map_err(|e| PosError::External(format!("CF API parse failed: {}", e)))?;
+
+    if api_response.status != "OK" {
+        return Err(PosError::External("CF API returned non-OK status or user not found".to_string()));
+    }
+
+    // The API returns a list, we asked for one handle
+    api_response.result
+        .and_then(|users| users.into_iter().next())
+        .ok_or_else(|| PosError::External("User not found in CF response".to_string()))
+}
+
 // ============================================================================
 // Commands
 // ============================================================================
@@ -123,23 +160,30 @@ pub async fn add_cf_friend(
     let pool = &db.0;
     let id = gen_id();
     let now = Utc::now();
-    let display = request.display_name.unwrap_or_else(|| request.cf_handle.clone());
-
-    // Verify handle exists via CF API
-    let _ = fetch_cf_submissions(&request.cf_handle).await?;
+    // Verify handle exists via CF API (Lightweight check)
+    let user_info = verify_cf_handle(&request.cf_handle).await?;
+    
+    // Use the canonical handle from CF (correct casing)
+    let final_handle = user_info.handle;
+    let display = request.display_name.unwrap_or_else(|| final_handle.clone());
 
     let friend: CFFriendRow = sqlx::query_as(
         r#"
-        INSERT INTO cf_friends (id, cf_handle, display_name, created_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO cf_friends (id, cf_handle, display_name, current_rating, max_rating, max_rank, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (cf_handle) DO UPDATE
-        SET display_name = EXCLUDED.display_name
-        RETURNING id, cf_handle, display_name, current_rating, max_rating, last_synced, created_at, NULL::bigint AS submission_count
+        SET display_name = EXCLUDED.display_name,
+            current_rating = EXCLUDED.current_rating,
+            max_rating = EXCLUDED.max_rating
+        RETURNING id, cf_handle, display_name, current_rating, max_rating, last_synced, created_at, 0::bigint AS total_submissions, NULL::bigint AS submission_count
         "#,
     )
     .bind(&id)
-    .bind(&request.cf_handle)
+    .bind(&final_handle)
     .bind(&display)
+    .bind(user_info.rating)
+    .bind(user_info.max_rating)
+    .bind(user_info.max_rank)
     .bind(now)
     .fetch_one(pool)
     .await
@@ -157,7 +201,7 @@ pub async fn get_cf_friends(
     let friends: Vec<CFFriendRow> = sqlx::query_as(
         r#"
         SELECT f.id, f.cf_handle, f.display_name, f.current_rating, f.max_rating,
-               f.last_synced, f.created_at,
+               f.last_synced, f.created_at, f.total_submissions,
                COUNT(s.id)::bigint AS submission_count
         FROM cf_friends f
         LEFT JOIN cf_friend_submissions s ON s.friend_id = f.id
@@ -177,6 +221,7 @@ pub async fn sync_cf_friend_submissions(
     db: State<'_, PosDb>,
     friend_id: String,
 ) -> PosResult<i32> {
+    log::info!("[CF FRIEND] Syncing submissions for friend_id: {}", friend_id);
     let pool = &db.0;
 
     // Get friend
@@ -190,6 +235,8 @@ pub async fn sync_cf_friend_submissions(
 
     // Fetch submissions from CF API
     let submissions = fetch_cf_submissions(&friend.cf_handle).await?;
+    let total_count = submissions.len() as i64;
+    log::info!("[CF FRIEND] Fetched {} submissions for {} from CF API", total_count, friend.cf_handle);
 
     // Filter for AC (Accepted) submissions only
     let ac_subs: Vec<CFSubmission> = submissions
@@ -239,13 +286,16 @@ pub async fn sync_cf_friend_submissions(
         }
     }
 
-    // Update last_synced (DB column name is `last_synced`)
-    sqlx::query("UPDATE cf_friends SET last_synced = $1 WHERE id = $2")
+    // Update last_synced and total_submissions
+    sqlx::query("UPDATE cf_friends SET last_synced = $1, total_submissions = $2 WHERE id = $3")
         .bind(Utc::now())
+        .bind(total_count)
         .bind(&friend.id)
         .execute(pool)
         .await
         .map_err(|e| PosError::Database(format!("Failed to update sync time: {}", e)))?;
+
+    log::info!("[CF FRIEND] Sync complete for {}. Imported {} new AC submissions.", friend.cf_handle, imported_count);
 
     Ok(imported_count)
 }

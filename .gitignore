@@ -27,3 +27,4 @@ dist-ssr
 .env
 target_widget
 area51
+public/cf-data/

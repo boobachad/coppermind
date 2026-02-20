@@ -284,9 +284,9 @@ export interface DuplicateCheckResult {
     existingItems: KnowledgeItem[];
 }
 
-// ─── Monthly Goals (Goal Periods) ───────────────────────────────
+// ─── Milestones (Goal Periods) ──────────────────────────────────────
 
-export interface MonthlyGoal {
+export interface Milestone {
     id: string;
     targetMetric: string;         // e.g., "Pushups", "LeetCode Problems"
     targetValue: number;
@@ -299,11 +299,14 @@ export interface MonthlyGoal {
 }
 
 export interface BalancerResult {
-    monthlyGoalId: string;
+    milestoneId: string;
     updatedGoals: number;
     dailyRequired: number;
     message: string;
 }
+
+// Legacy alias for backwards compatibility
+export type MonthlyGoal = Milestone;
 
 // ─── Debt System ────────────────────────────────────────────────
 
@@ -408,7 +411,8 @@ export interface CFLadderProblem {
     difficulty: number | null;
     onlineJudge: string;
     createdAt: string;
-    status?: 'unsolved' | 'attempted' | 'solved'; // enriched client-side
+    solvedByFriends?: string[];
+    status?: string; // Actual verdict from pos_submissions (OK, WRONG_ANSWER, COMPILATION_ERROR, etc.)
 }
 
 export interface CFLadderProgress {
@@ -444,6 +448,7 @@ export interface CFFriend {
     lastSynced: string | null;
     createdAt: string;
     submissionCount: number | null;
+    totalSubmissions: number | null;
 }
 
 /** Matches Rust CFCategoryRow (serde camelCase) */
@@ -453,7 +458,6 @@ export interface CFCategory {
     description: string | null;
     problemCount: number;
     createdAt: string;
-    solvedCount: number;
 }
 
 /** Matches Rust DailyRecommendation (serde camelCase) */
@@ -493,10 +497,11 @@ export interface ActivitySummary {
 
 export interface GoalSummary {
     id: string;
-    date: string;           // YYYY-MM-DD (from due_date)
+    date: string;           // YYYY-MM-DD (from due_date in UTC)
     text: string;
     completed: boolean;
     priority: string;
+    dueDate: string;        // ISO UTC timestamp for frontend timezone conversion
 }
 
 export interface SubmissionSummary {
@@ -548,12 +553,33 @@ export interface NoteSummary {
 }
 
 export interface YearlyGraphData {
-    activities:     ActivitySummary[];
-    goals:          GoalSummary[];
-    submissions:    SubmissionSummary[];
-    kbItems:        KbGraphItem[];
-    kbLinks:        KbGraphLink[];
+    activities: ActivitySummary[];
+    goals: GoalSummary[];
+    submissions: SubmissionSummary[];
+    kbItems: KbGraphItem[];
+    kbLinks: KbGraphLink[];
     retrospectives: RetroSummary[];
     journalEntries: JournalSummary[];
-    notes:          NoteSummary[];
+    notes: NoteSummary[];
+}
+
+export interface LeetCodeUserStats {
+    username: string;
+    ranking: number | null;
+    totalSolved: number;
+    easySolved: number;
+    mediumSolved: number;
+    hardSolved: number;
+    acceptanceRate: number;
+}
+
+export interface CodeforcesUserStats {
+    handle: string;
+    rating: number | null;
+    maxRating: number | null;
+    rank: string | null;
+    maxRank: string | null;
+    avatar: string | null;
+    totalSolved: number;
+    totalSubmissions: number;
 }

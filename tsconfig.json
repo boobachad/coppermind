@@ -31,7 +31,7 @@
   },
   "include": [
     "src"
-  ],
+, "area51/LadderBrowser.backup.tsx", "area51/LadderView.backup.tsx"  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

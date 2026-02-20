@@ -245,3 +245,171 @@ async fn fetch_leetcode_question(client: &reqwest::Client, title_slug: &str) -> 
     }
     (None, vec![])
 }
+// ─── User Stats Command ─────────────────────────────────────────────
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeetCodeUserStats {
+    pub username: String,
+    pub ranking:  Option<i32>,
+    pub total_solved: i32,
+    pub easy_solved: i32,
+    pub medium_solved: i32,
+    pub hard_solved: i32,
+    pub acceptance_rate: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct LeetCodeGraphqlResponse {
+    data: LeetCodeGraphqlData,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LeetCodeGraphqlData {
+    all_questions_count: Vec<CategoryCount>,
+    matched_user: Option<LeetCodeMatchedUser>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LeetCodeMatchedUser {
+    username: String,
+    profile: Option<LeetCodeUserProfile>,
+    submit_stats: LeetCodeSubmitStats,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LeetCodeUserProfile {
+    ranking: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LeetCodeSubmitStats {
+    ac_submission_num: Vec<CategoryCount>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CategoryCount {
+    difficulty: String,
+    count: i32,
+}
+
+
+#[tauri::command]
+pub async fn get_leetcode_user_stats(
+    db: State<'_, PosDb>,
+    config: State<'_, PosConfig>,
+    force_refresh: bool,
+) -> PosResult<LeetCodeUserStats> {
+    let pool = &db.0;
+    
+    // Check config first
+    let username = match config.0.leetcode_username.clone() {
+        Some(u) => u,
+        None => return Err(PosError::InvalidInput("LeetCode username not configured".into())),
+    };
+
+    // If not forcing refresh, try to serve from cache if fresh (< 24 hrs)
+    if !force_refresh {
+         let cached: Option<(serde_json::Value, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+            "SELECT data, updated_at FROM pos_user_stats WHERE platform = 'leetcode'"
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| db_context("Load cached stats", e))?; // Added error handling for fetch_optional
+
+        if let Some((data, updated_at)) = cached {
+            let now = chrono::Utc::now();
+            let duration = now.signed_duration_since(updated_at);
+            // If less than 24 hours old, valid cache
+            if duration.num_hours() < 24 {
+                if let Ok(stats) = serde_json::from_value::<LeetCodeUserStats>(data) {
+                    log::info!("[LEETCODE] Serving stats from cache (age: {} hrs)", duration.num_hours());
+                    return Ok(stats);
+                } else {
+                    log::warn!("[LEETCODE] Failed to parse cached stats, fetching fresh.");
+                }
+            } else {
+                log::info!("[LEETCODE] Cached stats too old (age: {} hrs), fetching fresh.", duration.num_hours());
+            }
+        }
+    }
+
+    log::info!("[LEETCODE] Fetching fresh stats from API...");
+
+    let client = build_http_client();
+    let query = r#"
+        query getUserProfile($username: String!) {
+            allQuestionsCount { difficulty count }
+            matchedUser(username: $username) {
+                username
+                profile { ranking }
+                submitStats {
+                    acSubmissionNum { difficulty count }
+                }
+            }
+        }
+    "#;
+
+    let vars = serde_json::json!({ "username": username });
+    let body = serde_json::json!({ "query": query, "variables": vars });
+
+    let resp = client.post("https://leetcode.com/graphql")
+        .header("Content-Type", "application/json")
+        .header("Referer", "https://leetcode.com")
+        .json(&body)
+        .send()
+        .await?;
+
+    let data: LeetCodeGraphqlResponse = resp.json().await?;
+
+    let user = data.data.matched_user.ok_or(PosError::External("User not found".into()))?;
+    let all_counts = data.data.all_questions_count;
+
+    let get_count = |list: &[CategoryCount], diff: &str| -> i32 {
+        list.iter().find(|c| c.difficulty == diff).map(|c| c.count).unwrap_or(0)
+    };
+
+    let total_solved = get_count(&user.submit_stats.ac_submission_num, "All");
+    let easy_solved = get_count(&user.submit_stats.ac_submission_num, "Easy");
+    let medium_solved = get_count(&user.submit_stats.ac_submission_num, "Medium");
+    let hard_solved = get_count(&user.submit_stats.ac_submission_num, "Hard");
+
+    let total_questions = get_count(&all_counts, "All");
+    let acceptance_rate = if total_questions > 0 {
+        (total_solved as f64 / total_questions as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let stats = LeetCodeUserStats {
+        username: user.username,
+        ranking: user.profile.unwrap().ranking,
+        total_solved,
+        easy_solved,
+        medium_solved,
+        hard_solved,
+        acceptance_rate,
+    };
+
+    // Save to DB
+    let json_data = serde_json::to_value(&stats).unwrap_or_default();
+    sqlx::query(
+        "INSERT INTO pos_user_stats (platform, username, data, updated_at) 
+            VALUES ('leetcode', $1, $2, NOW())
+            ON CONFLICT (platform) DO UPDATE 
+            SET username = EXCLUDED.username, data = EXCLUDED.data, updated_at = NOW()"
+    )
+    .bind(&stats.username)
+    .bind(json_data)
+    .execute(pool)
+    .await
+    .map_err(|e| db_context("Save stats", e))?;
+    
+    log::info!("[LEETCODE] User stats updated and cached");
+    Ok(stats)
+}
