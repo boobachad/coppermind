@@ -250,7 +250,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 if (temporalInfo?.date) {
                     try {
                         const d = temporalInfo.date;
-                        const goalDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                        const goalDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                         await invoke('create_unified_goal', {
                             req: {
                                 text: title,
@@ -411,7 +411,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
             {/* Row 2: Title */}
             <div>
-                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                <label className="block text-sm font-medium mb-2 items-center gap-2">
                     Title
                     {detectedUrls.length > 0 && (
                         <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-accent-primary)' }}>

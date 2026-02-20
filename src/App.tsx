@@ -20,6 +20,7 @@ import MilestonesPage from './pages/MilestonesPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
 import LadderView from './components/codeforces/LadderView';
 import CategoryBrowser from './components/codeforces/CategoryBrowser';
+import CategoryView from './components/codeforces/CategoryView';
 import { FriendsManager } from './components/codeforces/FriendsManager';
 import { FriendsLadder } from './components/codeforces/FriendsLadder';
 import { DailyProblemsPicker } from './components/codeforces/DailyProblemsPicker';
@@ -67,6 +68,7 @@ function App() {
             <Route path="cf/ladders" element={<LadderBrowser />} />
             <Route path="cf/ladders/:id" element={<LadderView />} />
             <Route path="cf/categories" element={<CategoryBrowser />} />
+            <Route path="cf/categories/:id" element={<CategoryView />} />
             <Route path="cf/friends" element={<FriendsManager />} />
             <Route path="cf/friends-ladder" element={<FriendsLadder />} />
             <Route path="cf/daily" element={<DailyProblemsPicker />} />

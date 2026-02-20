@@ -460,6 +460,23 @@ export interface CFCategory {
     createdAt: string;
 }
 
+/** Matches Rust CFCategoryProblemRow (serde camelCase) */
+export interface CFCategoryProblem {
+    id: string;
+    categoryId: string;
+    problemId: string;
+    problemName: string;
+    problemUrl: string;
+    position: number;
+    difficulty: number | null;
+    onlineJudge: string;
+    year: string | null;
+    contest: string | null;
+    createdAt: string;
+    solvedByFriends?: string[];
+    status?: string;
+}
+
 /** Matches Rust DailyRecommendation (serde camelCase) */
 export interface DailyRecommendation {
     problemId: string;

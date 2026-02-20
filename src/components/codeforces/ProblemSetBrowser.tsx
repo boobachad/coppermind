@@ -14,6 +14,8 @@ interface ProblemSetItem {
   problemCount: number;
   createdAt: string;
   difficulty?: number | null;
+  ratingMin?: number | null;
+  ratingMax?: number | null;
 }
 
 interface ProblemSetWithStats extends ProblemSetItem {
@@ -75,7 +77,8 @@ export function ProblemSetBrowser({
               [statsParamName]: item.id
             });
             return { ...item, stats };
-          } catch {
+          } catch (err) {
+            console.error(`Failed to load stats for ${item.name}:`, err);
             return { ...item, stats: null };
           }
         })
@@ -124,6 +127,22 @@ export function ProblemSetBrowser({
     } finally {
       setImporting(false);
     }
+  };
+
+  const getSubtitle = (item: ProblemSetWithStats): string => {
+    // Priority 1: Show rating range if available
+    if (item.ratingMin != null && item.ratingMax != null) {
+      const diffText = item.difficulty != null ? ` | Difficulty: ${item.difficulty}/10` : '';
+      return `Rating: ${item.ratingMin}-${item.ratingMax}${diffText}`;
+    }
+    
+    // Priority 2: Show difficulty only
+    if (item.difficulty != null) {
+      return `Difficulty: ${item.difficulty}/10`;
+    }
+    
+    // Priority 3: Fallback to import date
+    return `Imported ${formatDateDDMMYYYY(new Date(item.createdAt))}`;
   };
 
   if (loading) {
@@ -212,7 +231,7 @@ export function ProblemSetBrowser({
               <CodeforcesCard
                 key={item.id}
                 title={item.name}
-                subtitle={`Imported ${formatDateDDMMYYYY(new Date(item.createdAt))}`}
+                subtitle={getSubtitle(item)}
                 description={item.description ?? undefined}
                 progress={{
                   solved: item.stats?.solved ?? 0,

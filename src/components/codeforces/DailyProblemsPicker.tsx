@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Sparkles, RefreshCw, Plus, ExternalLink, Zap, Trophy, Users, BookOpen, Target, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
-import type { DailyRecommendation } from '../../pos/lib/types';
+import type { DailyRecommendation, CFCategory } from '../../pos/lib/types';
 import { getLocalDateString } from '../../pos/lib/time';
 
 type RecommendationStrategy = 'ladder' | 'friends' | 'category' | 'rating' | 'hybrid';
@@ -30,6 +30,20 @@ export function DailyProblemsPicker() {
   const [loading, setLoading] = useState(false);
   const [strategy, setStrategy] = useState<RecommendationStrategy>('hybrid');
   const [goalAdded, setGoalAdded] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CFCategory[]>([]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await invoke<CFCategory[]>('get_categories');
+        setCategories(cats);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+    };
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     loadRecommendations();
@@ -41,6 +55,7 @@ export function DailyProblemsPicker() {
       const data = await invoke<DailyRecommendation[]>('get_daily_recommendations', {
         strategy,
         count: 5,
+        categoryId: strategy === 'category' ? selectedCategory : null,
       });
       setRecommendations(data || []);
     } catch (err) {
@@ -121,6 +136,44 @@ export function DailyProblemsPicker() {
             );
           })}
         </div>
+
+        {/* Category Selector (show only when category strategy is selected) */}
+        {strategy === 'category' && (
+          <div className="mb-6 p-4 rounded-xl" style={{ 
+            backgroundColor: 'var(--glass-bg)', 
+            border: '1px solid var(--glass-border)' 
+          }}>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              Select Topic (optional - leave empty for random)
+            </label>
+            <select
+              value={selectedCategory || ''}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value || null);
+                // Reload recommendations when category changes
+                setTimeout(() => loadRecommendations(), 100);
+              }}
+              className="w-full px-4 py-2 rounded-lg"
+              style={{
+                backgroundColor: 'var(--surface-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-primary)',
+              }}
+            >
+              <option value="">Random Topics (All Categories)</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} ({cat.problemCount} problems)
+                </option>
+              ))}
+            </select>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              {selectedCategory 
+                ? 'Get problems from selected topic at your difficulty level'
+                : 'Get random problems from all topics at your difficulty level'}
+            </p>
+          </div>
+        )}
 
         {/* Recommendations List */}
         {loading ? (

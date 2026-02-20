@@ -11,6 +11,8 @@ interface ProblemSetData {
   name: string;
   description: string | null;
   difficulty?: number | null;
+  ratingMin?: number | null;
+  ratingMax?: number | null;
 }
 
 interface ProblemSetViewProps {
@@ -47,6 +49,11 @@ export function ProblemSetView({
   const [stats, setStats] = useState<LadderStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [goalAdded, setGoalAdded] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{
+    problemId: string;
+    field: 'year' | 'contest';
+    value: string;
+  } | null>(null);
 
   useEffect(() => {
     if (itemId) loadData();
@@ -90,6 +97,81 @@ export function ProblemSetView({
     }
   };
 
+  const handleSaveEdit = async (problemId: string, field: 'year' | 'contest', value: string) => {
+    try {
+      await invoke('update_category_problem', {
+        problemId,
+        year: field === 'year' ? (value || null) : undefined,
+        contest: field === 'contest' ? (value || null) : undefined,
+      });
+
+      await loadData();
+      toast.success('Updated successfully');
+    } catch (err) {
+      toast.error('Failed to update', { description: String(err) });
+    } finally {
+      setEditingCell(null);
+    }
+  };
+
+  const EditableCell = ({
+    problemId,
+    field,
+    value
+  }: {
+    problemId: string;
+    field: 'year' | 'contest';
+    value: string | null;
+  }) => {
+    const isEditing = editingCell?.problemId === problemId && editingCell?.field === field;
+
+    if (isEditing) {
+      return (
+        <input
+          type="text"
+          value={editingCell.value}
+          onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+          onBlur={() => handleSaveEdit(problemId, field, editingCell.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSaveEdit(problemId, field, editingCell.value);
+            } else if (e.key === 'Escape') {
+              setEditingCell(null);
+            }
+          }}
+          autoFocus
+          style={{
+            width: '100%',
+            padding: '0.25rem 0.5rem',
+            background: 'var(--surface-secondary)',
+            border: '1px solid var(--color-accent-primary)',
+            borderRadius: '0.25rem',
+            color: 'var(--text-primary)',
+          }}
+        />
+      );
+    }
+
+    return (
+      <div
+        onDoubleClick={() => setEditingCell({ problemId, field, value: value || '' })}
+        style={{
+          cursor: 'pointer',
+          padding: '0.25rem 0.5rem',
+          borderRadius: '0.25rem',
+          transition: 'background 0.2s',
+          color: 'var(--text-secondary)',
+          fontSize: '0.875rem',
+        }}
+        className="hover:bg-zinc-800/30"
+        title="Double-click to edit"
+      >
+        {value || '-'}
+      </div>
+    );
+  };
+
+
   const getDifficultyColor = (level: number | null) => {
     if (!level) return 'var(--pos-heatmap-level-1)';
     if (level <= 1200) return 'var(--pos-heatmap-level-2)';
@@ -126,7 +208,12 @@ export function ProblemSetView({
     );
   }
 
-  const progressPercent = stats ? Math.round(stats.progressPercentage) : 0;
+  const progressPercent = stats ? stats.progressPercentage : 0;
+  const displayPercent = progressPercent < 1 && progressPercent > 0 
+    ? progressPercent.toFixed(2) 
+    : progressPercent < 10 
+      ? progressPercent.toFixed(1)
+      : Math.round(progressPercent).toString();
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar">
@@ -164,6 +251,22 @@ export function ProblemSetView({
             )}
 
             <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '2rem', marginLeft: headerIcon ? '0.5rem' : '0' }}>
+              {item.ratingMin != null && item.ratingMax != null && (
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>Target Rating</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    {item.ratingMin}-{item.ratingMax}
+                  </div>
+                </div>
+              )}
+              {showDifficulty && item.difficulty != null && (
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>Ladder Difficulty</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '600', padding: '0.25rem 0.75rem', background: getDifficultyColor(item.difficulty), borderRadius: '0.5rem', display: 'inline-block' }}>
+                    Level {item.difficulty}/10
+                  </div>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>Progress</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
@@ -178,16 +281,8 @@ export function ProblemSetView({
               </div>
               <div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>Completion</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: '600', color: getProgressColor(progressPercent) }}>{progressPercent}%</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: '600', color: getProgressColor(progressPercent) }}>{displayPercent}%</div>
               </div>
-              {showDifficulty && item.difficulty != null && (
-                <div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>Difficulty</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '600', padding: '0.25rem 0.75rem', background: getDifficultyColor(item.difficulty), borderRadius: '0.5rem', display: 'inline-block' }}>
-                    Level {item.difficulty}
-                  </div>
-                </div>
-              )}
             </div>
             <div style={{ marginTop: '1.5rem', height: '8px', background: 'var(--surface-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${progressPercent}%`, background: getProgressColor(progressPercent), transition: 'width 0.3s ease' }} />
@@ -204,7 +299,13 @@ export function ProblemSetView({
                   <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '60px' }}>#</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Problem</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '120px' }}>Judge</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '100px' }}>Rating</th>
+                  {itemParamName === 'categoryId' && (
+                    <>
+                      <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '80px' }}>Year</th>
+                      <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '200px' }}>Contest</th>
+                    </>
+                  )}
+                  <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '100px' }}>Difficulty</th>
                   {showStatusColumn && (
                     <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)', width: '120px' }}>Status</th>
                   )}
@@ -234,6 +335,24 @@ export function ProblemSetView({
                       )}
                     </td>
                     <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{problem.onlineJudge}</td>
+                    {itemParamName === 'categoryId' && (
+                      <>
+                        <td style={{ padding: '1rem' }}>
+                          <EditableCell
+                            problemId={problem.problemId}
+                            field="year"
+                            value={(problem as any).year}
+                          />
+                        </td>
+                        <td style={{ padding: '1rem' }}>
+                          <EditableCell
+                            problemId={problem.problemId}
+                            field="contest"
+                            value={(problem as any).contest}
+                          />
+                        </td>
+                      </>
+                    )}
                     <td style={{ padding: '1rem' }}>
                       {problem.difficulty != null && (
                         <span style={{ padding: '0.25rem 0.5rem', background: getDifficultyColor(problem.difficulty), borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '500' }}>

@@ -1,29 +1,9 @@
-import { useState } from 'react';
-import { BookOpen, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 import { ProblemSetBrowser } from './ProblemSetBrowser';
-import { ProblemSetView } from './ProblemSetView';
 
 export default function CategoryBrowser() {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-
-  if (selectedCategoryId) {
-    return (
-      <ProblemSetView
-        itemId={selectedCategoryId}
-        getItemCommand="get_category_by_id"
-        itemParamName="categoryId"
-        getProblemsCommand="get_category_problems"
-        problemsParamName="categoryId"
-        getStatsCommand="get_category_stats"
-        statsParamName="categoryId"
-        backButtonText="Back to Categories"
-        onBack={() => setSelectedCategoryId(null)}
-        headerIcon={<Tag size={24} style={{ color: 'var(--color-accent-primary)' }} />}
-        showDifficulty={false}
-        showStatusColumn={false}
-      />
-    );
-  }
+  const navigate = useNavigate();
 
   return (
     <ProblemSetBrowser
@@ -38,7 +18,7 @@ export default function CategoryBrowser() {
       importCommand="import_category_from_html"
       importRequestBuilder={(html) => ({ htmlContent: html, categoryName: null })}
       importSuccessMessage="Category imported successfully"
-      onItemClick={(item) => setSelectedCategoryId(item.id)}
+      onItemClick={(item) => navigate(`/cf/categories/${item.id}`)}
       showScanButton={false}
       showDifficultyBadge={false}
     />

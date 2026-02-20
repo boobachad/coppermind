@@ -23,10 +23,15 @@ export function CodeforcesCard({
     progress,
     onClick,
 }: CodeforcesCardProps) {
-    const percentage = progress.total > 0 ? Math.round((progress.solved / progress.total) * 100) : 0;
+    const exactPercentage = progress.total > 0 ? (progress.solved / progress.total) * 100 : 0;
+    const displayPercentage = exactPercentage < 1 && exactPercentage > 0 
+        ? exactPercentage.toFixed(2) 
+        : exactPercentage < 10 
+            ? exactPercentage.toFixed(1)
+            : Math.round(exactPercentage).toString();
     const radius = 24;
     const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+    const strokeDashoffset = circumference - (exactPercentage / 100) * circumference;
 
     const getProgressColor = () => {
         return '#3b82f6';
@@ -43,7 +48,7 @@ export function CodeforcesCard({
                 // Dynamic border using box-shadow or background manipulation is complex with rounded corners
                 // Using a pseudo-element approach via localized style for the "ring" effect
                 background: `linear-gradient(var(--glass-bg), var(--glass-bg)) padding-box,
-                             conic-gradient(from 0deg, var(--color-accent-primary) ${percentage}%, var(--glass-border) ${percentage}%) border-box`,
+                             conic-gradient(from 0deg, var(--color-accent-primary) ${exactPercentage}%, var(--glass-border) ${exactPercentage}%) border-box`,
                 border: '2px solid transparent',
                 backdropFilter: 'blur(8px)',
             }}
@@ -100,7 +105,7 @@ export function CodeforcesCard({
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
-                            {percentage}%
+                            {displayPercentage}%
                         </span>
                     </div>
                 </div>
