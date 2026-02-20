@@ -124,38 +124,64 @@ pub async fn get_daily_recommendations(
         }
 
         "rating" => {
-            // Problems from ladder within a 200-point rating window of the user's last solved
-            let last_diff: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<i32>>(
-                r#"
-                SELECT MAX(p.difficulty)
-                FROM cf_ladder_progress pr
-                JOIN cf_ladder_problems p ON p.ladder_id = pr.ladder_id AND p.problem_id = pr.problem_id
-                WHERE pr.solved_at IS NOT NULL AND p.difficulty IS NOT NULL
-                "#,
+            // Get user's actual Codeforces rating from pos_user_stats
+            let user_rating: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<serde_json::Value>>(
+                "SELECT data FROM pos_user_stats WHERE platform = 'codeforces'"
             )
-            .fetch_one(&db.0)
+            .fetch_optional(&db.0)
             .await
-            .map_err(|e| db_context("get last difficulty", e))?;
+            .map_err(|e| db_context("get user stats", e))?
+            .flatten()
+            .and_then(|data| {
+                data.get("rating")
+                    .and_then(|r| r.as_i64())
+                    .map(|r| r as i32)
+            });
 
             let mut target = 800;
 
-            if let Some(diff) = last_diff {
-                 target = diff;
+            if let Some(rating) = user_rating {
+                target = rating;
+                log::info!("[CF RECOMMENDATIONS] Using user rating: {}", rating);
             } else {
-                // Fallback: Check if user has added themselves as a friend (use most recent friend as proxy)
-                let friend_rating: Option<i32> = sqlx::query_scalar("SELECT current_rating FROM cf_friends ORDER BY created_at DESC LIMIT 1")
-                    .fetch_optional(&db.0)
-                    .await
-                    .unwrap_or(None)
-                    .flatten();
-                
-                if let Some(rating) = friend_rating {
-                    target = rating;
+                // Fallback 1: Check max difficulty from solved ladder problems
+                let last_diff: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<i32>>(
+                    r#"
+                    SELECT MAX(p.difficulty)
+                    FROM cf_ladder_progress pr
+                    JOIN cf_ladder_problems p ON p.ladder_id = pr.ladder_id AND p.problem_id = pr.problem_id
+                    WHERE pr.solved_at IS NOT NULL AND p.difficulty IS NOT NULL
+                    "#,
+                )
+                .fetch_one(&db.0)
+                .await
+                .map_err(|e| db_context("get last difficulty", e))?;
+
+                if let Some(diff) = last_diff {
+                    target = diff;
+                    log::info!("[CF RECOMMENDATIONS] Using max solved difficulty: {}", diff);
+                } else {
+                    // Fallback 2: Check if user has added themselves as a friend
+                    let friend_rating: Option<i32> = sqlx::query_scalar("SELECT current_rating FROM cf_friends ORDER BY created_at DESC LIMIT 1")
+                        .fetch_optional(&db.0)
+                        .await
+                        .unwrap_or(None)
+                        .flatten();
+                    
+                    if let Some(rating) = friend_rating {
+                        target = rating;
+                        log::info!("[CF RECOMMENDATIONS] Using friend rating: {}", rating);
+                    } else {
+                        log::info!("[CF RECOMMENDATIONS] No rating found, using default: 800");
+                    }
                 }
             }
+
             // Search window: +/- 200 (min 800)
             let min_r = (target - 200).max(800);
             let max_r = target + 200;
+
+            log::info!("[CF RECOMMENDATIONS] Rating range: {} - {} (target: {})", min_r, max_r, target);
 
             // 1. Try Ladder Problems
             let ladder_rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
