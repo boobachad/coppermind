@@ -396,6 +396,7 @@ pub fn run() {
             cf_ladder_system::get_category_stats,
             cf_ladder_system::import_category_from_html,
             cf_ladder_system::get_category_problems,
+            cf_ladder_system::update_category_problem,
             cf_ladder_system::scan_and_import_public_data,
             cf_recommendations::get_daily_recommendations,
             date_summary::get_yearly_graph_data,

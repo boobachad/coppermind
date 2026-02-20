@@ -23,6 +23,7 @@ pub async fn get_daily_recommendations(
     db: State<'_, PosDb>,
     strategy: String,
     count: Option<i32>,
+    category_id: Option<String>,
 ) -> PosResult<Vec<DailyRecommendation>> {
     let n = count.unwrap_or(5);
     let mut recs: Vec<DailyRecommendation> = Vec::new();
@@ -93,38 +94,7 @@ pub async fn get_daily_recommendations(
         }
 
         "category" => {
-            let rows = sqlx::query_as::<sqlx::Postgres, (String, String, String, String, Option<i32>)>(
-                r#"
-                SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                FROM cf_category_problems p
-                LEFT JOIN cf_category_progress cp
-                  ON cp.category_id = p.category_id AND cp.problem_id = p.problem_id
-                WHERE cp.id IS NULL
-                GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                ORDER BY MIN(p.position)
-                LIMIT $1
-                "#,
-            )
-            .bind(n)
-            .fetch_all(&db.0)
-            .await
-            .map_err(|e| db_context("get category recommendations", e))?;
-
-            for (problem_id, problem_name, problem_url, online_judge, difficulty) in rows {
-                recs.push(DailyRecommendation {
-                    problem_id,
-                    problem_name,
-                    problem_url,
-                    online_judge,
-                    difficulty,
-                    reason: "Unsolved in your categories".to_string(),
-                    strategy: "category".to_string(),
-                });
-            }
-        }
-
-        "rating" => {
-            // Get user's actual Codeforces rating from pos_user_stats
+            // Get user rating
             let user_rating: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<serde_json::Value>>(
                 "SELECT data FROM pos_user_stats WHERE platform = 'codeforces'"
             )
@@ -138,122 +108,264 @@ pub async fn get_daily_recommendations(
                     .map(|r| r as i32)
             });
 
-            let mut target = 800;
-
-            if let Some(rating) = user_rating {
-                target = rating;
-                log::info!("[CF RECOMMENDATIONS] Using user rating: {}", rating);
-            } else {
-                // Fallback 1: Check max difficulty from solved ladder problems
-                let last_diff: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<i32>>(
-                    r#"
-                    SELECT MAX(p.difficulty)
-                    FROM cf_ladder_progress pr
-                    JOIN cf_ladder_problems p ON p.ladder_id = pr.ladder_id AND p.problem_id = pr.problem_id
-                    WHERE pr.solved_at IS NOT NULL AND p.difficulty IS NOT NULL
-                    "#,
-                )
-                .fetch_one(&db.0)
-                .await
-                .map_err(|e| db_context("get last difficulty", e))?;
-
-                if let Some(diff) = last_diff {
-                    target = diff;
-                    log::info!("[CF RECOMMENDATIONS] Using max solved difficulty: {}", diff);
-                } else {
-                    // Fallback 2: Check if user has added themselves as a friend
-                    let friend_rating: Option<i32> = sqlx::query_scalar("SELECT current_rating FROM cf_friends ORDER BY created_at DESC LIMIT 1")
-                        .fetch_optional(&db.0)
-                        .await
-                        .unwrap_or(None)
-                        .flatten();
-                    
-                    if let Some(rating) = friend_rating {
-                        target = rating;
-                        log::info!("[CF RECOMMENDATIONS] Using friend rating: {}", rating);
-                    } else {
-                        log::info!("[CF RECOMMENDATIONS] No rating found, using default: 800");
-                    }
+            // Map rating to A2OJ difficulty range
+            let (min_diff, max_diff) = if let Some(rating) = user_rating {
+                match rating {
+                    0..=1199 => (1, 2),
+                    1200..=1499 => (2, 3),
+                    1500..=1799 => (3, 4),
+                    1800..=2099 => (4, 5),
+                    2100..=2399 => (5, 6),
+                    2400..=2699 => (6, 7),
+                    2700..=2999 => (7, 8),
+                    3000..=3299 => (8, 9),
+                    _ => (9, 10),
                 }
-            }
-
-            // Search window: +/- 200 (min 800)
-            let min_r = (target - 200).max(800);
-            let max_r = target + 200;
-
-            log::info!("[CF RECOMMENDATIONS] Rating range: {} - {} (target: {})", min_r, max_r, target);
-
-            // 1. Try Ladder Problems
-            let ladder_rows = sqlx::query_as::<sqlx::Postgres, CFLadderProblemRow>(
-                r#"
-                SELECT p.id, p.ladder_id, p.problem_id, p.problem_name, p.problem_url,
-                       p.position, p.difficulty, p.online_judge, p.created_at
-                FROM cf_ladder_problems p
-                LEFT JOIN cf_ladder_progress pr
-                  ON pr.ladder_id = p.ladder_id AND pr.problem_id = p.problem_id
-                WHERE pr.id IS NULL
-                  AND p.difficulty >= $1 AND p.difficulty <= $2
-                ORDER BY p.difficulty
-                LIMIT $3
-                "#,
-            )
-            .bind(min_r)
-            .bind(max_r)
-            .bind(n)
-            .fetch_all(&db.0)
-            .await
-            .map_err(|e| db_context("get rating recommendations (ladder)", e))?;
-
-            for r in ladder_rows {
-                recs.push(DailyRecommendation {
-                    problem_id: r.problem_id.clone(),
-                    problem_name: r.problem_name.clone(),
-                    problem_url: r.problem_url.clone(),
-                    online_judge: r.online_judge.clone(),
-                    difficulty: r.difficulty,
-                    reason: format!("Ladder problem at your level (~{})", target),
-                    strategy: "rating".to_string(),
-                });
-            }
-
-            // 2. Fill gaps with Category Problems
-            if (recs.len() as i32) < n {
-                let needed = n - (recs.len() as i32);
-                let cat_rows = sqlx::query_as::<sqlx::Postgres, (String, String, String, String, Option<i32>)>(
+            } else {
+                (3, 4)  // Default to intermediate if no rating
+            };
+            
+            // Branch based on whether category_id is provided
+            if let Some(cat_id) = category_id {
+                // SPECIFIC TOPIC: Get problems from selected category
+                log::info!("[CF RECOMMENDATIONS] Category strategy (specific): category_id={}, difficulty {}-{}", 
+                    cat_id, min_diff, max_diff);
+                
+                let category_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
                     r#"
                     SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
                     FROM cf_category_problems p
-                    LEFT JOIN cf_category_progress cp
-                      ON cp.category_id = p.category_id AND cp.problem_id = p.problem_id
-                    WHERE cp.id IS NULL
-                      AND p.difficulty >= $1 AND p.difficulty <= $2
-                    GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                    ORDER BY p.difficulty
-                    LIMIT $3
-                    "#,
+                    WHERE p.category_id = $1
+                    AND p.difficulty >= $2 
+                    AND p.difficulty <= $3
+                    AND NOT EXISTS (
+                        SELECT 1 FROM pos_submissions s 
+                        WHERE s.problem_id = ('cf-' || p.problem_id) 
+                        AND s.platform = 'codeforces'
+                        AND s.verdict = 'OK'
+                    )
+                    ORDER BY p.difficulty, p.position
+                    LIMIT $4
+                    "#
                 )
-                .bind(min_r)
-                .bind(max_r)
-                .bind(needed)
+                .bind(&cat_id)
+                .bind(min_diff)
+                .bind(max_diff)
+                .bind(n)
                 .fetch_all(&db.0)
                 .await
-                .map_err(|e| db_context("get rating recommendations (category)", e))?;
+                .map_err(|e| db_context("get category recommendations", e))?;
+                
+                // Get category name for better reason text
+                let category_name: String = sqlx::query_scalar(
+                    "SELECT name FROM cf_categories WHERE id = $1"
+                )
+                .bind(&cat_id)
+                .fetch_one(&db.0)
+                .await
+                .unwrap_or_else(|_| "Unknown".to_string());
+                
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in category_problems {
+                    recs.push(DailyRecommendation {
+                        problem_id,
+                        problem_name,
+                        problem_url,
+                        online_judge,
+                        difficulty,
+                        reason: format!("{} (difficulty {})", category_name, difficulty.unwrap_or(0)),
+                        strategy: "category".to_string(),
+                    });
+                }
+            } else {
+                // RANDOM TOPICS: Get problems from all categories
+                log::info!("[CF RECOMMENDATIONS] Category strategy (random): difficulty {}-{}", min_diff, max_diff);
+                
+                let category_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+                    r#"
+                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    FROM cf_category_problems p
+                    WHERE p.difficulty >= $1 
+                    AND p.difficulty <= $2
+                    AND NOT EXISTS (
+                        SELECT 1 FROM pos_submissions s 
+                        WHERE s.problem_id = ('cf-' || p.problem_id) 
+                        AND s.platform = 'codeforces'
+                        AND s.verdict = 'OK'
+                    )
+                    GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    ORDER BY p.difficulty, RANDOM()
+                    LIMIT $3
+                    "#
+                )
+                .bind(min_diff)
+                .bind(max_diff)
+                .bind(n)
+                .fetch_all(&db.0)
+                .await
+                .map_err(|e| db_context("get category recommendations", e))?;
+                
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in category_problems {
+                    recs.push(DailyRecommendation {
+                        problem_id,
+                        problem_name,
+                        problem_url,
+                        online_judge,
+                        difficulty,
+                        reason: format!("Topic-based problem (difficulty {})", difficulty.unwrap_or(0)),
+                        strategy: "category".to_string(),
+                    });
+                }
+            }
+            
+            log::info!("[CF RECOMMENDATIONS] Generated {} recommendations using category strategy", recs.len());
+        }
 
-                for (problem_id, problem_name, problem_url, online_judge, difficulty) in cat_rows {
-                    // Avoid duplicates if problem exists in both ladder and category
+        "rating" => {
+            // 1. Get user's Codeforces rating
+            let user_rating: Option<i32> = sqlx::query_scalar::<sqlx::Postgres, Option<serde_json::Value>>(
+                "SELECT data FROM pos_user_stats WHERE platform = 'codeforces'"
+            )
+            .fetch_optional(&db.0)
+            .await
+            .map_err(|e| db_context("get user stats", e))?
+            .flatten()
+            .and_then(|data| {
+                data.get("rating")
+                    .and_then(|r| r.as_i64())
+                    .map(|r| r as i32)
+            });
+
+            let target = user_rating.unwrap_or(800);
+            let min_r = (target - 200).max(800);
+            let max_r = target + 200;
+
+            log::info!("[CF RECOMMENDATIONS] User rating: {}, Range: {}-{}", target, min_r, max_r);
+
+            // 2. Find ladders that overlap with user's rating range
+            let matching_ladders = sqlx::query_scalar::<_, String>(
+                r#"
+                SELECT id FROM cf_ladders 
+                WHERE rating_min IS NOT NULL 
+                AND rating_max IS NOT NULL
+                AND rating_min <= $1 
+                AND rating_max >= $2
+                ORDER BY rating_min
+                "#
+            )
+            .bind(max_r)
+            .bind(min_r)
+            .fetch_all(&db.0)
+            .await
+            .map_err(|e| db_context("find matching ladders", e))?;
+
+            log::info!("[CF RECOMMENDATIONS] Found {} matching ladders", matching_ladders.len());
+
+            // 3. Get unsolved problems from matching ladders
+            let problems_per_ladder = if matching_ladders.is_empty() { 
+                0 
+            } else { 
+                (n / matching_ladders.len() as i32).max(1) 
+            };
+
+            for ladder_id in matching_ladders.iter().take(3) {
+                let ladder_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+                    r#"
+                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    FROM cf_ladder_problems p
+                    WHERE p.ladder_id = $1 
+                    AND NOT EXISTS (
+                        SELECT 1 FROM pos_submissions s 
+                        WHERE s.problem_id = ('cf-' || p.problem_id) 
+                        AND s.platform = 'codeforces'
+                        AND s.verdict = 'OK'
+                    )
+                    ORDER BY p.position
+                    LIMIT $2
+                    "#
+                )
+                .bind(ladder_id)
+                .bind(problems_per_ladder)
+                .fetch_all(&db.0)
+                .await
+                .map_err(|e| db_context("get ladder problems", e))?;
+
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in ladder_problems {
                     if !recs.iter().any(|r| r.problem_id == problem_id) {
-                         recs.push(DailyRecommendation {
+                        recs.push(DailyRecommendation {
                             problem_id,
                             problem_name,
                             problem_url,
                             online_judge,
                             difficulty,
-                            reason: format!("Category problem at your level (~{})", target),
+                            reason: format!("From rating-matched ladder (~{})", target),
                             strategy: "rating".to_string(),
                         });
                     }
                 }
             }
+
+            // 4. Fallback: Use A2OJ difficulty for categories (if not enough from ladders)
+            if recs.len() < n as usize {
+                let needed = n - recs.len() as i32;
+                
+                // Map user rating to A2OJ difficulty (conservative)
+                let (min_diff, max_diff) = match target {
+                    0..=1199 => (1, 2),
+                    1200..=1499 => (2, 3),
+                    1500..=1799 => (3, 4),
+                    1800..=2099 => (4, 5),
+                    2100..=2399 => (5, 6),
+                    2400..=2699 => (6, 7),
+                    2700..=2999 => (7, 8),
+                    3000..=3299 => (8, 9),
+                    _ => (9, 10),
+                };
+                
+                log::info!("[CF RECOMMENDATIONS] Fallback to categories: difficulty {}-{}", min_diff, max_diff);
+                
+                let category_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+                    r#"
+                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    FROM cf_category_problems p
+                    WHERE p.difficulty >= $1 
+                    AND p.difficulty <= $2
+                    AND NOT EXISTS (
+                        SELECT 1 FROM pos_submissions s 
+                        WHERE s.problem_id = ('cf-' || p.problem_id) 
+                        AND s.platform = 'codeforces'
+                        AND s.verdict = 'OK'
+                    )
+                    GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                    ORDER BY p.difficulty, RANDOM()
+                    LIMIT $3
+                    "#
+                )
+                .bind(min_diff)
+                .bind(max_diff)
+                .bind(needed)
+                .fetch_all(&db.0)
+                .await
+                .map_err(|e| db_context("get category fallback", e))?;
+                
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in category_problems {
+                    if !recs.iter().any(|r| r.problem_id == problem_id) {
+                        recs.push(DailyRecommendation {
+                            problem_id,
+                            problem_name,
+                            problem_url,
+                            online_judge,
+                            difficulty,
+                            reason: format!("A2OJ difficulty {} (your level: {})", 
+                                difficulty.unwrap_or(0), 
+                                (min_diff + max_diff) / 2
+                            ),
+                            strategy: "rating".to_string(),
+                        });
+                    }
+                }
+            }
+
+            log::info!("[CF RECOMMENDATIONS] Generated {} recommendations using rating strategy", recs.len());
         }
 
         // "hybrid" and fallback — round-robin: ladder + friends + category
