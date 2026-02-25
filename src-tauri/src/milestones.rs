@@ -13,7 +13,9 @@ use crate::pos::utils::gen_id;
 pub struct MilestoneRow {
     pub id: String,
     pub target_metric: String,      // e.g., "Pushups", "LeetCode Problems"
-    pub target_value: i32,
+    pub target_value: i32,           // Calculated: daily_amount × days_in_period
+    pub daily_amount: i32,           // User input: amount per day
+    pub period_type: String,         // "monthly" | "weekly" | "daily"
     pub period_start: DateTime<Utc>, // Start of period
     pub period_end: DateTime<Utc>,   // End of period
     pub strategy: String,            // Always "EvenDistribution" (auto-calculated)
@@ -32,9 +34,10 @@ pub struct MilestoneRow {
 #[serde(rename_all = "camelCase")]
 pub struct CreateMilestoneRequest {
     pub target_metric: String,
-    pub target_value: i32,
+    pub daily_amount: i32,          // User input: amount per day
     pub period_start: String,       // ISO 8601 date (e.g., "2026-02-01")
     pub period_end: String,         // ISO 8601 date (e.g., "2026-02-28")
+    pub period_type: String,        // "monthly" | "weekly" | "daily"
     pub problem_id: Option<String>, // LeetCode/Codeforces URL
     pub recurring_pattern: Option<String>, // "Daily" or "Mon,Tue,Wed"
     pub label: Option<String>,      // Metric label
@@ -56,10 +59,22 @@ pub struct BalancerResult {
     pub milestone_id: String,
     pub updated_goals: i32,
     pub daily_required: i32,
+    pub is_real_milestone: bool,  // true for monthly, false for weekly/daily
     pub message: String,
 }
 
 // ─── Helper Functions ───────────────────────────────────────────────
+
+/// Calculate target_value from daily_amount and period length
+/// Handles leap years for February periods
+fn calculate_target_value(
+    daily_amount: i32,
+    period_start: DateTime<Utc>,
+    period_end: DateTime<Utc>,
+) -> i32 {
+    let days_in_period = (period_end - period_start).num_days() + 1; // +1 to include both start and end
+    daily_amount * days_in_period as i32
+}
 
 /// Check if a recurring pattern matches a given date.
 /// Pattern is comma-separated days: "Mon,Tue,Wed" or all 7 days for daily
@@ -169,17 +184,27 @@ pub async fn create_milestone(
         return Err(PosError::InvalidInput("period_end must be after period_start".into()));
     }
 
+    // Validate period_type
+    if !["monthly", "weekly", "daily"].contains(&req.period_type.as_str()) {
+        return Err(PosError::InvalidInput("period_type must be 'monthly', 'weekly', or 'daily'".into()));
+    }
+
+    // Calculate target_value from daily_amount × days_in_period
+    let target_value = calculate_target_value(req.daily_amount, period_start, period_end);
+
     let row = sqlx::query_as::<_, MilestoneRow>(
         r#"INSERT INTO goal_periods (
-            id, target_metric, target_value, period_start, period_end, strategy, current_value, 
-            problem_id, recurring_pattern, label, unit, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, 'EvenDistribution', 0, $6, $7, $8, $9, $10, $10)
-        RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, 
-                  problem_id, recurring_pattern, label, unit, created_at, updated_at"#,
+            id, target_metric, target_value, daily_amount, period_type, period_start, period_end, 
+            strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'EvenDistribution', 0, $8, $9, $10, $11, $12, $12)
+        RETURNING id, target_metric, target_value, daily_amount, period_type, period_start, period_end, 
+                  strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at"#,
     )
     .bind(&id)
     .bind(&req.target_metric)
-    .bind(req.target_value)
+    .bind(target_value)
+    .bind(req.daily_amount)
+    .bind(&req.period_type)
     .bind(period_start)
     .bind(period_end)
     .bind(&req.problem_id)
@@ -196,7 +221,8 @@ pub async fn create_milestone(
         generate_daily_instances(pool, &row, pattern).await?;
     }
 
-    log::info!("[MILESTONE] Created milestone {} for {}", id, req.target_metric);
+    log::info!("[MILESTONE] Created {} milestone {} for {} (daily_amount: {}, target_value: {})", 
+        req.period_type, id, req.target_metric, req.daily_amount, target_value);
     Ok(row)
 }
 
@@ -209,9 +235,9 @@ pub async fn get_milestones(
     let pool = &db.0;
 
     let query = if active_only.unwrap_or(false) {
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
     } else {
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods ORDER BY period_start DESC"
     };
 
     let rows = sqlx::query_as::<_, MilestoneRow>(query)
@@ -244,7 +270,7 @@ pub async fn update_milestone(
     }
 
     let query = format!(
-        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at",
+        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING id, target_metric, target_value, daily_amount, period_type, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at",
         updates.join(", "),
         bind_idx + 1
     );
@@ -269,6 +295,7 @@ pub async fn update_milestone(
 }
 
 /// Run the Balancer Engine - redistributes milestone across remaining days
+/// Only runs on monthly milestones (is_real_milestone = true)
 #[tauri::command]
 pub async fn run_balancer_engine(
     db: State<'_, PosDb>,
@@ -279,12 +306,21 @@ pub async fn run_balancer_engine(
 
     // 1. Fetch milestone
     let milestone = sqlx::query_as::<_, MilestoneRow>(
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE id = $1"
+        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE id = $1"
     )
     .bind(&milestone_id)
     .fetch_one(pool)
     .await
     .map_err(|e| db_context("fetch milestone", e))?;
+
+    // Check if this is a real milestone (monthly only)
+    let is_real_milestone = milestone.period_type == "monthly";
+    
+    if !is_real_milestone {
+        return Err(PosError::InvalidInput(
+            "Balancer only runs on monthly milestones. Weekly/daily milestones are analytics-only.".into()
+        ));
+    }
 
     // 2. Calculate remaining target
     // Aggregate current_value from all linked unified_goals (daily instances)
@@ -313,6 +349,7 @@ pub async fn run_balancer_engine(
             milestone_id: milestone_id.clone(),
             updated_goals: 0,
             daily_required: 0,
+            is_real_milestone,
             message: "Milestone already complete!".to_string(),
         });
     }
@@ -394,6 +431,7 @@ pub async fn run_balancer_engine(
         milestone_id: milestone_id.clone(),
         updated_goals: updated_count,
         daily_required,
+        is_real_milestone,
         message: format!("Redistributed to {} goals, {} per day", updated_count, daily_required),
     })
 }

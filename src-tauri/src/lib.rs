@@ -19,6 +19,7 @@ mod cf_friends_system;
 mod cf_recommendations;
 mod date_summary;
 mod books;
+mod daily_briefing;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -350,6 +351,7 @@ pub fn run() {
             unified_goals::delete_unified_goal,
             unified_goals::toggle_unified_goal_completion,
             unified_goals::link_activity_to_unified_goal,
+            daily_briefing::get_daily_briefing,
             knowledge_base::create_knowledge_item,
             knowledge_base::get_knowledge_items,
             knowledge_base::update_knowledge_item,
