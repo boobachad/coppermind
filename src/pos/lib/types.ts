@@ -136,11 +136,11 @@ export interface UnifiedGoal {
     recurringTemplateId: string | null;
     priority: 'low' | 'medium' | 'high';
     urgent: boolean;
-    metrics: UnifiedGoalMetric[] | null;
-    problemId: string | null;
+    metrics: UnifiedGoalMetric[] | null;  // Only for milestone-generated goals
+    problemId: string | null;             // Only for milestone-generated goals
     linkedActivityIds: string[] | null;
     labels: string[] | null;
-    parentGoalId: string | null;  // Link to MonthlyGoal
+    parentGoalId: string | null;  // Link to Milestone (goal_periods)
     createdAt: string;
     updatedAt: string;
     originalDate: string | null;
@@ -288,12 +288,16 @@ export interface DuplicateCheckResult {
 
 export interface Milestone {
     id: string;
-    targetMetric: string;         // e.g., "Pushups", "LeetCode Problems"
+    targetMetric: string;
     targetValue: number;
-    periodStart: string;          // ISO 8601 UTC
-    periodEnd: string;            // ISO 8601 UTC
-    strategy: 'EvenDistribution' | 'FrontLoad' | 'Manual';
-    currentValue: number;         // Aggregated from linked daily goals
+    periodStart: string;
+    periodEnd: string;
+    strategy: string;                 // Always "EvenDistribution" (auto-calculated)
+    currentValue: number;
+    problemId: string | null;
+    recurringPattern: string | null;
+    label: string | null;
+    unit: string | null;
     createdAt: string;
     updatedAt: string;
 }

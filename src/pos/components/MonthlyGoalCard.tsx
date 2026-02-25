@@ -27,20 +27,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
     goal.periodEnd
   );
 
-  // Get strategy badge color
-  const getStrategyColor = () => {
-    switch (goal.strategy) {
-      case 'EvenDistribution':
-        return 'var(--color-accent-primary)';
-      case 'FrontLoad':
-        return 'var(--color-warning)';
-      case 'Manual':
-        return 'var(--text-tertiary)';
-      default:
-        return 'var(--text-secondary)';
-    }
-  };
-
   // Get status colors based on ahead/behind
   const getStatusColor = () => {
     if (status === 'ahead') return 'var(--color-success)';
@@ -156,7 +142,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
         </div>
       </div>
 
-      {/* Status & Strategy */}
+      {/* Status */}
       <div className="flex items-center justify-between mb-4">
         {/* Schedule Status */}
         <div className="flex items-center gap-2">
@@ -167,21 +153,10 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
             {status}
           </span>
         </div>
-
-        {/* Strategy Badge */}
-        <div
-          className="px-3 py-1 rounded-full text-xs font-medium"
-          style={{
-            backgroundColor: 'var(--surface-secondary)',
-            color: getStrategyColor(),
-          }}
-        >
-          {goal.strategy.replace(/([A-Z])/g, ' $1').trim()}
-        </div>
       </div>
 
       {/* Run Balancer Button */}
-      {goal.strategy !== 'Manual' && (
+      <div>
         <button
           onClick={handleRunBalancer}
           disabled={balancing}
@@ -194,7 +169,8 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
           <Play className="w-4 h-4" />
           <span>{balancing ? 'Redistributing...' : 'Run Balancer'}</span>
         </button>
-      )}
+      </div>
+      
 
       {/* Details Toggle */}
       <button

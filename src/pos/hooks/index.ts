@@ -11,12 +11,8 @@
 
 export { useActivities } from './useActivities';
 export { useActivitiesBatch } from './useActivitiesBatch';
-export { useGoals } from './useGoals';
-export { useDebtGoals } from './useDebtGoals';
 export { useSubmissions } from './useSubmissions';
 
 export type { UseActivitiesReturn } from './useActivities';
 export type { UseActivitiesBatchReturn } from './useActivitiesBatch';
-export type { UseGoalsReturn } from './useGoals';
-export type { UseDebtGoalsReturn } from './useDebtGoals';
 export type { UseSubmissionsReturn } from './useSubmissions';

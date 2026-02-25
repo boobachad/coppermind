@@ -257,9 +257,17 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         period_end      TIMESTAMPTZ NOT NULL,
         strategy        TEXT NOT NULL DEFAULT 'EvenDistribution' CHECK (strategy IN ('EvenDistribution', 'FrontLoad', 'Manual')),
         current_value   INTEGER DEFAULT 0,
+        problem_id      TEXT,
+        recurring_pattern TEXT,
+        label           TEXT,
+        unit            TEXT,
         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
+    "ALTER TABLE goal_periods ADD COLUMN IF NOT EXISTS problem_id TEXT",
+    "ALTER TABLE goal_periods ADD COLUMN IF NOT EXISTS recurring_pattern TEXT",
+    "ALTER TABLE goal_periods ADD COLUMN IF NOT EXISTS label TEXT",
+    "ALTER TABLE goal_periods ADD COLUMN IF NOT EXISTS unit TEXT",
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_dates ON goal_periods(period_start, period_end)",
     "CREATE INDEX IF NOT EXISTS idx_goal_periods_metric ON goal_periods(target_metric)",
 

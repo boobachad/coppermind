@@ -38,9 +38,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
     const [formUrgent, setFormUrgent] = useState(false);
     const [formDate, setFormDate] = useState<Date | undefined>(undefined);
     const [formTime, setFormTime] = useState('');
-    const [formProblemId, setFormProblemId] = useState('');
-    const [formMetrics, setFormMetrics] = useState<{ label: string; target: string; unit: string }[]>([]);
-    const [newMetric, setNewMetric] = useState({ label: '', target: '', unit: '' });
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
     useEffect(() => {
@@ -60,18 +57,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                     setFormTime('');
                 }
 
-                setFormProblemId(editingGoal.problemId || '');
-
-                if (editingGoal.metrics) {
-                    setFormMetrics(editingGoal.metrics.map(m => ({
-                        label: m.label,
-                        target: m.target.toString(),
-                        unit: m.unit
-                    })));
-                } else {
-                    setFormMetrics([]);
-                }
-
                 if (editingGoal.recurringPattern) {
                     setSelectedDays(editingGoal.recurringPattern.split(','));
                 } else {
@@ -85,9 +70,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                 setFormUrgent(false);
                 setFormDate(undefined);
                 setFormTime('');
-                setFormProblemId('');
-                setFormMetrics([]);
-                setNewMetric({ label: '', target: '', unit: '' });
                 setSelectedDays([]);
             }
         }
@@ -115,15 +97,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
             dueDate = d.toISOString();
         }
 
-        const metricsData = formMetrics.map(m => ({
-            // Preserve ID if editing and metric existed, OR generate new UUID
-            id: editingGoal?.metrics?.find(ex => ex.label === m.label)?.id || crypto.randomUUID(),
-            label: m.label,
-            target: parseFloat(m.target),
-            current: editingGoal?.metrics?.find(ex => ex.label === m.label)?.current || 0,
-            unit: m.unit
-        }));
-
         try {
             if (editingGoal) {
                 await invoke('update_unified_goal', {
@@ -135,8 +108,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         urgent: formUrgent,
                         dueDate,
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : '',
-                        metrics: metricsData.length > 0 ? metricsData : undefined,
-                        problemId: formProblemId || undefined,
                     },
                 });
                 toast.success('Goal updated');
@@ -149,8 +120,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         urgent: formUrgent,
                         dueDate,
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : undefined,
-                        metrics: metricsData.length > 0 ? metricsData : undefined,
-                        problemId: formProblemId || undefined,
                     },
                 });
                 toast.success('Goal created');
@@ -160,17 +129,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
         } catch (err) {
             toast.error(editingGoal ? 'Failed to update goal' : 'Failed to create goal', { description: String(err) });
         }
-    };
-
-    const addMetric = () => {
-        if (newMetric.target && newMetric.unit) {
-            setFormMetrics([...formMetrics, { ...newMetric, label: newMetric.label || 'Target' }]);
-            setNewMetric({ label: '', target: '', unit: '' });
-        }
-    };
-
-    const removeMetric = (index: number) => {
-        setFormMetrics(formMetrics.filter((_, i) => i !== index));
     };
 
     const toggleDay = (day: string) => {
@@ -286,65 +244,8 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         </div>
                     </div>
 
-                    {/* Problem ID */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary)">Problem ID / URL</label>
-                        <input
-                            type="text"
-                            value={formProblemId}
-                            onChange={(e) => setFormProblemId(e.target.value)}
-                            placeholder="LeetCode/Codeforces URL or ID"
-                            className="w-full px-4 py-2.5 rounded-xl font-mono text-sm bg-secondary border border-border shadow-sm placeholder:text-muted-foreground"
-                            style={{ color: 'var(--text-primary)' }}
-                        />
-                    </div>
-
-                    {/* Metrics */}
+                    {/* Recurring Pattern */}
                     <div className="rounded-2xl p-6 space-y-5 bg-secondary/30 border border-border/50">
-                        <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary) mb-4 block">Quantitative Tracking</label>
-
-                            <div className="space-y-2 mb-4">
-                                {formMetrics.map((m, idx) => (
-                                    <div key={idx} className="flex items-center gap-3 text-sm p-3 rounded-lg border bg-background border-border shadow-sm">
-                                        <span className="font-bold text-(--pos-goal-link-text)">{m.label}:</span>
-                                        <span className="font-mono text-(--text-primary)">{m.target} {m.unit}</span>
-                                        <button onClick={() => removeMetric(idx)} className="ml-auto hover:text-red-500 text-muted-foreground transition-colors">
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex gap-2">
-                                <input
-                                    placeholder="Label (e.g. Pushups)"
-                                    className="w-1/3 px-3 py-2.5 rounded-lg text-sm bg-background border border-border shadow-sm placeholder:text-muted-foreground"
-                                    style={{ color: 'var(--text-primary)' }}
-                                    value={newMetric.label}
-                                    onChange={(e) => setNewMetric({ ...newMetric, label: e.target.value })}
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Target"
-                                    className="w-1/4 px-3 py-2.5 rounded-lg text-sm bg-background border border-border shadow-sm placeholder:text-muted-foreground"
-                                    style={{ color: 'var(--text-primary)' }}
-                                    value={newMetric.target}
-                                    onChange={(e) => setNewMetric({ ...newMetric, target: e.target.value })}
-                                />
-                                <input
-                                    placeholder="Unit"
-                                    className="w-1/4 px-3 py-2.5 rounded-lg text-sm bg-background border border-border shadow-sm placeholder:text-muted-foreground"
-                                    style={{ color: 'var(--text-primary)' }}
-                                    value={newMetric.unit}
-                                    onChange={(e) => setNewMetric({ ...newMetric, unit: e.target.value })}
-                                    onKeyDown={(e) => e.key === 'Enter' && addMetric()}
-                                />
-                                <button onClick={addMetric} className="px-4 rounded-lg font-bold hover:bg-primary/90 bg-primary text-primary-foreground transition-colors shadow-sm">+</button>
-                            </div>
-                        </div>
-
-                        {/* Recurring Pattern */}
                         <div>
                             <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary) mb-3 flex items-center gap-2">
                                 <Repeat className="w-3 h-3" /> Repeat On
@@ -375,7 +276,7 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                             <p className="text-[10px] mt-3" style={{ color: 'var(--text-tertiary)' }}>
                                 {selectedDays.length === 0
                                     ? "Creating a single, one-time goal."
-                                    : `Recurring goal: Will explicitly generate instances every ${selectedDays.join(', ')}.`}
+                                    : `Recurring goal: Will generate instances every ${selectedDays.join(', ')}.`}
                             </p>
                         </div>
                     </div>

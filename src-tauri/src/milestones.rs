@@ -16,8 +16,12 @@ pub struct MilestoneRow {
     pub target_value: i32,
     pub period_start: DateTime<Utc>, // Start of period
     pub period_end: DateTime<Utc>,   // End of period
-    pub strategy: String,            // "EvenDistribution" | "FrontLoad" | "Manual"
+    pub strategy: String,            // Always "EvenDistribution" (auto-calculated)
     pub current_value: i32,          // Aggregated from all linked daily goals
+    pub problem_id: Option<String>,  // LeetCode/Codeforces problem URL
+    pub recurring_pattern: Option<String>, // "Daily" or "Mon,Tue,Wed"
+    pub label: Option<String>,       // Metric label (e.g., "pushups")
+    pub unit: Option<String>,        // Metric unit (e.g., "reps")
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -31,7 +35,10 @@ pub struct CreateMilestoneRequest {
     pub target_value: i32,
     pub period_start: String,       // ISO 8601 date (e.g., "2026-02-01")
     pub period_end: String,         // ISO 8601 date (e.g., "2026-02-28")
-    pub strategy: Option<String>,   // Default: "EvenDistribution"
+    pub problem_id: Option<String>, // LeetCode/Codeforces URL
+    pub recurring_pattern: Option<String>, // "Daily" or "Mon,Tue,Wed"
+    pub label: Option<String>,      // Metric label
+    pub unit: Option<String>,       // Metric unit
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,6 +57,95 @@ pub struct BalancerResult {
     pub updated_goals: i32,
     pub daily_required: i32,
     pub message: String,
+}
+
+// ─── Helper Functions ───────────────────────────────────────────────
+
+/// Check if a recurring pattern matches a given date.
+/// Pattern is comma-separated days: "Mon,Tue,Wed" or all 7 days for daily
+fn is_recurring_day(pattern: &str, date_str: &str) -> bool {
+    if pattern.is_empty() {
+        return true; // Empty pattern = all days
+    }
+    
+    let days: Vec<&str> = pattern.split(',').filter(|s| !s.is_empty()).collect();
+    if days.len() == 7 {
+        return true; // All 7 days selected = daily
+    }
+    
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+        let day_name = date.format("%a").to_string(); // Mon, Tue, Wed...
+        pattern.contains(&day_name)
+    } else {
+        false
+    }
+}
+
+/// Generate daily goal instances for a milestone based on recurring pattern
+async fn generate_daily_instances(
+    pool: &sqlx::PgPool,
+    milestone: &MilestoneRow,
+    pattern: &str,
+) -> PosResult<()> {
+    let mut curr = milestone.period_start;
+    let end = milestone.period_end;
+    
+    // Calculate initial daily target (even distribution)
+    let total_days = (end - curr).num_days() + 1;
+    let daily_target = (milestone.target_value as f64 / total_days as f64).ceil() as i32;
+    
+    let label = milestone.label.as_deref().unwrap_or("Target");
+    let unit = milestone.unit.as_deref().unwrap_or("units");
+    
+    while curr <= end {
+        let day_name = curr.format("%a").to_string(); // Mon, Tue, Wed...
+        let date_str = curr.format("%Y-%m-%d").to_string();
+        
+        // Check if this day matches the pattern
+        let should_generate = is_recurring_day(pattern, &date_str);
+        
+        if should_generate {
+            let goal_id = gen_id();
+            let metric_id = gen_id();
+            let date_str = curr.format("%Y-%m-%d").to_string();
+            
+            // Create metrics JSON
+            let metrics_json = serde_json::json!([{
+                "id": metric_id,
+                "label": label,
+                "target": daily_target,
+                "current": 0,
+                "unit": unit
+            }]);
+            
+            // Insert daily goal instance
+            sqlx::query(
+                r#"INSERT INTO unified_goals (
+                    id, text, description, completed, completed_at, verified,
+                    due_date, due_date_local, recurring_pattern, recurring_template_id, 
+                    priority, urgent, metrics, problem_id, linked_activity_ids, labels, 
+                    parent_goal_id, created_at, updated_at, original_date, is_debt
+                ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, NULL, 'medium', false, $6, $7, NULL, NULL, $8, NOW(), NOW(), NULL, false)
+                ON CONFLICT (recurring_template_id, due_date_local) DO NOTHING"#
+            )
+            .bind(&goal_id)
+            .bind(&milestone.target_metric)
+            .bind(format!("Daily target: {} {}", daily_target, unit).as_str())
+            .bind(curr)
+            .bind(&date_str)
+            .bind(&metrics_json)
+            .bind(&milestone.problem_id)
+            .bind(&milestone.id) // parent_goal_id links to milestone
+            .execute(pool)
+            .await
+            .map_err(|e| db_context("generate daily instance", e))?;
+        }
+        
+        curr = curr + chrono::Duration::days(1);
+    }
+    
+    log::info!("[MILESTONE] Generated daily instances for milestone {}", milestone.id);
+    Ok(())
 }
 
 // ─── Commands ───────────────────────────────────────────────────────
@@ -73,24 +169,32 @@ pub async fn create_milestone(
         return Err(PosError::InvalidInput("period_end must be after period_start".into()));
     }
 
-    let strategy = req.strategy.unwrap_or_else(|| "EvenDistribution".to_string());
-
     let row = sqlx::query_as::<_, MilestoneRow>(
         r#"INSERT INTO goal_periods (
-            id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $7)
-        RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at"#,
+            id, target_metric, target_value, period_start, period_end, strategy, current_value, 
+            problem_id, recurring_pattern, label, unit, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, 'EvenDistribution', 0, $6, $7, $8, $9, $10, $10)
+        RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, 
+                  problem_id, recurring_pattern, label, unit, created_at, updated_at"#,
     )
     .bind(&id)
     .bind(&req.target_metric)
     .bind(req.target_value)
     .bind(period_start)
     .bind(period_end)
-    .bind(&strategy)
+    .bind(&req.problem_id)
+    .bind(&req.recurring_pattern)
+    .bind(&req.label)
+    .bind(&req.unit)
     .bind(now)
     .fetch_one(pool)
     .await
     .map_err(|e| db_context("create_milestone", e))?;
+
+    // Generate daily instances if recurring_pattern is set
+    if let Some(ref pattern) = req.recurring_pattern {
+        generate_daily_instances(pool, &row, pattern).await?;
+    }
 
     log::info!("[MILESTONE] Created milestone {} for {}", id, req.target_metric);
     Ok(row)
@@ -105,9 +209,9 @@ pub async fn get_milestones(
     let pool = &db.0;
 
     let query = if active_only.unwrap_or(false) {
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE period_end >= NOW() ORDER BY period_start DESC"
     } else {
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods ORDER BY period_start DESC"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods ORDER BY period_start DESC"
     };
 
     let rows = sqlx::query_as::<_, MilestoneRow>(query)
@@ -140,7 +244,7 @@ pub async fn update_milestone(
     }
 
     let query = format!(
-        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at",
+        "UPDATE goal_periods SET {} WHERE id = ${} RETURNING id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at",
         updates.join(", "),
         bind_idx + 1
     );
@@ -175,7 +279,7 @@ pub async fn run_balancer_engine(
 
     // 1. Fetch milestone
     let milestone = sqlx::query_as::<_, MilestoneRow>(
-        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, created_at, updated_at FROM goal_periods WHERE id = $1"
+        "SELECT id, target_metric, target_value, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE id = $1"
     )
     .bind(&milestone_id)
     .fetch_one(pool)
@@ -183,7 +287,7 @@ pub async fn run_balancer_engine(
     .map_err(|e| db_context("fetch milestone", e))?;
 
     // 2. Calculate remaining target
-    // Aggregate current_value from all linked unified_goals
+    // Aggregate current_value from all linked unified_goals (daily instances)
     let total_completed: Option<i32> = sqlx::query_scalar(
         r#"SELECT COALESCE(SUM(
             CASE 
@@ -194,7 +298,7 @@ pub async fn run_balancer_engine(
             END
         ), 0)::int
         FROM unified_goals 
-        WHERE parent_goal_id = $1 AND completed = true"#
+        WHERE parent_goal_id = $1"#
     )
     .bind(&milestone_id)
     .fetch_one(pool)
@@ -232,35 +336,14 @@ pub async fn run_balancer_engine(
         return Err(PosError::InvalidInput("No remaining days in period".into()));
     }
 
-    // 4. Calculate daily required based on strategy
-    let daily_required = match milestone.strategy.as_str() {
-        "EvenDistribution" => {
-            (remaining_target as f64 / remaining_days as f64).ceil() as i32
-        }
-        "FrontLoad" => {
-            // FrontLoad: Higher targets in earlier days
-            // Simple implementation: double the even distribution for early days
-            let base = (remaining_target as f64 / remaining_days as f64).ceil() as i32;
-            base * 2 // This would be more sophisticated in a full implementation
-        }
-        "Manual" => {
-            // Manual: Don't auto-redistribute
-            return Ok(BalancerResult {
-                milestone_id: milestone_id.clone(),
-                updated_goals: 0,
-                daily_required: 0,
-                message: "Manual strategy - no auto-redistribution".to_string(),
-            });
-        }
-        _ => (remaining_target as f64 / remaining_days as f64).ceil() as i32,
-    };
+    // 4. Calculate daily required (always even distribution)
+    let daily_required = (remaining_target as f64 / remaining_days as f64).ceil() as i32;
 
     // 5. Update future unified_goals that are linked to this milestone
     // Only update goals that are:
     // - Linked to this milestone_id (parent_goal_id)
     // - Not completed
     // - Due date is today or later
-    // - Not manually locked (we'll add a manual_override flag later)
 
     let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
@@ -278,10 +361,10 @@ pub async fn run_balancer_engine(
     .map_err(|e| db_context("fetch future goals", e))?;
 
     let mut updated_count = 0;
+    let label = milestone.label.as_deref().unwrap_or("Target");
 
     for (goal_id,) in &future_goals {
-        // Update the goal's metrics to match daily_required
-        // This assumes metrics is a JSONB array with a "target" field
+        // Update the goal's metrics target value
         let update_result = sqlx::query(
             r#"UPDATE unified_goals 
                SET metrics = jsonb_set(

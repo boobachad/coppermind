@@ -3,7 +3,6 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod github;
-pub mod goals;
 pub mod retry;
 pub mod scrapers;
 pub mod scraper;

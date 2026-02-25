@@ -5,7 +5,7 @@ import { Navbar } from '../components/Navbar';
 import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import type { Submission, LeetCodeUserStats, CodeforcesUserStats } from '../lib/types';
 import { Loader } from '@/components/Loader';
-import { Loader2, TrendingUp, Trophy, Target, Award } from 'lucide-react';
+import { Loader2, TrendingUp, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     Select,
@@ -14,31 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-
-function StatCard({ title, value, subtext, icon, color, loading }: { title: string, value: string | number | null, subtext?: string, icon: React.ReactNode, color: string, loading?: boolean }) {
-    return (
-        <div className="p-6 rounded-xl border relative overflow-hidden group" style={{
-            backgroundColor: 'var(--glass-bg)',
-            borderColor: 'var(--glass-border)',
-            backdropFilter: 'blur(8px)'
-        }}>
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity" style={{ color }}>
-                {icon}
-            </div>
-            <div className="relative z-10">
-                <div className="text-sm font-medium mb-1 opacity-70" style={{ color: 'var(--text-secondary)' }}>{title}</div>
-                {loading ? (
-                    <div className="h-8 w-24 bg-zinc-800/50 rounded animate-pulse" />
-                ) : (
-                    <div className="text-2xl font-bold flex items-baseline gap-2" style={{ color: 'var(--text-primary)' }}>
-                        {value || '-'}
-                        {subtext && <span className="text-xs font-normal opacity-60">{subtext}</span>}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
 
 export function SheetsPage() {
     const [submissions, setSubmissions] = useState<any[]>([]);

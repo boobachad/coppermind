@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Plus, RefreshCw, Trash2, Users, AlertCircle, Trophy, TrendingUp } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, Users, Trophy, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
 import { useConfirmDialog } from '@/components/ConfirmDialog';

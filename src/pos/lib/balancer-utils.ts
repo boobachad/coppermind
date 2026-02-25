@@ -268,7 +268,7 @@ export function getDistributionPreview(
         let target = 0;
         if (!isPast && remainingDays > 0) {
             target = calculateDailyTarget(
-                monthlyGoal.strategy,
+                'EvenDistribution', // Always use even distribution (auto-calculated)
                 remainingTarget,
                 remainingDays,
                 i
