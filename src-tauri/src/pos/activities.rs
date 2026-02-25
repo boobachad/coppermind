@@ -23,6 +23,8 @@ pub struct ActivityRow {
     pub is_productive: bool,
     pub is_shadow: bool,
     pub goal_id: Option<String>,
+    pub book_id: Option<String>,
+    pub pages_read: Option<i32>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -38,6 +40,8 @@ pub struct CreateActivityRequest {
     pub description: String,
     pub is_productive: Option<bool>,
     pub goal_id: Option<String>,
+    pub book_id: Option<String>,
+    pub pages_read: Option<i32>,
     pub updates: Option<Vec<MetricUpdate>>,
     pub date: Option<String>,     // Optional: local date YYYY-MM-DD for correct filtering
 }
@@ -79,7 +83,7 @@ pub async fn get_activities(
 
     let rows = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, created_at
+                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
            FROM pos_activities
            WHERE date = $1
            ORDER BY start_time ASC"#,
@@ -146,8 +150,8 @@ pub async fn create_activity(
     // 1. Insert activity — sqlx+chrono handles DateTime<Utc> → TIMESTAMPTZ natively
     sqlx::query(
         r#"INSERT INTO pos_activities
-           (id, date, start_time, end_time, category, title, description, is_productive, is_shadow, goal_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9)"#,
+           (id, date, start_time, end_time, category, title, description, is_productive, is_shadow, goal_id, book_id, pages_read)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, $10, $11)"#,
     )
     .bind(&activity_id)
     .bind(&date)
@@ -158,6 +162,8 @@ pub async fn create_activity(
     .bind(&req.description)
     .bind(is_productive)
     .bind(&req.goal_id)
+    .bind(&req.book_id)
+    .bind(req.pages_read)
     .execute(&mut *tx)
     .await
     .map_err(|e| db_context("insert activity", e))?;
@@ -212,7 +218,7 @@ pub async fn create_activity(
     // Fetch the created activity
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, created_at
+                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&activity_id)
@@ -275,7 +281,7 @@ pub async fn update_activity(
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, created_at
+                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&id)
@@ -315,7 +321,7 @@ pub async fn patch_activity(
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, created_at
+                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&id)
@@ -366,7 +372,7 @@ pub async fn get_activities_batch(
     // Fetch all activities for all dates in one query
     let rows = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, created_at
+                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
            FROM pos_activities
            WHERE date = ANY($1)
            ORDER BY date ASC, start_time ASC"#,

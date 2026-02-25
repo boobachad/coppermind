@@ -146,3 +146,27 @@ pub struct ParsedCategoryProblem {
     pub contest: Option<String>,
     pub difficulty: Option<i32>,
 }
+
+// ─── Bulk Operations Types ──────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BulkAction {
+    SaveToLadder,
+    GoalForToday,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BulkAddProblemsRequest {
+    pub urls: Vec<String>,
+    pub action: BulkAction,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BulkAddProblemsResponse {
+    pub added_count: i32,
+    pub skipped_count: i32,
+    pub errors: Vec<String>,
+}

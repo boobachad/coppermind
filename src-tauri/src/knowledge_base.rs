@@ -372,3 +372,93 @@ pub fn extract_urls(text: &str) -> Vec<String> {
         Err(_) => Vec::new(),
     }
 }
+
+// ─── Quick Save & Backlinks ─────────────────────────────────────────
+
+/// Quick save a link to knowledge inbox
+#[tauri::command]
+pub async fn quick_save_link(
+    db: State<'_, PosDb>,
+    url: String,
+) -> PosResult<KnowledgeItemRow> {
+    let pool = &db.0;
+    
+    // Check for duplicate URL
+    let existing = sqlx::query_as::<_, KnowledgeItemRow>(
+        "SELECT * FROM knowledge_items WHERE content = $1 AND item_type = 'Link'"
+    )
+    .bind(&url)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| db_context("check duplicate link", e))?;
+    
+    if let Some(item) = existing {
+        return Err(PosError::InvalidInput(format!("Link already exists with ID: {}", item.id)));
+    }
+    
+    // Create new link item
+    let id = gen_id();
+    let now = Utc::now();
+    
+    let row = sqlx::query_as::<_, KnowledgeItemRow>(
+        r#"INSERT INTO knowledge_items 
+           (id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at)
+           VALUES ($1, 'Link', 'Manual', $2, NULL, 'Inbox', NULL, $3, $3)
+           RETURNING *"#
+    )
+    .bind(&id)
+    .bind(&url)
+    .bind(now)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("quick_save_link", e))?;
+    
+    log::info!("[KB] Quick saved link: {}", id);
+    Ok(row)
+}
+
+/// Get backlinks for a knowledge item (bidirectional)
+#[tauri::command]
+pub async fn get_backlinks(
+    db: State<'_, PosDb>,
+    item_id: String,
+) -> PosResult<Vec<KnowledgeLinkRow>> {
+    let pool = &db.0;
+    
+    // Get both forward links (where item is source) and backlinks (where item is target)
+    let links = sqlx::query_as::<_, KnowledgeLinkRow>(
+        r#"SELECT * FROM knowledge_links 
+           WHERE source_id = $1 OR target_id = $1
+           ORDER BY created_at DESC"#
+    )
+    .bind(&item_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("get_backlinks", e))?;
+    
+    Ok(links)
+}
+
+/// Bulk update knowledge item status
+#[tauri::command]
+pub async fn bulk_update_kb_status(
+    db: State<'_, PosDb>,
+    item_ids: Vec<String>,
+    status: String,
+) -> PosResult<i64> {
+    let pool = &db.0;
+    let now = Utc::now();
+    
+    let result = sqlx::query(
+        "UPDATE knowledge_items SET status = $1, updated_at = $2 WHERE id = ANY($3)"
+    )
+    .bind(&status)
+    .bind(now)
+    .bind(&item_ids)
+    .execute(pool)
+    .await
+    .map_err(|e| db_context("bulk_update_kb_status", e))?;
+    
+    log::info!("[KB] Bulk updated {} items to status: {}", result.rows_affected(), status);
+    Ok(result.rows_affected() as i64)
+}

@@ -18,6 +18,7 @@ mod cf_ladder_system;
 mod cf_friends_system;
 mod cf_recommendations;
 mod date_summary;
+mod books;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -357,6 +358,9 @@ pub fn run() {
             knowledge_base::get_knowledge_links,
             knowledge_base::delete_knowledge_link,
             knowledge_base::check_knowledge_duplicates,
+            knowledge_base::quick_save_link,
+            knowledge_base::get_backlinks,
+            knowledge_base::bulk_update_kb_status,
             milestones::create_milestone,
             milestones::get_milestones,
             milestones::update_milestone,
@@ -387,6 +391,7 @@ pub fn run() {
             cf_ladder_system::track_ladder_progress,
             cf_ladder_system::get_ladder_stats,
             cf_ladder_system::get_ladder_by_id,
+            cf_ladder_system::bulk_add_problems,
             cf_ladder_system::get_categories,
             cf_ladder_system::get_category_by_id,
             cf_ladder_system::get_category_stats,
@@ -396,6 +401,10 @@ pub fn run() {
             cf_ladder_system::scan_and_import_public_data,
             cf_recommendations::get_daily_recommendations,
             date_summary::get_yearly_graph_data,
+            books::fetch_book_by_isbn,
+            books::create_or_get_book,
+            books::update_book,
+            books::get_book_reading_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

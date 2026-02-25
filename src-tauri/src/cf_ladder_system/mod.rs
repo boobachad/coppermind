@@ -16,3 +16,7 @@ pub use cf_ladder_commands::*;
 // Re-export category commands
 mod cf_category_commands;
 pub use cf_category_commands::*;
+
+// Re-export bulk operations
+mod cf_bulk_operations;
+pub use cf_bulk_operations::*;

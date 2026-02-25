@@ -161,7 +161,7 @@ pub async fn get_unified_goals(
     // threshold = (Today 00:00 Local) - Offset
     #[allow(deprecated)] // Date::and_hms is deprecated in favor of and_hms_opt, but we know 0,0,0 is valid
     let today_start_local = today_local.and_hms_opt(0, 0, 0).unwrap();
-    let today_start_utc = DateTime::<Utc>::from_utc(today_start_local, Utc) - chrono::Duration::minutes(offset_minutes as i64);
+    let today_start_utc = DateTime::<Utc>::from_naive_utc_and_offset(today_start_local, Utc) - chrono::Duration::minutes(offset_minutes as i64);
 
     // We execute an UPDATE.
     // "due_date < today_start_utc": checks if due_date is strictly before today's start.
@@ -344,7 +344,7 @@ pub async fn update_unified_goal(
     
     // Logic for updating due_date and recurring_pattern
     // If user provided a due_date OR we need to auto-set it because recurring is cleared
-    let mut final_due_date = req.due_date.clone();
+    let final_due_date = req.due_date.clone();
     let pattern_update = req.recurring_pattern.clone();
     
     // Add due_date if it exists (either from req or auto-set)
