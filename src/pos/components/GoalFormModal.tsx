@@ -37,7 +37,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
     const [formPriority, setFormPriority] = useState<'low' | 'medium' | 'high'>('medium');
     const [formUrgent, setFormUrgent] = useState(false);
     const [formDate, setFormDate] = useState<Date | undefined>(undefined);
-    const [formTime, setFormTime] = useState('');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
     useEffect(() => {
@@ -51,10 +50,8 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                 if (editingGoal.dueDate) {
                     const d = new Date(editingGoal.dueDate);
                     setFormDate(d);
-                    setFormTime(format(d, 'HH:mm'));
                 } else {
                     setFormDate(undefined);
-                    setFormTime('');
                 }
 
                 if (editingGoal.recurringPattern) {
@@ -69,7 +66,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                 setFormPriority('medium');
                 setFormUrgent(false);
                 setFormDate(undefined);
-                setFormTime('');
                 setSelectedDays([]);
             }
         }
@@ -83,7 +79,6 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
         if (smart.priority === 'high') setFormPriority('high');
         if (smart.date) {
             setFormDate(smart.date);
-            setFormTime(format(smart.date, 'HH:mm'));
         }
     }, [formText, editingGoal]);
 
@@ -93,7 +88,7 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
         let dueDate = undefined;
         if (formDate) {
             const dateStr = format(formDate, 'yyyy-MM-dd');
-            const d = new Date(`${dateStr}T${formTime || '00:00'}`);
+            const d = new Date(`${dateStr}T00:00:00Z`);
             dueDate = d.toISOString();
         }
 
@@ -226,22 +221,13 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         </div>
                     </div>
 
-                    {/* Date & Time */}
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary)">Due Date</label>
-                            <DatePicker date={formDate} setDate={setFormDate} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary)">Time</label>
-                            <input
-                                type="time"
-                                value={formTime}
-                                onChange={(e) => setFormTime(e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-xl bg-secondary border border-border shadow-sm"
-                                style={{ color: 'var(--text-primary)' }}
-                            />
-                        </div>
+                    {/* Date */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary)">Due Date</label>
+                        <DatePicker date={formDate} setDate={setFormDate} />
+                        <p className="text-xs italic text-muted-foreground">
+                            Goals are scheduled for the entire day (no specific time)
+                        </p>
                     </div>
 
                     {/* Recurring Pattern */}

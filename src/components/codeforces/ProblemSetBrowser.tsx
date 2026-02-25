@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Upload, Code } from 'lucide-react';
+import { Upload, Code, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
 import type { LadderStats } from '../../pos/lib/types';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { CodeforcesCard } from './CodeforcesCard';
+import { BulkProblemModal } from '../../pos/components/BulkProblemModal';
 
 interface ProblemSetItem {
   id: string;
@@ -60,6 +61,7 @@ export function ProblemSetBrowser({
   const [items, setItems] = useState<ProblemSetWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -176,6 +178,17 @@ export function ProblemSetBrowser({
               onChange={handleFileSelected}
             />
             <button
+              onClick={() => setShowBulkModal(true)}
+              className="px-4 py-2 rounded-lg transition-all hover:scale-105"
+              style={{
+                backgroundColor: 'var(--pos-success-bg)',
+                color: 'var(--pos-success-text)',
+              }}
+            >
+              <Plus className="inline-block mr-2 mb-1" size={18} />
+              Bulk Add
+            </button>
+            <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
               className="px-4 py-2 rounded-lg transition-all hover:scale-105"
@@ -248,6 +261,15 @@ export function ProblemSetBrowser({
           </div>
         )}
       </div>
+
+      <BulkProblemModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onSuccess={() => {
+          setShowBulkModal(false);
+          loadItems();
+        }}
+      />
     </div>
   );
 }

@@ -24,8 +24,8 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
     const loadBacklinks = useCallback(async () => {
         setLoading(true);
         try {
-            // Get all links for this item
-            const links = await invoke<KnowledgeLink[]>('get_knowledge_links', { itemId });
+            // Use get_backlinks command for bidirectional query
+            const links = await invoke<KnowledgeLink[]>('get_backlinks', { itemId });
             setRawLinks(links);
             
             // Separate incoming and outgoing
@@ -90,6 +90,18 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
         const link = rawLinks.find(l =>
             direction === 'incoming' ? l.sourceId === item.id : l.targetId === item.id
         );
+        
+        const getLinkTypeBadge = (type: string) => {
+            const badges = {
+                related: { label: 'Related', color: 'var(--pos-info-text)', bg: 'var(--pos-info-bg)' },
+                blocks: { label: 'Blocks', color: 'var(--pos-error-text)', bg: 'var(--pos-error-bg)' },
+                requires: { label: 'Requires', color: 'var(--pos-warning-text)', bg: 'var(--pos-warning-bg)' },
+            };
+            return badges[type as keyof typeof badges] || badges.related;
+        };
+        
+        const badge = link ? getLinkTypeBadge(link.linkType) : null;
+        
         return (
         <div
             key={item.id}
@@ -116,11 +128,21 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                    <div
-                        className="text-sm font-medium mb-1 truncate"
-                        style={{ color: 'var(--text-primary)' }}
-                    >
-                        {item.itemType}
+                    <div className="flex items-center gap-2 mb-1">
+                        <div
+                            className="text-sm font-medium truncate"
+                            style={{ color: 'var(--text-primary)' }}
+                        >
+                            {item.itemType}
+                        </div>
+                        {badge && (
+                            <span
+                                className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                                style={{ color: badge.color, background: badge.bg }}
+                            >
+                                {badge.label}
+                            </span>
+                        )}
                     </div>
                     <div
                         className="text-xs line-clamp-2"
