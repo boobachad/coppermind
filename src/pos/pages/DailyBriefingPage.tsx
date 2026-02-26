@@ -423,19 +423,8 @@ function MilestoneItem({ milestone }: MilestoneItemProps) {
     >
       <div className="flex items-center justify-between mb-2">
         <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-          {milestone.milestoneId}
+          {milestone.targetMetric}
         </p>
-        {milestone.isRealMilestone && (
-          <span
-            className="px-2 py-0.5 rounded text-xs font-medium"
-            style={{
-              backgroundColor: 'var(--btn-primary-bg)',
-              color: 'var(--btn-primary-text)',
-            }}
-          >
-            Real
-          </span>
-        )}
       </div>
       <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
         {milestone.message}

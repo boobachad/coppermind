@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { Calendar, TrendingUp, TrendingDown, Minus, Edit2, Trash2, Play } from 'lucide-react';
-import { toast } from 'sonner';
-import { Milestone, BalancerResult } from '../lib/types';
+import { Calendar, TrendingUp, TrendingDown, Minus, Edit2, Trash2 } from 'lucide-react';
+import { Milestone } from '../lib/types';
 import { calculateProgress, calculateScheduleStatus } from '../lib/balancer-utils';
 import { formatDateDDMMYYYY } from '../lib/time';
 
@@ -13,9 +11,7 @@ interface MonthlyGoalCardProps {
 }
 
 export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps) {
-  const [balancing, setBalancing] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [balancerResult, setBalancerResult] = useState<BalancerResult | null>(null);
 
   // Calculate progress percentage
   const progressPercent = calculateProgress(goal.currentValue, goal.targetValue);
@@ -28,16 +24,14 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
     goal.periodEnd
   );
 
+  // Daily target is the user-defined daily amount
+  const dailyTarget = goal.dailyAmount;
+  
   // Calculate remaining days and target
   const now = new Date();
   const periodEnd = new Date(goal.periodEnd);
   const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   const remainingTarget = Math.max(0, goal.targetValue - goal.currentValue);
-  const dailyTarget = remainingDays > 0 ? Math.ceil(remainingTarget / remainingDays) : remainingTarget;
-
-  // Determine if this is a real milestone (monthly) or analytics only
-  // For now, assume all are real milestones unless we add a field to distinguish
-  const isRealMilestone = true; // TODO: Add period_type field to Milestone type
 
   // Get status colors based on ahead/behind
   const getStatusColor = () => {
@@ -50,25 +44,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
     if (status === 'ahead') return <TrendingUp className="w-4 h-4" />;
     if (status === 'behind') return <TrendingDown className="w-4 h-4" />;
     return <Minus className="w-4 h-4" />;
-  };
-
-  const handleRunBalancer = async () => {
-    setBalancing(true);
-    try {
-      const result = await invoke<BalancerResult>('run_balancer_engine', {
-        goalId: goal.id,
-        timezoneOffset: -new Date().getTimezoneOffset(), // For TZ calculation
-      });
-
-      setBalancerResult(result);
-      toast.success('Balancer complete', {
-        description: `Updated ${result.updatedGoals} daily goals. New daily target: ${result.dailyRequired}`,
-      });
-    } catch (err) {
-      toast.error('Failed to run balancer', { description: String(err) });
-    } finally {
-      setBalancing(false);
-    }
   };
 
   return (
@@ -86,17 +61,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
             <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
               {goal.targetMetric}
             </h3>
-            {!isRealMilestone && (
-              <span
-                className="px-2 py-0.5 rounded text-xs font-medium"
-                style={{
-                  backgroundColor: 'var(--surface-tertiary)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Analytics Only
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <Calendar className="w-3.5 h-3.5" />
@@ -180,7 +144,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
             Daily Target
           </span>
           <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            {balancerResult?.dailyTarget ?? dailyTarget}
+            {dailyTarget}
             {goal.unit && <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-tertiary)' }}>{goal.unit}</span>}
           </span>
         </div>
@@ -206,24 +170,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
           </span>
         </div>
       </div>
-
-      {/* Run Balancer Button - Only for real milestones */}
-      {isRealMilestone && (
-        <div>
-          <button
-            onClick={handleRunBalancer}
-            disabled={balancing}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: 'var(--btn-primary-bg)',
-              color: 'var(--btn-primary-text)',
-            }}
-          >
-            <Play className="w-4 h-4" />
-            <span>{balancing ? 'Redistributing...' : 'Run Balancer'}</span>
-          </button>
-        </div>
-      )}
 
       {/* Details Toggle */}
       <button
@@ -262,18 +208,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
             <span>Remaining Days:</span>
             <span style={{ color: 'var(--text-primary)' }}>{remainingDays}</span>
           </div>
-          {balancerResult && (
-            <>
-              <div className="flex justify-between">
-                <span>Balancer Daily Target:</span>
-                <span style={{ color: 'var(--text-primary)' }}>{balancerResult.dailyTarget ?? balancerResult.dailyRequired}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Goals Updated:</span>
-                <span style={{ color: 'var(--text-primary)' }}>{balancerResult.updatedGoals}</span>
-              </div>
-            </>
-          )}
         </div>
       )}
     </div>

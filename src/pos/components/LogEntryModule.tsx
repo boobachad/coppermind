@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, Link2, Calendar, AlertCircle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
-import type { UnifiedGoal, Activity, DuplicateCheckResult, Book } from '../lib/types';
+import type { UnifiedGoal, Activity, DuplicateCheckResult, Book, Milestone } from '../lib/types';
 import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
 import { extractUrls, detectUrlType, parseTemporalKeywords } from '@/lib/kb-utils';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [isProductive, setIsProductive] = useState(editingActivity?.isProductive ?? true);
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
+    const [availableMilestones, setAvailableMilestones] = useState<Milestone[]>([]);
     const [selectedGoalId, setSelectedGoalId] = useState<string>('none');
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
 
@@ -77,17 +78,23 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     }, [editingActivity, date]);
 
     useEffect(() => {
-        const fetchGoals = async () => {
+        const fetchGoalsAndMilestones = async () => {
             try {
-                const goals = await invoke<UnifiedGoal[]>('get_unified_goals', {
-                    filters: { completed: false }
-                });
+                const [goals, milestones] = await Promise.all([
+                    invoke<UnifiedGoal[]>('get_unified_goals', {
+                        filters: { completed: false }
+                    }),
+                    invoke<Milestone[]>('get_milestones', {
+                        activeOnly: true
+                    })
+                ]);
                 setAvailableGoals(goals);
+                setAvailableMilestones(milestones);
             } catch (error) {
-                console.error('Failed to fetch goals:', error);
+                console.error('Failed to fetch goals/milestones:', error);
             }
         };
-        fetchGoals();
+        fetchGoalsAndMilestones();
     }, [date]);
 
     // Existing handlers (PRESERVED)
@@ -96,9 +103,19 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         setMetricValues({});
 
         if (value !== 'none') {
-            const goal = availableGoals.find(g => g.id === value);
-            if (goal) {
-                setTitle(prev => prev || `Worked on: ${goal.text}`);
+            // Check if it's a milestone
+            if (value.startsWith('milestone-')) {
+                const milestoneId = value.replace('milestone-', '');
+                const milestone = availableMilestones.find(m => m.id === milestoneId);
+                if (milestone) {
+                    setTitle(prev => prev || `Worked on: ${milestone.targetMetric}`);
+                }
+            } else {
+                // Regular goal
+                const goal = availableGoals.find(g => g.id === value);
+                if (goal) {
+                    setTitle(prev => prev || `Worked on: ${goal.text}`);
+                }
             }
         }
     };
@@ -283,26 +300,59 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     }
                 });
 
-                // Link to goal if selected (EXISTING)
+                // Link to goal/milestone if selected
                 if (selectedGoalId !== 'none') {
-                    await invoke('link_activity_to_unified_goal', {
-                        goalId: selectedGoalId,
-                        activityId: activityResult.id,
-                    });
-
-                    if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
-                        const updatedMetrics = selectedGoal.metrics.map(m => {
-                            const increment = parseInt(metricValues[m.id] || '0');
-                            return {
-                                ...m,
-                                current: m.current + increment
-                            };
+                    // Check if it's a milestone (prefixed with "milestone-")
+                    if (selectedGoalId.startsWith('milestone-')) {
+                        const milestoneId = selectedGoalId.replace('milestone-', '');
+                        
+                        // Increment milestone progress with metric values
+                        if (Object.keys(metricValues).length > 0) {
+                            const totalIncrement = Object.values(metricValues).reduce((sum, val) => sum + parseInt(val || '0'), 0);
+                            try {
+                                await invoke('increment_milestone_progress', {
+                                    milestoneId,
+                                    amount: totalIncrement
+                                });
+                            } catch (err) {
+                                console.error('Failed to update milestone progress:', err);
+                                toast.error('Failed to update milestone progress');
+                            }
+                        }
+                    } else {
+                        // Regular goal linking
+                        await invoke('link_activity_to_unified_goal', {
+                            goalId: selectedGoalId,
+                            activityId: activityResult.id,
                         });
 
-                        await invoke('update_unified_goal', {
-                            id: selectedGoalId,
-                            req: { metrics: updatedMetrics }
-                        });
+                        if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
+                            const updatedMetrics = selectedGoal.metrics.map(m => {
+                                const increment = parseInt(metricValues[m.id] || '0');
+                                return {
+                                    ...m,
+                                    current: m.current + increment
+                                };
+                            });
+
+                            await invoke('update_unified_goal', {
+                                id: selectedGoalId,
+                                req: { metrics: updatedMetrics }
+                            });
+
+                            // Auto-increment parent milestone if goal is linked to one
+                            if (selectedGoal.parentGoalId) {
+                                try {
+                                    const totalIncrement = Object.values(metricValues).reduce((sum, val) => sum + parseInt(val || '0'), 0);
+                                    await invoke('increment_milestone_progress', {
+                                        milestoneId: selectedGoal.parentGoalId,
+                                        amount: totalIncrement
+                                    });
+                                } catch (err) {
+                                    console.error('Failed to update milestone progress:', err);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -459,23 +509,50 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal (Optional)</label>
+                    <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal/Milestone (Optional)</label>
                     <Select value={selectedGoalId} onValueChange={handleGoalChange}>
                         <SelectTrigger className="material-glass-subtle border-none w-full">
-                            <SelectValue placeholder="Select a goal" />
+                            <SelectValue placeholder="Select a goal or milestone" />
                         </SelectTrigger>
                         <SelectContent className="material-glass max-h-60 overflow-y-auto">
                             <SelectItem value="none">-- No Goal --</SelectItem>
-                            {availableGoals.map(goal => (
-                                <SelectItem key={goal.id} value={goal.id}>
-                                    <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                        {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{formatDateDDMMYYYY(new Date(goal.dueDate))}]</span> : null}
-                                        <span className="truncate">{goal.text}</span>
-                                        {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
-                                        {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
-                                    </span>
-                                </SelectItem>
-                            ))}
+                            
+                            {/* Regular Goals Section */}
+                            {availableGoals.length > 0 && (
+                                <>
+                                    <div className="px-2 py-1.5 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
+                                        GOALS
+                                    </div>
+                                    {availableGoals.map(goal => (
+                                        <SelectItem key={goal.id} value={goal.id}>
+                                            <span className="flex items-center gap-1 max-w-[200px] truncate">
+                                                {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{formatDateDDMMYYYY(new Date(goal.dueDate))}]</span> : null}
+                                                <span className="truncate">{goal.text}</span>
+                                                {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
+                                                {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </>
+                            )}
+                            
+                            {/* Milestones Section */}
+                            {availableMilestones.length > 0 && (
+                                <>
+                                    <div className="px-2 py-1.5 text-xs font-semibold mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                                        MILESTONES
+                                    </div>
+                                    {availableMilestones.map(milestone => (
+                                        <SelectItem key={`milestone-${milestone.id}`} value={`milestone-${milestone.id}`}>
+                                            <span className="flex items-center gap-1 max-w-[200px] truncate">
+                                                <span className="text-xs text-muted-foreground mr-1">📊</span>
+                                                <span className="truncate">{milestone.targetMetric}</span>
+                                                <span className="text-xs text-muted-foreground">({milestone.currentValue}/{milestone.targetValue})</span>
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
@@ -575,6 +652,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             )}
 
             {/* EXISTING: Metrics (UNCHANGED) */}
+            {/* EXISTING: Metrics (UPDATED FOR MILESTONES) */}
             {selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (
                 <div className="space-y-2">
                     <label className="block text-sm font-medium">Progress on Metrics</label>
@@ -596,6 +674,31 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     ))}
                 </div>
             )}
+            
+            {/* NEW: Milestone Metrics */}
+            {selectedGoalId.startsWith('milestone-') && (() => {
+                const milestoneId = selectedGoalId.replace('milestone-', '');
+                const milestone = availableMilestones.find(m => m.id === milestoneId);
+                return milestone && (
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium">Progress on Milestone</label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm flex-1">{milestone.label || milestone.targetMetric}</span>
+                            <Input
+                                type="number"
+                                min="0"
+                                value={metricValues['milestone'] || ''}
+                                onChange={(e) => setMetricValues({ milestone: e.target.value })}
+                                placeholder="0"
+                                className="w-24"
+                            />
+                            <span className="text-sm text-muted-foreground">
+                                ({milestone.currentValue}/{milestone.targetValue} {milestone.unit || ''})
+                            </span>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* EXISTING: Submit Buttons (UNCHANGED) */}
             <div className="flex gap-2">

@@ -66,7 +66,7 @@ pub async fn get_daily_briefing(
 
     // 3. Query active milestones (period_start <= date AND period_end >= date)
     let milestone_rows = sqlx::query_as::<_, MilestoneRow>(
-        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, strategy, current_value, problem_id, recurring_pattern, label, unit, created_at, updated_at FROM goal_periods WHERE period_start <= $1 AND period_end >= $1 ORDER BY period_start ASC"
+        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, current_value, problem_id, unit, created_at, updated_at FROM goal_periods WHERE period_start <= $1 AND period_end >= $1 ORDER BY period_start ASC"
     )
     .bind(date_parsed)
     .fetch_all(pool)
@@ -79,43 +79,15 @@ pub async fn get_daily_briefing(
     let mut milestones_behind = 0;
 
     for milestone in milestone_rows {
-        // Calculate progress
-        let total_completed: Option<i32> = sqlx::query_scalar(
-            r#"SELECT COALESCE(SUM(
-                CASE 
-                    WHEN metrics IS NOT NULL THEN 
-                        (SELECT COALESCE(SUM((metric->>'current')::float), 0) 
-                         FROM jsonb_array_elements(metrics) AS metric)
-                    ELSE 0
-                END
-            ), 0)::int
-            FROM unified_goals 
-            WHERE parent_goal_id = $1"#
-        )
-        .bind(&milestone.id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| db_context("aggregate milestone progress", e))?;
-
-        let current_value = total_completed.unwrap_or(0);
-        let remaining_target = milestone.target_value - current_value;
+        // Use current_value from milestone table (updated via increment_milestone_progress)
+        let current_value = milestone.current_value;
         
-        // Calculate remaining days
-        let remaining_days = (milestone.period_end - date_parsed).num_days() + 1;
-        let daily_required = if remaining_days > 0 {
-            (remaining_target as f64 / remaining_days as f64).ceil() as i32
-        } else {
-            remaining_target
-        };
+        // Daily target is the user-defined daily_amount
+        let daily_required = milestone.daily_amount;
 
         // Determine if on track: current_value >= expected_value_by_now
         let days_elapsed = (date_parsed - milestone.period_start).num_days() + 1;
-        let total_days = (milestone.period_end - milestone.period_start).num_days() + 1;
-        let expected_by_now = if total_days > 0 {
-            (milestone.target_value as f64 * days_elapsed as f64 / total_days as f64).floor() as i32
-        } else {
-            milestone.target_value
-        };
+        let expected_by_now = (milestone.daily_amount as f64 * days_elapsed as f64).floor() as i32;
 
         let is_on_track = current_value >= expected_by_now;
         if is_on_track {
@@ -128,6 +100,7 @@ pub async fn get_daily_briefing(
 
         milestones.push(BalancerResult {
             milestone_id: milestone.id.clone(),
+            target_metric: milestone.target_metric.clone(),
             updated_goals: 0,  // Not applicable for briefing
             daily_required,
             is_real_milestone,

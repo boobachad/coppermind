@@ -292,13 +292,12 @@ export interface Milestone {
     id: string;
     targetMetric: string;
     targetValue: number;
+    dailyAmount: number;
+    periodType: string;
     periodStart: string;
     periodEnd: string;
-    strategy: string;                 // Always "EvenDistribution" (auto-calculated)
     currentValue: number;
     problemId: string | null;
-    recurringPattern: string | null;
-    label: string | null;
     unit: string | null;
     createdAt: string;
     updatedAt: string;
@@ -306,15 +305,11 @@ export interface Milestone {
 
 export interface BalancerResult {
     milestoneId: string;
+    targetMetric: string;
     updatedGoals: number;
     dailyRequired: number;
+    isRealMilestone: boolean;
     message: string;
-    targetValue?: number;
-    currentValue?: number;
-    remainingTarget?: number;
-    remainingDays?: number;
-    dailyTarget?: number;
-    isRealMilestone?: boolean;
 }
 
 // Legacy alias for backwards compatibility
