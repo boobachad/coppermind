@@ -233,6 +233,11 @@ pub async fn sync_cf_friend_submissions(
     .await
     .map_err(|e| PosError::Database(format!("Friend not found: {}", e)))?;
 
+    // Fetch user info to update rating
+    let user_info = verify_cf_handle(&friend.cf_handle).await?;
+    log::info!("[CF FRIEND] Fetched user info for {}: rating={:?}, max_rating={:?}", 
+               friend.cf_handle, user_info.rating, user_info.max_rating);
+
     // Fetch submissions from CF API
     let submissions = fetch_cf_submissions(&friend.cf_handle).await?;
     let total_count = submissions.len() as i64;
@@ -286,16 +291,21 @@ pub async fn sync_cf_friend_submissions(
         }
     }
 
-    // Update last_synced and total_submissions
-    sqlx::query("UPDATE cf_friends SET last_synced = $1, total_submissions = $2 WHERE id = $3")
+    // Update last_synced, total_submissions, current_rating, and max_rating
+    sqlx::query(
+        "UPDATE cf_friends SET last_synced = $1, total_submissions = $2, current_rating = $3, max_rating = $4 WHERE id = $5"
+    )
         .bind(Utc::now())
         .bind(total_count)
+        .bind(user_info.rating)
+        .bind(user_info.max_rating)
         .bind(&friend.id)
         .execute(pool)
         .await
-        .map_err(|e| PosError::Database(format!("Failed to update sync time: {}", e)))?;
+        .map_err(|e| PosError::Database(format!("Failed to update sync data: {}", e)))?;
 
-    log::info!("[CF FRIEND] Sync complete for {}. Imported {} new AC submissions.", friend.cf_handle, imported_count);
+    log::info!("[CF FRIEND] Sync complete for {}. Imported {} new AC submissions. Rating: {:?} -> {:?}", 
+               friend.cf_handle, imported_count, friend.current_rating, user_info.rating);
 
     Ok(imported_count)
 }

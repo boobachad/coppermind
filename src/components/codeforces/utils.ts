@@ -9,7 +9,11 @@ export const getRatingColor = (rating: number | null | undefined): string => {
     if (rating < 2400) return '#ff8c00'; // International Master - Orange
     if (rating < 2600) return '#ff0000'; // Grandmaster - Red
     if (rating < 3000) return '#ff0000'; // International Grandmaster - Red
-    return '#ff0000'; // Legendary Grandmaster - Red
+    return 'legendary'; // Legendary Grandmaster - Special (first letter black, rest red)
+};
+
+export const isLegendaryGrandmaster = (rating: number | null | undefined): boolean => {
+    return !!rating && rating >= 3000;
 };
 
 export const getDifficultyLevel = (difficulty: number | null | undefined): number => {

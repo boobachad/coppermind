@@ -2,81 +2,53 @@ import { useState, useEffect, useCallback } from 'react';
 import { Command } from 'cmdk';
 import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
 import {
   Home,
   Calendar,
   Target,
-  BookOpen,
   Code2,
-  Github,
   Settings,
   FileText,
-  Search,
-  Clock,
+  ChevronRight,
+  Plus,
   TrendingUp,
   Layers,
-  ChevronRight,
+  Moon,
+  Sun,
+  Monitor,
+  Lightbulb,
+  BookMarked,
+  RefreshCw,
+  Github,
+  Users,
 } from 'lucide-react';
-import type { Activity, Milestone, Submission } from '../pos/lib/types';
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Page = 'root' | 'navigation' | 'search' | 'recent' | 'shortcuts';
-
-interface SearchResults {
-  activities: Activity[];
-  milestones: Milestone[];
-  submissions: Submission[];
-}
+type Page = 'root' | 'create' | 'theme' | 'sync' | 'sync-friends';
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [page, setPage] = useState<Page>('root');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResults>({
-    activities: [],
-    milestones: [],
-    submissions: [],
-  });
 
-  // Reset state when closing
   useEffect(() => {
     if (!open) {
       setPage('root');
       setSearch('');
-      setSearchResults({ activities: [], milestones: [], submissions: [] });
     }
   }, [open]);
 
-  // Async search
   useEffect(() => {
-    if (search.length < 2) {
-      setSearchResults({ activities: [], milestones: [], submissions: [] });
-      return;
+    // Clear search when navigating to subpages
+    if (page !== 'root') {
+      setSearch('');
     }
-
-    const searchTimeout = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const [activities, milestones, submissions] = await Promise.all([
-          invoke<Activity[]>('search_activities', { query: search }).catch(() => []),
-          invoke<Milestone[]>('search_milestones', { query: search }).catch(() => []),
-          invoke<Submission[]>('search_submissions', { query: search }).catch(() => []),
-        ]);
-        setSearchResults({ activities, milestones, submissions });
-      } catch (err) {
-        console.error('Search error:', err);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(searchTimeout);
-  }, [search]);
+  }, [page]);
 
   const handleNavigate = useCallback((path: string) => {
     navigate(path);
@@ -84,10 +56,64 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }, [navigate, onOpenChange]);
 
   const handleBack = useCallback(() => {
-    if (page !== 'root') {
+    if (page === 'sync-friends') {
+      setPage('sync');
+    } else if (page !== 'root') {
       setPage('root');
     }
   }, [page]);
+
+  const handleSyncLeetCode = useCallback(async () => {
+    try {
+      const toastId = toast.loading('Syncing LeetCode data...');
+      const result = await invoke('scrape_leetcode');
+      toast.dismiss(toastId);
+      toast.success('LeetCode sync complete', { description: `Imported ${(result as any).newSubmissions} new submissions` });
+      onOpenChange(false);
+    } catch (err) {
+      toast.dismiss();
+      toast.error('LeetCode sync failed', { description: String(err) });
+    }
+  }, [onOpenChange]);
+
+  const handleSyncCodeforces = useCallback(async () => {
+    try {
+      const toastId = toast.loading('Syncing Codeforces data...');
+      const result = await invoke('scrape_codeforces');
+      toast.dismiss(toastId);
+      toast.success('Codeforces sync complete', { description: `Imported ${(result as any).newSubmissions} new submissions` });
+      onOpenChange(false);
+    } catch (err) {
+      toast.dismiss();
+      toast.error('Codeforces sync failed', { description: String(err) });
+    }
+  }, [onOpenChange]);
+
+  const handleSyncGitHub = useCallback(async () => {
+    try {
+      const toastId = toast.loading('Syncing GitHub data...');
+      const result = await invoke('scrape_github');
+      toast.dismiss(toastId);
+      toast.success('GitHub sync complete', { description: `Updated ${(result as any).newSubmissions} repositories` });
+      onOpenChange(false);
+    } catch (err) {
+      toast.dismiss();
+      toast.error('GitHub sync failed', { description: String(err) });
+    }
+  }, [onOpenChange]);
+
+  const handleSyncFriend = useCallback(async (friendId: string, displayName: string) => {
+    try {
+      const toastId = toast.loading(`Syncing ${displayName}...`);
+      const count = await invoke<number>('sync_cf_friend_submissions', { friendId });
+      toast.dismiss(toastId);
+      toast.success(`${displayName} sync complete`, { description: `Imported ${count} new submissions` });
+      onOpenChange(false);
+    } catch (err) {
+      toast.dismiss();
+      toast.error(`Failed to sync ${displayName}`, { description: String(err) });
+    }
+  }, [onOpenChange]);
 
   return (
     <Command.Dialog
@@ -134,7 +160,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             fontSize: '14px',
           }}
         >
-          {loading ? 'Searching...' : 'No results found.'}
+          No results found.
         </Command.Empty>
 
         {page === 'root' && (
@@ -150,43 +176,61 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 letterSpacing: '0.05em',
               }}
             >
-              <CommandItem icon={<Home />} onSelect={() => handleNavigate('/pos')}>
-                Home
+              <CommandItem icon={<Home />} onSelect={() => handleNavigate('/')}>
+                Notes
               </CommandItem>
-              <CommandItem icon={<Calendar />} onSelect={() => handleNavigate('/pos/daily')}>
-                Daily View
+              <CommandItem icon={<Home />} onSelect={() => handleNavigate('/pos')}>
+                POS Home
               </CommandItem>
               <CommandItem icon={<Layers />} onSelect={() => handleNavigate('/pos/grid')}>
-                Grid View
+                Activity Grid
               </CommandItem>
-              <CommandItem icon={<Target />} onSelect={() => handleNavigate('/pos/briefing')}>
+              <CommandItem icon={<Target />} onSelect={() => handleNavigate('/briefing')}>
                 Daily Briefing
+              </CommandItem>
+              <CommandItem icon={<Target />} onSelect={() => handleNavigate('/goals')}>
+                Goals
+              </CommandItem>
+              <CommandItem icon={<BookMarked />} onSelect={() => handleNavigate('/milestones')}>
+                Milestones
+              </CommandItem>
+              <CommandItem icon={<Lightbulb />} onSelect={() => handleNavigate('/knowledge')}>
+                Knowledge Base
               </CommandItem>
               <CommandItem icon={<TrendingUp />} onSelect={() => handleNavigate('/pos/sheets')}>
                 Sheets
               </CommandItem>
-              <CommandItem icon={<Code2 />} onSelect={() => handleNavigate('/codeforces')}>
-                Codeforces
+              <CommandItem icon={<Code2 />} onSelect={() => handleNavigate('/cf/ladders')}>
+                Codeforces Ladders
               </CommandItem>
-              <CommandItem icon={<Github />} onSelect={() => handleNavigate('/github')}>
-                GitHub
+              <CommandItem icon={<Code2 />} onSelect={() => handleNavigate('/cf/categories')}>
+                Codeforces Categories
               </CommandItem>
-              <CommandItem icon={<BookOpen />} onSelect={() => handleNavigate('/pos/books')}>
-                Books
+              <CommandItem icon={<Calendar />} onSelect={() => handleNavigate('/journal')}>
+                Journal
               </CommandItem>
             </Command.Group>
 
             <Command.Separator style={{ height: '1px', backgroundColor: 'var(--glass-border)', margin: '8px 0' }} />
 
-            <Command.Group heading="Actions">
-              <CommandItem icon={<Search />} onSelect={() => setPage('search')} shortcut="⌘S">
-                Search Everything
-                <ChevronRight className="ml-auto" size={16} style={{ color: 'var(--text-tertiary)' }} />
+            <Command.Group heading="Quick Actions">
+              <CommandItem icon={<Plus />} onSelect={() => setPage('create')}>
+                Create New...
+                <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} size={16} />
               </CommandItem>
-              <CommandItem icon={<Clock />} onSelect={() => setPage('recent')} shortcut="⌘R">
-                Recent Items
-                <ChevronRight className="ml-auto" size={16} style={{ color: 'var(--text-tertiary)' }} />
+              <CommandItem icon={<RefreshCw />} onSelect={() => setPage('sync')}>
+                Sync Data
+                <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} size={16} />
               </CommandItem>
+              <CommandItem icon={<Monitor />} onSelect={() => setPage('theme')}>
+                Change Theme
+                <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} size={16} />
+              </CommandItem>
+            </Command.Group>
+
+            <Command.Separator style={{ height: '1px', backgroundColor: 'var(--glass-border)', margin: '8px 0' }} />
+
+            <Command.Group heading="System">
               <CommandItem icon={<Settings />} onSelect={() => handleNavigate('/settings')}>
                 Settings
               </CommandItem>
@@ -194,77 +238,139 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </>
         )}
 
-        {page === 'search' && (
+        {page === 'create' && (
           <>
-            {searchResults.activities.length > 0 && (
-              <Command.Group heading="Activities">
-                {searchResults.activities.slice(0, 5).map((activity) => (
-                  <CommandItem
-                    key={activity.id}
-                    icon={<FileText size={16} />}
-                    onSelect={() => handleNavigate(`/pos/daily?date=${activity.date}`)}
-                  >
-                    <div>
-                      <div>{activity.title}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{activity.date}</div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </Command.Group>
-            )}
-
-            {searchResults.milestones.length > 0 && (
-              <Command.Group heading="Milestones">
-                {searchResults.milestones.slice(0, 5).map((milestone) => (
-                  <CommandItem
-                    key={milestone.id}
-                    icon={<Target size={16} />}
-                    onSelect={() => handleNavigate('/pos/briefing')}
-                  >
-                    <div>
-                      <div>{milestone.targetMetric}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                        {milestone.currentValue}/{milestone.targetValue}
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </Command.Group>
-            )}
-
-            {searchResults.submissions.length > 0 && (
-              <Command.Group heading="Submissions">
-                {searchResults.submissions.slice(0, 5).map((submission) => (
-                  <CommandItem
-                    key={submission.id}
-                    icon={<Code2 size={16} />}
-                    onSelect={() => handleNavigate('/codeforces')}
-                  >
-                    <div>
-                      <div>{submission.problemTitle}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                        {submission.platform} • {submission.verdict}
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </Command.Group>
-            )}
+            <Command.Group heading="Create New">
+              <CommandItem icon={<FileText />} onSelect={() => handleNavigate('/notes/new')}>
+                New Note
+              </CommandItem>
+              <CommandItem icon={<Target />} onSelect={() => handleNavigate('/goals?create=true')}>
+                New Goal
+              </CommandItem>
+              <CommandItem icon={<BookMarked />} onSelect={() => handleNavigate('/milestones?create=true')}>
+                New Milestone
+              </CommandItem>
+              <CommandItem icon={<Lightbulb />} onSelect={() => handleNavigate('/knowledge?create=true')}>
+                New Knowledge Item
+              </CommandItem>
+              <CommandItem icon={<Calendar />} onSelect={() => {
+                const today = new Date().toISOString().split('T')[0];
+                handleNavigate(`/journal/${today}`);
+              }}>
+                New Journal Entry
+              </CommandItem>
+            </Command.Group>
           </>
         )}
 
-        {page === 'recent' && (
-          <Command.Group heading="Recent">
-            <CommandItem icon={<Clock size={16} />} onSelect={() => handleNavigate('/pos/daily')}>
-              Today's Activities
-            </CommandItem>
-            <CommandItem icon={<Target size={16} />} onSelect={() => handleNavigate('/pos/briefing')}>
-              Daily Briefing
-            </CommandItem>
-          </Command.Group>
+        {page === 'theme' && (
+          <>
+            <Command.Group heading="Theme">
+              <CommandItem icon={<Sun />} onSelect={() => { 
+                localStorage.setItem('app_theme', 'solarized-light');
+                document.documentElement.setAttribute('data-theme', 'solarized-light'); 
+                onOpenChange(false); 
+              }}>
+                Solarized Light
+              </CommandItem>
+              <CommandItem icon={<Monitor />} onSelect={() => { 
+                localStorage.setItem('app_theme', 'blue-light');
+                document.documentElement.setAttribute('data-theme', 'blue-light'); 
+                onOpenChange(false); 
+              }}>
+                Blue Light
+              </CommandItem>
+              <CommandItem icon={<Moon />} onSelect={() => { 
+                localStorage.setItem('app_theme', 'dark');
+                document.documentElement.setAttribute('data-theme', 'dark'); 
+                onOpenChange(false); 
+              }}>
+                Dark
+              </CommandItem>
+            </Command.Group>
+          </>
         )}
+
+        {page === 'sync' && (
+          <>
+            <Command.Group heading="Sync Data">
+              <CommandItem icon={<Code2 />} onSelect={handleSyncLeetCode}>
+                Sync LeetCode
+              </CommandItem>
+              <CommandItem icon={<Code2 />} onSelect={handleSyncCodeforces}>
+                Sync Codeforces
+              </CommandItem>
+              <CommandItem icon={<Github />} onSelect={handleSyncGitHub}>
+                Sync GitHub
+              </CommandItem>
+              <CommandItem icon={<Users />} onSelect={() => setPage('sync-friends')}>
+                Sync Codeforces Friends
+                <ChevronRight style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} size={16} />
+              </CommandItem>
+            </Command.Group>
+          </>
+        )}
+
+        {page === 'sync-friends' && <SyncFriendsPage onSyncFriend={handleSyncFriend} />}
       </Command.List>
     </Command.Dialog>
+  );
+}
+
+interface SyncFriendsPageProps {
+  onSyncFriend: (friendId: string, displayName: string) => void;
+}
+
+function SyncFriendsPage({ onSyncFriend }: SyncFriendsPageProps) {
+  const [friends, setFriends] = useState<Array<{ id: string; displayName: string; cfHandle: string }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        const result = await invoke<Array<{ id: string; displayName: string; cfHandle: string }>>('get_cf_friends');
+        setFriends(result);
+      } catch (err) {
+        toast.error('Failed to load friends', { description: String(err) });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadFriends();
+  }, []);
+
+  if (loading) {
+    return (
+      <Command.Group heading="Codeforces Friends">
+        <Command.Item disabled>
+          <span style={{ color: 'var(--text-tertiary)' }}>Loading friends...</span>
+        </Command.Item>
+      </Command.Group>
+    );
+  }
+
+  if (friends.length === 0) {
+    return (
+      <Command.Group heading="Codeforces Friends">
+        <Command.Item disabled>
+          <span style={{ color: 'var(--text-tertiary)' }}>No friends added yet</span>
+        </Command.Item>
+      </Command.Group>
+    );
+  }
+
+  return (
+    <Command.Group heading="Sync Codeforces Friend">
+      {friends.map(friend => (
+        <CommandItem
+          key={friend.id}
+          icon={<Users />}
+          onSelect={() => onSyncFriend(friend.id, friend.displayName)}
+        >
+          {friend.displayName} ({friend.cfHandle})
+        </CommandItem>
+      ))}
+    </Command.Group>
   );
 }
 
@@ -272,10 +378,9 @@ interface CommandItemProps {
   icon?: React.ReactNode;
   children: React.ReactNode;
   onSelect: () => void;
-  shortcut?: string;
 }
 
-function CommandItem({ icon, children, onSelect, shortcut }: CommandItemProps) {
+function CommandItem({ icon, children, onSelect }: CommandItemProps) {
   return (
     <Command.Item
       onSelect={onSelect}
@@ -293,21 +398,6 @@ function CommandItem({ icon, children, onSelect, shortcut }: CommandItemProps) {
     >
       {icon && <span style={{ color: 'var(--text-secondary)', display: 'flex' }}>{icon}</span>}
       <span style={{ flex: 1 }}>{children}</span>
-      {shortcut && (
-        <kbd
-          style={{
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontFamily: 'monospace',
-            backgroundColor: 'var(--surface-tertiary)',
-            color: 'var(--text-tertiary)',
-            border: '1px solid var(--border-primary)',
-          }}
-        >
-          {shortcut}
-        </kbd>
-      )}
     </Command.Item>
   );
 }

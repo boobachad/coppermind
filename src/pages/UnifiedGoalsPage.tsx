@@ -23,6 +23,15 @@ export function UnifiedGoalsPage() {
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
   const [editingGoal, setEditingGoal] = useState<UnifiedGoal | null>(null);
 
+  // Check for ?create=true query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') === 'true') {
+      setIsModalOpen(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     loadGoals();
   }, []); // Only load on mount (and manual refreshes), filter change is local

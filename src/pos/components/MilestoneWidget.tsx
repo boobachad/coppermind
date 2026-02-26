@@ -17,9 +17,13 @@ interface MilestoneWidgetProps {
    * If true, shows goals from all time periods, not just active ones
    */
   showAll?: boolean;
+  /**
+   * If true, opens the create modal on mount
+   */
+  openCreateModal?: boolean;
 }
 
-export function MilestoneWidget({ month, showAll = false }: MilestoneWidgetProps) {
+export function MilestoneWidget({ month, showAll = false, openCreateModal = false }: MilestoneWidgetProps) {
   const [goals, setGoals] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +32,12 @@ export function MilestoneWidget({ month, showAll = false }: MilestoneWidgetProps
   useEffect(() => {
     loadMilestones();
   }, [month, showAll]);
+
+  useEffect(() => {
+    if (openCreateModal) {
+      setIsModalOpen(true);
+    }
+  }, [openCreateModal]);
 
   const loadMilestones = async () => {
     setLoading(true);

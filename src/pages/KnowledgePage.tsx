@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { BookOpen, Network, Link2 } from 'lucide-react';
 import { KnowledgeInbox } from '../components/knowledge/KnowledgeInbox';
@@ -11,6 +12,7 @@ import type { KnowledgeItem, YearlyGraphData } from '../pos/lib/types';
 type KBTab = 'inbox' | 'graph' | 'backlinks';
 
 export default function KnowledgePage() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab,    setActiveTab]    = useState<KBTab>('inbox');
     const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
     const [isModalOpen,  setIsModalOpen]  = useState(false);
@@ -18,6 +20,14 @@ export default function KnowledgePage() {
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     // graphData state: KnowledgeGraph populates it via onDataLoaded; DateSummaryPanel reads it
     const [graphData,    setGraphData]    = useState<YearlyGraphData | null>(null);
+
+    useEffect(() => {
+        const shouldCreate = searchParams.get('create') === 'true';
+        if (shouldCreate) {
+            setIsModalOpen(true);
+            setSearchParams({});
+        }
+    }, [searchParams, setSearchParams]);
 
     const tabs: { key: KBTab; label: string; icon: React.ReactNode }[] = [
         { key: 'inbox',     label: 'Inbox',     icon: <BookOpen size={16} /> },

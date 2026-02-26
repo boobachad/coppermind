@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Target, ExternalLink, Plus, RefreshCw } from 'lucide-react';
+import { Target, ExternalLink, Plus, RefreshCw, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FriendsLadderProblem } from '../../pos/lib/types';
 import { getLocalDateString } from '../../pos/lib/time';
@@ -140,15 +140,18 @@ export function FriendsLadder() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <span className="px-2 py-1 rounded text-sm font-semibold" style={{ backgroundColor: 'var(--color-accent-primary)', color: 'white' }}>
-                            {problem.solveCount}
-                          </span>
-                          {problem.solvedBy.length > 0 && (
-                            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                              ({problem.solvedBy.slice(0, 3).join(', ')}{problem.solvedBy.length > 3 ? '…' : ''})
-                            </span>
-                          )}
+                        <div 
+                          className="flex items-center gap-1"
+                          title={problem.solvedBy.join(', ')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {Array.from({ length: problem.solveCount }).map((_, i) => (
+                            <UserCircle 
+                              key={i} 
+                              size={20} 
+                              style={{ color: 'var(--color-accent-primary)' }} 
+                            />
+                          ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Loader } from '@/components/Loader';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { toast } from 'sonner';
 import type { Activity } from '../lib/types';
 import { getLocalDateString, getMonthShort } from '../lib/time';
@@ -143,8 +144,8 @@ export function ActivityHeatmap() {
   const getHeatmapStyle = (level: number): React.CSSProperties => {
     if (level === 0) {
       return {
-        backgroundColor: 'var(--surface-tertiary)',
-        opacity: 0.4
+        backgroundColor: 'var(--glass-bg-subtle)',
+        border: '1px solid var(--glass-border)',
       };
     }
     return {
@@ -279,26 +280,22 @@ export function ActivityHeatmap() {
         </div>
 
         {/* Hover Tooltip */}
-        {hoveredDay && (
-          <div 
-            className="absolute px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap z-20 pointer-events-none backdrop-blur-sm"
-            style={{ 
-              backgroundColor: 'var(--surface-secondary)',
-              border: '2px solid var(--border-primary)',
-              left: `${tooltipPos.x}px`,
-              top: `${tooltipPos.y - 60}px`,
-              transform: 'translateX(-50%)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-            }}
-          >
-            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              {hoveredDay.date}
-            </div>
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {hoveredDay.count} {hoveredDay.count === 1 ? 'activity' : 'activities'}
-            </div>
-          </div>
-        )}
+        <Tooltip 
+          x={tooltipPos.x} 
+          y={tooltipPos.y - 60} 
+          visible={!!hoveredDay}
+        >
+          {hoveredDay && (
+            <>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                {hoveredDay.date}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {hoveredDay.count} {hoveredDay.count === 1 ? 'activity' : 'activities'}
+              </div>
+            </>
+          )}
+        </Tooltip>
       </div>
 
       {/* Legend - Redesigned */}

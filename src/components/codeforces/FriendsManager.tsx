@@ -6,7 +6,7 @@ import { Loader } from '@/components/Loader';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import type { CFFriend } from '../../pos/lib/types';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
-import { getRatingColor } from './utils';
+import { getRatingColor, isLegendaryGrandmaster } from './utils';
 
 export function FriendsManager() {
   const [friends, setFriends] = useState<CFFriend[]>([]);
@@ -241,9 +241,16 @@ export function FriendsManager() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="font-bold text-xl" style={{ color: getRatingColor(friend.currentRating) }}>
-                      {friend.cfHandle}
-                    </h3>
+                    {isLegendaryGrandmaster(friend.currentRating) ? (
+                      <h3 className="font-bold text-xl">
+                        <span style={{ color: '#000000' }}>{friend.cfHandle[0]}</span>
+                        <span style={{ color: '#ff0000' }}>{friend.cfHandle.slice(1)}</span>
+                      </h3>
+                    ) : (
+                      <h3 className="font-bold text-xl" style={{ color: getRatingColor(friend.currentRating) }}>
+                        {friend.cfHandle}
+                      </h3>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
                         <Trophy size={10} />
