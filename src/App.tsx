@@ -15,6 +15,7 @@ import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
 import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
+import { BookDetailPage } from './pos/pages/BookDetailPage';
 import KnowledgePage from './pages/KnowledgePage';
 import MilestonesPage from './pages/MilestonesPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
@@ -63,6 +64,7 @@ function App() {
             <Route path="pos/grid/:date" element={<DailyPage />} />
             <Route path="pos/sheets" element={<SheetsPage />} />
             <Route path="pos/github" element={<GitHubPage />} />
+            <Route path="books/:bookId" element={<BookDetailPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="journal/:date" element={<EntryPage />} />
             <Route path="cf/ladders" element={<LadderBrowser />} />

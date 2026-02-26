@@ -13,7 +13,8 @@ interface MilestoneModalProps {
 
 export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: MilestoneModalProps) {
   const [targetMetric, setTargetMetric] = useState('');
-  const [targetValue, setTargetValue] = useState('');
+  const [dailyAmount, setDailyAmount] = useState('');
+  const [periodType, setPeriodType] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [problemId, setProblemId] = useState('');
@@ -24,11 +25,34 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mi
 
   const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  // Calculate target value from daily amount and period length
+  const calculateTargetValue = (): number => {
+    const amount = parseInt(dailyAmount, 10);
+    if (isNaN(amount) || !periodStart || !periodEnd) return 0;
+
+    const start = new Date(periodStart + 'T00:00:00');
+    const end = new Date(periodEnd + 'T00:00:00');
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (periodType === 'daily') return amount;
+    if (periodType === 'weekly') return amount * 7;
+    return amount * days; // monthly
+  };
+
+  const targetValue = calculateTargetValue();
+  const isAnalyticsOnly = periodType !== 'monthly';
+
   useEffect(() => {
     if (isOpen) {
       if (editingGoal) {
         setTargetMetric(editingGoal.targetMetric);
-        setTargetValue(String(editingGoal.targetValue));
+        // For editing, we don't have daily_amount, so calculate it backwards
+        const start = new Date(editingGoal.periodStart);
+        const end = new Date(editingGoal.periodEnd);
+        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const estimatedDaily = Math.ceil(editingGoal.targetValue / days);
+        setDailyAmount(String(estimatedDaily));
+        setPeriodType('monthly'); // Default to monthly for existing milestones
         setPeriodStart(editingGoal.periodStart.split('T')[0]);
         setPeriodEnd(editingGoal.periodEnd.split('T')[0]);
         setProblemId(editingGoal.problemId || '');
@@ -44,11 +68,12 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mi
         const mm = String(m + 1).padStart(2, '0');
         const dd = String(d).padStart(2, '0');
         setTargetMetric('');
-        setTargetValue('');
+        setDailyAmount('');
+        setPeriodType('monthly');
         setPeriodStart(`${y}-${mm}-${dd}`);
         setPeriodEnd(`${y}-${mm}-${String(lastDayNum).padStart(2, '0')}`);
         setProblemId('');
-        setRecurringPattern('Mon,Tue,Wed,Thu,Fri,Sat,Sun'); // Default to all days
+        setRecurringPattern('Mon,Tue,Wed,Thu,Fri,Sat,Sun');
         setLabel('');
         setUnit('');
       }
@@ -58,34 +83,40 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!targetMetric || !targetValue || !periodStart || !periodEnd) {
+    if (!targetMetric || !dailyAmount || !periodStart || !periodEnd) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    const value = parseInt(targetValue, 10);
-    if (isNaN(value) || value <= 0) {
-      toast.error('Target value must be a positive number');
+    const amount = parseInt(dailyAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Daily amount must be a positive number');
       return;
     }
 
     setSaving(true);
     try {
       if (editingGoal) {
+        // For updates, still use targetValue (backend doesn't support daily_amount updates yet)
         await invoke('update_milestone', {
           id: editingGoal.id,
           req: {
-            targetValue: value,
+            targetValue: targetValue,
           },
         });
         toast.success('Milestone updated');
       } else {
+        // Create local Date objects with 00:00:00 time
+        const startDate = new Date(periodStart + 'T00:00:00');
+        const endDate = new Date(periodEnd + 'T23:59:59');
+
         await invoke('create_milestone', {
           req: {
             targetMetric,
-            targetValue: value,
-            periodStart: `${periodStart}T00:00:00Z`,
-            periodEnd: `${periodEnd}T23:59:59Z`,
+            dailyAmount: amount,
+            periodStart: periodStart, // Send YYYY-MM-DD
+            periodEnd: periodEnd,     // Send YYYY-MM-DD
+            periodType,
             problemId: problemId || undefined,
             recurringPattern: recurringPattern || undefined,
             label: label || undefined,
@@ -145,18 +176,54 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: Mi
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               <TrendingUp className="w-4 h-4 inline mr-2" />
-              Target Value
+              Daily Amount
             </label>
             <input
               type="number"
-              value={targetValue}
-              onChange={e => setTargetValue(e.target.value)}
-              placeholder="e.g., 3000"
+              value={dailyAmount}
+              onChange={e => setDailyAmount(e.target.value)}
+              placeholder="e.g., 100"
               min="1"
               className="w-full px-4 py-2 rounded-lg border transition-colors"
               style={{ backgroundColor: 'var(--surface-secondary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
               required
             />
+            {dailyAmount && periodStart && periodEnd && (
+              <p className="text-sm mt-2 flex items-center gap-2" style={{ color: 'var(--text-tertiary)' }}>
+                <span>Calculated Target: <strong style={{ color: 'var(--text-primary)' }}>{targetValue}</strong></span>
+                {isAnalyticsOnly && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: 'var(--surface-tertiary)', color: 'var(--text-secondary)' }}>
+                    Analytics Only
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              Period Type
+            </label>
+            <div className="flex gap-2">
+              {(['monthly', 'weekly', 'daily'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setPeriodType(type)}
+                  className="flex-1 px-4 py-2 rounded-lg border transition-all capitalize"
+                  style={{
+                    backgroundColor: periodType === type ? 'var(--btn-primary-bg)' : 'var(--surface-secondary)',
+                    borderColor: periodType === type ? 'var(--btn-primary-bg)' : 'var(--border-primary)',
+                    color: periodType === type ? 'var(--btn-primary-text)' : 'var(--text-primary)',
+                  }}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              {periodType === 'monthly' ? 'Real milestone with Balancer support' : 'Analytics aggregation only (no Balancer)'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -67,6 +67,7 @@ pub struct BookReadingHistory {
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivitySummary {
     pub id: String,
     pub date: String,
@@ -120,6 +121,13 @@ pub async fn get_book_reading_history(
 ) -> PosResult<BookReadingHistory> {
     let pool = &db.0;
     get_reading_history(pool, &book_id).await
+}
+
+/// Get all books
+#[tauri::command]
+pub async fn get_all_books(db: State<'_, PosDb>) -> PosResult<Vec<BookRow>> {
+    let pool = &db.0;
+    get_books(pool).await
 }
 
 // ─── Internal Functions ─────────────────────────────────────────────────────
@@ -332,4 +340,14 @@ async fn get_reading_history(pool: &PgPool, book_id: &str) -> PosResult<BookRead
         first_read_date,
         last_read_date,
     })
+}
+
+async fn get_books(pool: &PgPool) -> PosResult<Vec<BookRow>> {
+    let books = sqlx::query_as::<_, BookRow>(
+        "SELECT * FROM books ORDER BY title ASC"
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(books)
 }

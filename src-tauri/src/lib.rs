@@ -407,6 +407,7 @@ pub fn run() {
             books::create_or_get_book,
             books::update_book,
             books::get_book_reading_history,
+            books::get_all_books,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

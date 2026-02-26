@@ -13,6 +13,8 @@ export interface Activity {
     isProductive: boolean;
     isShadow: boolean;
     goalId: string | null;
+    bookId: string | null;     // NEW: Link to books table
+    pagesRead: number | null;  // NEW: Pages read in this activity
     createdAt: string;
 }
 
@@ -307,10 +309,36 @@ export interface BalancerResult {
     updatedGoals: number;
     dailyRequired: number;
     message: string;
+    targetValue?: number;
+    currentValue?: number;
+    remainingTarget?: number;
+    remainingDays?: number;
+    dailyTarget?: number;
+    isRealMilestone?: boolean;
 }
 
 // Legacy alias for backwards compatibility
 export type MonthlyGoal = Milestone;
+
+// ─── Daily Briefing ─────────────────────────────────────────────
+
+export interface DailyBriefingResponse {
+    date: string;                      // YYYY-MM-DD
+    goals: UnifiedGoal[];              // Today's goals
+    debtGoals: UnifiedGoal[];          // Overdue goals
+    milestones: BalancerResult[];      // Active milestones
+    kbItemsDue: KnowledgeItem[];       // KB items for review
+    stats: BriefingStats;
+}
+
+export interface BriefingStats {
+    totalGoals: number;
+    completedGoals: number;
+    debtCount: number;
+    kbItemsDueCount: number;
+    milestonesOnTrack: number;
+    milestonesBehind: number;
+}
 
 // ─── Debt System ────────────────────────────────────────────────
 
@@ -603,4 +631,47 @@ export interface CodeforcesUserStats {
     avatar: string | null;
     totalSolved: number;
     totalSubmissions: number;
+}
+
+// ─── Book Tracking ──────────────────────────────────────────────
+
+export interface BookMetadata {
+    isbn: string;
+    title: string;
+    authors: string[];
+    numberOfPages: number | null;
+    publisher: string | null;
+    publishDate: string | null;
+    coverUrl: string | null;
+}
+
+export interface Book {
+    id: string;
+    isbn: string | null;
+    title: string;
+    authors: string[];  // Parsed from JSONB
+    numberOfPages: number | null;
+    publisher: string | null;
+    publishDate: string | null;
+    coverUrl: string | null;
+    metadata: Record<string, unknown> | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface BookReadingHistory {
+    book: Book;
+    activities: BookActivitySummary[];
+    totalPagesRead: number;
+    totalReadingTimeMinutes: number;
+    firstReadDate: string | null;
+    lastReadDate: string | null;
+}
+
+export interface BookActivitySummary {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    pagesRead: number | null;
 }

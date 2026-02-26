@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, AlertCircle } from 'lucide-react';
+import { Star, AlertCircle, BookOpen, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
 import { formatSlotTime, activityOverlapsSlot, formatActivityTime } from '../lib/time';
-import type { Activity, UnifiedGoal } from '../lib/types';
+import type { Activity, UnifiedGoal, Book } from '../lib/types';
 
 interface SlotPopupProps {
     open: boolean;
@@ -18,6 +20,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
     const [debtGoals, setDebtGoals] = useState<UnifiedGoal[]>([]);
+    const [booksMap, setBooksMap] = useState<Map<string, Book>>(new Map());
 
     useEffect(() => {
         if (open && slotIndex !== null) {
@@ -36,6 +39,23 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                     );
 
                     setActivities(overlapping);
+
+                    // Fetch books for activities that have book_id
+                    const bookIds = [...new Set(overlapping.filter(a => a.bookId).map(a => a.bookId!))];
+                    if (bookIds.length > 0) {
+                        invoke<Book[]>('get_all_books')
+                            .then(allBooks => {
+                                const bookMap = new Map<string, Book>();
+                                allBooks.forEach(book => {
+                                    if (bookIds.includes(book.id)) {
+                                        bookMap.set(book.id, book);
+                                    }
+                                });
+                                setBooksMap(bookMap);
+                            })
+                            .catch(err => console.error('Failed to fetch books:', err));
+                    }
+
                     setLoading(false);
 
                     // Fetch debt goals for this date
@@ -70,49 +90,77 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                     </div>
                 ) : activities && activities.length > 0 ? (
                     <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                        {activities.map((activity) => (
-                            <div
-                                key={activity.id}
-                                className="p-3 rounded-lg space-y-2 bg-secondary/50 border border-border/50 shadow-sm transition-all hover:bg-secondary"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <div className="font-medium text-foreground">{activity.title}</div>
-                                        {activity.description && (
-                                            <div className="text-xs text-muted-foreground mt-1">{activity.description}</div>
-                                        )}
-                                        <div className="text-sm text-muted-foreground/80 mt-1">
-                                            {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
+                        {activities.map((activity) => {
+                            const book = activity.bookId ? booksMap.get(activity.bookId) : null;
+                            
+                            return (
+                                <div
+                                    key={activity.id}
+                                    className="p-3 rounded-lg space-y-2 bg-secondary/50 border border-border/50 shadow-sm transition-all hover:bg-secondary"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="font-medium text-foreground">{activity.title}</div>
+                                            {activity.description && (
+                                                <div className="text-xs text-muted-foreground mt-1">{activity.description}</div>
+                                            )}
+                                            {book && (
+                                                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                                    <BookOpen className="w-3 h-3" />
+                                                    <span>
+                                                        {book.title}
+                                                        {book.authors.length > 0 && ` by ${book.authors.join(', ')}`}
+                                                        {activity.pagesRead && ` • ${activity.pagesRead} pages`}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="text-sm text-muted-foreground/80 mt-1">
+                                                {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 items-center">
+                                            <div
+                                                className="w-3 h-3 rounded shadow-sm"
+                                                style={{ backgroundColor: ACTIVITY_COLORS[activity.category] }}
+                                            />
+                                            {activity.isProductive && (
+                                                <span className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                                                    Productive
+                                                </span>
+                                            )}
+                                            {activity.isShadow && (
+                                                <span className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                    Shadow
+                                                </span>
+                                            )}
+                                            {activity.goalId && (
+                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                    Goal <Star className="w-3 h-3" />
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 items-center">
-                                        <div
-                                            className="w-3 h-3 rounded shadow-sm"
-                                            style={{ backgroundColor: ACTIVITY_COLORS[activity.category] }}
-                                        />
-                                        {activity.isProductive && (
-                                            <span className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                                                Productive
-                                            </span>
-                                        )}
-                                        {activity.isShadow && (
-                                            <span className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                Shadow
-                                            </span>
-                                        )}
-                                        {activity.goalId && (
-                                            <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                                Goal <Star className="w-3 h-3" />
-                                            </span>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-xs text-muted-foreground">
+                                            Category: <span className="font-medium uppercase text-foreground/80">{activity.category}</span>
+                                        </div>
+                                        {book && (
+                                            <Link to={`/books/${activity.bookId}`} onClick={onClose}>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 px-2 text-xs flex items-center gap-1"
+                                                >
+                                                    <ExternalLink className="w-3 h-3" />
+                                                    View Book
+                                                </Button>
+                                            </Link>
                                         )}
                                     </div>
                                 </div>
-
-                                <div className="text-xs text-muted-foreground">
-                                    Category: <span className="font-medium uppercase text-foreground/80">{activity.category}</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="py-8 text-center text-muted-foreground">

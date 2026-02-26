@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, Link2, Calendar, AlertCircle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
-import type { UnifiedGoal, Activity, DuplicateCheckResult } from '../lib/types';
+import type { UnifiedGoal, Activity, DuplicateCheckResult, Book } from '../lib/types';
 import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
 import { extractUrls, detectUrlType, parseTemporalKeywords } from '@/lib/kb-utils';
 import { toast } from 'sonner';
+import { BookSelector } from './BookSelector';
 
 interface LogEntryModuleProps {
     date: string;
@@ -50,6 +51,13 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [urlDuplicates, setUrlDuplicates] = useState<DuplicateCheckResult | null>(null);
     const [showUrlPrompt, setShowUrlPrompt] = useState(false);
     const [temporalInfo, setTemporalInfo] = useState<{ date?: Date; keyword?: string } | null>(null);
+
+    // NEW: Book Tracking State
+    const [selectedBookId, setSelectedBookId] = useState<string | null>(editingActivity?.bookId || null);
+    const [pagesRead, setPagesRead] = useState<string>(editingActivity?.pagesRead?.toString() || '');
+    const [showBookSelector, setShowBookSelector] = useState(false);
+    const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+    const [totalPages, setTotalPages] = useState<string>('');
 
     // Existing useEffect hooks (PRESERVED)
     useEffect(() => {
@@ -92,6 +100,63 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             if (goal) {
                 setTitle(prev => prev || `Worked on: ${goal.text}`);
             }
+        }
+    };
+
+    // NEW: Category change handler - show book selector for book category
+    const handleCategoryChange = (value: string) => {
+        setCategory(value);
+        const isBookCategory = value === 'book';
+        setShowBookSelector(isBookCategory);
+        
+        if (!isBookCategory) {
+            setSelectedBookId(null);
+            setPagesRead('');
+            setSelectedBook(null);
+            setTotalPages('');
+        }
+    };
+
+    // NEW: Fetch book details when book is selected
+    const handleBookSelected = async (bookId: string) => {
+        setSelectedBookId(bookId);
+        
+        try {
+            const books = await invoke<Book[]>('get_all_books');
+            const book = books.find(b => b.id === bookId);
+            
+            if (book) {
+                setSelectedBook(book);
+                setTotalPages(book.numberOfPages?.toString() || '');
+            }
+        } catch (error) {
+            console.error('Failed to fetch book:', error);
+            toast.error('Failed to load book details');
+        }
+    };
+
+    // NEW: Update book's total pages
+    const handleTotalPagesUpdate = async () => {
+        if (!selectedBook || !totalPages) return;
+
+        const newTotal = parseInt(totalPages);
+        if (isNaN(newTotal) || newTotal <= 0) {
+            toast.error('Invalid page count');
+            return;
+        }
+
+        try {
+            await invoke('update_book', {
+                bookId: selectedBook.id,
+                req: {
+                    numberOfPages: newTotal
+                }
+            });
+            
+            setSelectedBook({ ...selectedBook, numberOfPages: newTotal });
+            toast.success('Book pages updated');
+        } catch (error) {
+            toast.error('Failed to update book', { description: String(error) });
         }
     };
 
@@ -202,7 +267,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 toast.success('Activity updated successfully');
                 onCancelEdit?.();
             } else {
-                // Create activity (EXISTING LOGIC PRESERVED)
+                // Create activity (ENHANCED WITH BOOK TRACKING)
                 const activityResult = await invoke<{ id: string }>('create_activity', {
                     req: {
                         startTime: startTimeISO,
@@ -212,6 +277,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         description,
                         isProductive,
                         goalId: null,
+                        bookId: selectedBookId,
+                        pagesRead: pagesRead ? parseInt(pagesRead) : null,
                         date,
                     }
                 });
@@ -268,7 +335,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 toast.success('Activity logged successfully');
             }
 
-            // Reset form (EXISTING)
+            // Reset form (ENHANCED)
             const [year, month, day] = date.split('-').map(Number);
             setStartDate(new Date(year, month - 1, day, 9, 0));
             const now = new Date();
@@ -281,6 +348,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setUrlDuplicates(null);
             setShowUrlPrompt(false);
             setTemporalInfo(null);
+            setSelectedBookId(null);
+            setPagesRead('');
+            setShowBookSelector(false);
+            setSelectedBook(null);
+            setTotalPages('');
             onSuccess?.();
         } catch (error) {
             const errorMsg = error && typeof error === 'object' && 'message' in error
@@ -365,12 +437,12 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
             </div>
 
-            {/* EXISTING: Category (UNCHANGED) */}
+            {/* EXISTING: Category (UPDATED) */}
             {/* Row 1: Category & Goal Link */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <label className="block text-sm font-medium">Category</label>
-                    <Select value={category} onValueChange={setCategory}>
+                    <Select value={category} onValueChange={handleCategoryChange}>
                         <SelectTrigger className="material-glass-subtle border-none">
                             <SelectValue placeholder="Select category" />
                         </SelectTrigger>
@@ -453,6 +525,54 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     Mark as productive
                 </label>
             </div>
+
+            {/* NEW: Book Tracking Section */}
+            {showBookSelector && (
+                <div className="space-y-3 p-4 rounded-lg border" style={{ 
+                    backgroundColor: 'var(--surface-secondary)',
+                    borderColor: 'var(--border-primary)'
+                }}>
+                    <BookSelector 
+                        onBookSelected={handleBookSelected}
+                        selectedBookId={selectedBookId}
+                    />
+                    
+                    {selectedBookId && selectedBook && (
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium">Reading Progress</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="Pages read"
+                                        value={pagesRead}
+                                        onChange={(e) => setPagesRead(e.target.value)}
+                                    />
+                                    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                        Pages read
+                                    </span>
+                                </div>
+                                <div>
+                                    <div className="flex gap-1">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Total pages"
+                                            value={totalPages}
+                                            onChange={(e) => setTotalPages(e.target.value)}
+                                            onBlur={handleTotalPagesUpdate}
+                                        />
+                                    </div>
+                                    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                        Total pages
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* EXISTING: Metrics (UNCHANGED) */}
             {selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (

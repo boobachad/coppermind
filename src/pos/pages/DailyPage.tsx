@@ -10,8 +10,8 @@ import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
 import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, formatLocalAsUTC } from '../lib/time';
 import { getActivityColor } from '../lib/config';
-import type { Activity, UnifiedGoal } from '../lib/types';
-import { ArrowLeft, BookOpen, Pencil, AlertCircle } from 'lucide-react';
+import type { Activity, UnifiedGoal, Book } from '../lib/types';
+import { ArrowLeft, BookOpen, Pencil, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -41,6 +41,7 @@ export function DailyPage() {
     const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
     const [hasDebt, setHasDebt] = useState(false);
     const [debtCount, setDebtCount] = useState(0);
+    const [booksMap, setBooksMap] = useState<Map<string, Book>>(new Map());
 
     const fetchData = async () => {
         if (!date) return;
@@ -83,6 +84,23 @@ export function DailyPage() {
             const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
             const actData = response.activities;
             setActivities(actData);
+
+            // Fetch books for activities that have book_id
+            const bookIds = [...new Set(actData.filter(a => a.bookId).map(a => a.bookId!))];
+            if (bookIds.length > 0) {
+                try {
+                    const allBooks = await invoke<Book[]>('get_all_books');
+                    const bookMap = new Map<string, Book>();
+                    allBooks.forEach(book => {
+                        if (bookIds.includes(book.id)) {
+                            bookMap.set(book.id, book);
+                        }
+                    });
+                    setBooksMap(bookMap);
+                } catch (err) {
+                    console.error('Failed to fetch books:', err);
+                }
+            }
 
             const sortedActivities = [...actData].sort((a, b) =>
                 parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
@@ -358,36 +376,64 @@ export function DailyPage() {
                                     <p className="text-muted-foreground text-xs">No activities logged</p>
                                 ) : (
                                     <div className="space-y-1">
-                                        {activities.map((activity) => (
-                                            <div
-                                                key={activity.id}
-                                                className="flex items-center gap-3 p-2 border rounded"
-                                                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
-                                            >
+                                        {activities.map((activity) => {
+                                            const book = activity.bookId ? booksMap.get(activity.bookId) : null;
+                                            
+                                            return (
                                                 <div
-                                                    className="w-2.5 h-2.5 rounded shrink-0"
-                                                    style={{
-                                                        backgroundColor: getActivityColor(activity.category),
-                                                        border: activity.goalId ? '2px solid var(--pos-goal-accent)' : 'none',
-                                                    }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium leading-none truncate">{activity.title}</p>
-                                                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                                                        {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
-                                                        {activity.isShadow && <span className="ml-2 font-bold" style={{ color: 'var(--pos-shadow-text)' }}>(Shadow)</span>}
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-7 w-7 p-0 shrink-0"
-                                                    onClick={() => setEditingActivity(activity)}
+                                                    key={activity.id}
+                                                    className="flex items-center gap-3 p-2 border rounded"
+                                                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}
                                                 >
-                                                    <Pencil className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ))}
+                                                    <div
+                                                        className="w-2.5 h-2.5 rounded shrink-0"
+                                                        style={{
+                                                            backgroundColor: getActivityColor(activity.category),
+                                                            border: activity.goalId ? '2px solid var(--pos-goal-accent)' : 'none',
+                                                        }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium leading-none truncate">{activity.title}</p>
+                                                        {book && (
+                                                            <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                                                <BookOpen className="w-3 h-3" />
+                                                                <span className="truncate">
+                                                                    {book.title}
+                                                                    {book.authors.length > 0 && ` by ${book.authors.join(', ')}`}
+                                                                    {activity.pagesRead && ` • ${activity.pagesRead} pages`}
+                                                                </span>
+                                                            </p>
+                                                        )}
+                                                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                            {formatActivityTime(activity.startTime)} - {formatActivityTime(activity.endTime)}
+                                                            {activity.isShadow && <span className="ml-2 font-bold" style={{ color: 'var(--pos-shadow-text)' }}>(Shadow)</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        {book && (
+                                                            <Link to={`/books/${activity.bookId}`}>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-7 w-7 p-0"
+                                                                    title="View Book History"
+                                                                >
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                </Button>
+                                                            </Link>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-7 w-7 p-0"
+                                                            onClick={() => setEditingActivity(activity)}
+                                                        >
+                                                            <Pencil className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </CardContent>
