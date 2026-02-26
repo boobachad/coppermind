@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { NotePage } from './pages/NotePage';
@@ -30,10 +30,13 @@ import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
 import { initPgSync, stopPgSync } from './lib/pgSync';
 import { ConfirmDialogProvider } from './components/ConfirmDialog';
+import { CommandPalette } from './components/CommandPalette';
 
 import { Toaster } from './components/ui/sonner';
 
 function App() {
+  const [commandOpen, setCommandOpen] = useState(false);
+
   useEffect(() => {
     initDb().then(() => {
       initPgSync();
@@ -46,9 +49,23 @@ function App() {
     };
   }, []);
 
+  // Global keyboard shortcut for command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <ConfirmDialogProvider>
       <BrowserRouter>
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<NotesGrid />} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Loader } from '@/components/Loader';
 import { toast } from 'sonner';
@@ -22,10 +22,18 @@ interface MonthData {
   days: HeatmapData[];
 }
 
+interface TooltipPosition {
+  x: number;
+  y: number;
+}
+
 export function ActivityHeatmap() {
   const [monthsData, setMonthsData] = useState<MonthData[]>([]);
   const [streakData, setStreakData] = useState<StreakData>({ current: 0, longest: 0, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [hoveredDay, setHoveredDay] = useState<HeatmapData | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<TooltipPosition>({ x: 0, y: 0 });
+  const heatmapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchHeatmapData();
@@ -34,7 +42,6 @@ export function ActivityHeatmap() {
   const fetchHeatmapData = async () => {
     setLoading(true);
     try {
-      // Get last 12 months
       const now = new Date();
       const endDate = new Date(now);
       endDate.setHours(23, 59, 59, 999);
@@ -44,7 +51,6 @@ export function ActivityHeatmap() {
       startDate.setDate(1);
       startDate.setHours(0, 0, 0, 0);
 
-      // Generate all dates
       const allDates: string[] = [];
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
@@ -54,17 +60,14 @@ export function ActivityHeatmap() {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Batch fetch activities
       const batchResponse = await invoke<Record<string, { activities: Activity[] }>>('get_activities_batch', { dates: allDates });
 
-      // Build activity map
       const activityMap = new Map<string, number>();
       allDates.forEach(date => {
         const activities = batchResponse[date]?.activities || [];
         activityMap.set(date, activities.length);
       });
 
-      // Build months structure
       const months: MonthData[] = [];
       const monthDate = new Date(startDate);
 
@@ -100,7 +103,6 @@ export function ActivityHeatmap() {
 
       setMonthsData(months);
 
-      // Calculate streaks
       const flatData = months.flatMap(m => m.days);
       const streaks = calculateStreaks(flatData);
       setStreakData(streaks);
@@ -117,7 +119,6 @@ export function ActivityHeatmap() {
     let tempStreak = 0;
     let totalDays = 0;
 
-    // Calculate longest streak
     for (let i = 0; i < data.length; i++) {
       if (data[i].count > 0) {
         tempStreak++;
@@ -128,7 +129,6 @@ export function ActivityHeatmap() {
       }
     }
 
-    // Calculate current streak from today backwards
     for (let i = data.length - 1; i >= 0; i--) {
       if (data[i].count > 0) {
         currentStreak++;
@@ -143,13 +143,12 @@ export function ActivityHeatmap() {
   const getHeatmapStyle = (level: number): React.CSSProperties => {
     if (level === 0) {
       return {
-        backgroundColor: 'var(--glass-border)', // Use glass border as "empty" state
-        opacity: 0.3
+        backgroundColor: 'var(--surface-tertiary)',
+        opacity: 0.4
       };
     }
     return {
       backgroundColor: `var(--pos-heatmap-level-${level})`,
-      boxShadow: '0 0 4px 0 var(--color-shadow-subtle)'
     };
   };
 
@@ -163,75 +162,158 @@ export function ActivityHeatmap() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12 w-full h-full items-center">
+      <div className="flex justify-center py-16 w-full h-full items-center">
         <Loader />
       </div>
     );
   }
 
+  const todayStr = getLocalDateString();
+
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* Stats Cards - Integrated into Glass Theme */}
-      <div className="grid grid-cols-3 gap-3 w-full">
-        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
-          <span className="text-2xl font-bold text-(--pos-success-text) tabular-nums leading-none mb-1">{streakData.current}</span>
-          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Current Streak</span>
+    <div className="w-full space-y-6">
+      {/* Streak Stats - Redesigned */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-xl p-6" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+          <div className="relative z-10">
+            <div className="text-4xl font-bold mb-1" style={{ color: 'var(--color-success)' }}>
+              {streakData.current}
+            </div>
+            <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Current Streak
+            </div>
+          </div>
+          <div 
+            className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20"
+            style={{ backgroundColor: 'var(--color-success)' }}
+          />
         </div>
-        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
-          <span className="text-2xl font-bold text-(--pos-warning-text) tabular-nums leading-none mb-1">{streakData.longest}</span>
-          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Longest Streak</span>
+
+        <div className="relative overflow-hidden rounded-xl p-6" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+          <div className="relative z-10">
+            <div className="text-4xl font-bold mb-1" style={{ color: 'var(--color-warning)' }}>
+              {streakData.longest}
+            </div>
+            <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Longest Streak
+            </div>
+          </div>
+          <div 
+            className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20"
+            style={{ backgroundColor: 'var(--color-warning)' }}
+          />
         </div>
-        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg material-glass-subtle border-(--glass-border) shadow-sm">
-          <span className="text-2xl font-bold text-(--pos-info-text) tabular-nums leading-none mb-1">{streakData.total}</span>
-          <span className="text-[10px] font-medium text-(--text-secondary) uppercase tracking-widest">Total Days</span>
+
+        <div className="relative overflow-hidden rounded-xl p-6" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+          <div className="relative z-10">
+            <div className="text-4xl font-bold mb-1" style={{ color: 'var(--color-info)' }}>
+              {streakData.total}
+            </div>
+            <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Active Days
+            </div>
+          </div>
+          <div 
+            className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20"
+            style={{ backgroundColor: 'var(--color-info)' }}
+          />
         </div>
       </div>
 
-      {/* Heatmap Visualization */}
-      <div className="w-full flex justify-center py-2">
-        <div className="grid grid-flow-col gap-6 auto-cols-max overflow-x-auto custom-scrollbar pb-4 px-2">
-          {monthsData.map((month, monthIndex) => {
-            const columns = chunkedDays(month.days, 7);
-            const todayStr = getLocalDateString();
-            return (
-              <div key={`${month.name}-${monthIndex}`} className="flex flex-col gap-1">
-                <div className="text-[10px] uppercase font-bold text-(--text-tertiary) mb-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">{month.name}</div>
-                <div className="flex gap-1">
-                  {columns.map((column, colIndex) => (
-                    <div key={`col-${monthIndex}-${colIndex}`} className="flex flex-col gap-1">
-                      {column.map((day, dayIndex) => {
-                        const isToday = day.date === todayStr;
-                        return (
-                          <div
-                            key={`${day.date}-${dayIndex}`}
-                            className={`w-3 h-3 transition-opacity duration-200 ${day.level > 0 ? 'hover:opacity-80' : 'hover:bg-(--glass-border)'} ${isToday ? 'ring-1 ring-(--glass-text) z-10' : ''}`}
-                            style={{
-                              ...getHeatmapStyle(day.level),
-                              borderRadius: '1px', // Slightly rounded but mostly square
-                            }}
-                            title={`${day.date}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
+      {/* Heatmap - Redesigned with larger cells */}
+      <div className="relative" ref={heatmapRef}>
+        <div className="overflow-x-auto custom-scrollbar pb-4">
+          <div className="inline-flex gap-2 min-w-full justify-center px-4">
+            {monthsData.map((month, monthIndex) => {
+              const columns = chunkedDays(month.days, 7);
+              return (
+                <div key={`${month.name}-${monthIndex}`} className="flex flex-col gap-2">
+                  <div 
+                    className="text-xs font-bold uppercase tracking-wider text-center mb-1"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
+                    {month.name}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {columns.map((column, colIndex) => (
+                      <div key={`col-${monthIndex}-${colIndex}`} className="flex flex-col gap-1.5">
+                        {column.map((day, dayIndex) => {
+                          const isToday = day.date === todayStr;
+                          const isHovered = hoveredDay?.date === day.date;
+                          return (
+                            <div
+                              key={`${day.date}-${dayIndex}`}
+                              className="w-4 h-4 rounded transition-all duration-200 cursor-pointer"
+                              style={{
+                                ...getHeatmapStyle(day.level),
+                                transform: isHovered ? 'scale(1.3)' : 'scale(1)',
+                                boxShadow: isToday 
+                                  ? '0 0 0 2px var(--text-primary)' 
+                                  : isHovered 
+                                    ? '0 4px 12px rgba(0,0,0,0.3)' 
+                                    : 'none',
+                                zIndex: isHovered ? 10 : isToday ? 5 : 1
+                              }}
+                              onMouseEnter={(e) => {
+                                setHoveredDay(day);
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const containerRect = heatmapRef.current?.getBoundingClientRect();
+                                if (containerRect) {
+                                  setTooltipPos({
+                                    x: rect.left - containerRect.left + rect.width / 2,
+                                    y: rect.top - containerRect.top
+                                  });
+                                }
+                              }}
+                              onMouseLeave={() => setHoveredDay(null)}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
+        {/* Hover Tooltip */}
+        {hoveredDay && (
+          <div 
+            className="absolute px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap z-20 pointer-events-none backdrop-blur-sm"
+            style={{ 
+              backgroundColor: 'var(--surface-secondary)',
+              border: '2px solid var(--border-primary)',
+              left: `${tooltipPos.x}px`,
+              top: `${tooltipPos.y - 60}px`,
+              transform: 'translateX(-50%)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+            }}
+          >
+            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              {hoveredDay.date}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {hoveredDay.count} {hoveredDay.count === 1 ? 'activity' : 'activities'}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-end gap-2 text-[10px] text-(--text-tertiary) mt-1 px-4">
-        <span>Less</span>
-        <div className="flex gap-1">
-          <div className="w-3 h-3" style={{ ...getHeatmapStyle(0), borderRadius: '1px' }} />
-          {[1, 2, 3, 4].map(level => (
-            <div key={level} className="w-3 h-3" style={{ ...getHeatmapStyle(level), borderRadius: '1px' }} />
+      {/* Legend - Redesigned */}
+      <div className="flex items-center justify-center gap-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+        <span className="uppercase tracking-wider">Less</span>
+        <div className="flex gap-1.5">
+          {[0, 1, 2, 3, 4].map(level => (
+            <div 
+              key={level} 
+              className="w-4 h-4 rounded" 
+              style={getHeatmapStyle(level)} 
+            />
           ))}
         </div>
-        <span>More</span>
+        <span className="uppercase tracking-wider">More</span>
       </div>
     </div>
   );

@@ -710,3 +710,98 @@ ul[data-type="taskList"] li>div {
     @apply text-(--text-tertiary) text-xs;
   }
 }
+
+/* Command Palette Styles */
+[cmdk-dialog] {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 640px;
+  width: 90vw;
+  z-index: 9999;
+}
+
+[cmdk-root] {
+  max-width: 640px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 70px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--glass-border);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[cmdk-overlay] {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  position: fixed;
+  inset: 0;
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 9998;
+}
+
+[cmdk-list] {
+  height: min(400px, var(--cmdk-list-height));
+  transition: height 100ms ease;
+  overflow: auto;
+}
+
+[cmdk-item] {
+  content-visibility: auto;
+  cursor: pointer;
+  user-select: none;
+}
+
+[cmdk-item][data-selected='true'] {
+  background-color: var(--glass-bg-subtle);
+}
+
+[cmdk-item][data-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[cmdk-group-heading] {
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  padding: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[cmdk-separator] {
+  height: 1px;
+  width: 100%;
+  background: var(--glass-border);
+  margin: 8px 0;
+}
+
+[cmdk-input] {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+[cmdk-input]::placeholder {
+  color: var(--text-tertiary);
+}
+
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

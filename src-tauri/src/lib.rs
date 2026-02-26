@@ -394,6 +394,7 @@ pub fn run() {
             cf_ladder_system::track_ladder_progress,
             cf_ladder_system::get_ladder_stats,
             cf_ladder_system::get_ladder_by_id,
+            cf_ladder_system::update_ladder_problem,
             cf_ladder_system::bulk_add_problems,
             cf_ladder_system::get_categories,
             cf_ladder_system::get_category_by_id,

@@ -181,8 +181,8 @@ export function ProblemSetBrowser({
               onClick={() => setShowBulkModal(true)}
               className="px-4 py-2 rounded-lg transition-all hover:scale-105"
               style={{
-                backgroundColor: 'var(--pos-success-bg)',
-                color: 'var(--pos-success-text)',
+                backgroundColor: 'var(--btn-primary-bg)',
+                color: 'var(--btn-primary-text)',
               }}
             >
               <Plus className="inline-block mr-2 mb-1" size={18} />
@@ -208,8 +208,8 @@ export function ProblemSetBrowser({
                 disabled={importing}
                 className="px-4 py-2 rounded-lg transition-all hover:scale-105"
                 style={{
-                  backgroundColor: 'var(--surface-tertiary)',
-                  color: 'var(--text-primary)',
+                  backgroundColor: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)',
                   opacity: importing ? 0.6 : 1,
                 }}
               >

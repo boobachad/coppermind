@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ExternalLink, CheckCircle, Circle, Target, ArrowLeft, Plus } from 'lucide-react';
+import { ExternalLink, CheckCircle, Circle, Target, ArrowLeft, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
 import type { CFLadderProblem, LadderStats } from '../../pos/lib/types';
@@ -51,7 +51,7 @@ export function ProblemSetView({
   const [goalAdded, setGoalAdded] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{
     problemId: string;
-    field: 'year' | 'contest';
+    field: 'year' | 'contest' | 'problemName' | 'onlineJudge' | 'difficulty';
     value: string;
   } | null>(null);
 
@@ -97,17 +97,61 @@ export function ProblemSetView({
     }
   };
 
-  const handleSaveEdit = async (problemId: string, field: 'year' | 'contest', value: string) => {
+  const handleSaveEdit = async (problemId: string, field: 'year' | 'contest' | 'problemName' | 'onlineJudge' | 'difficulty', value: string) => {
     try {
-      await invoke('update_category_problem', {
-        problemId,
-        year: field === 'year' ? (value || null) : undefined,
-        contest: field === 'contest' ? (value || null) : undefined,
-      });
+      console.log('[EDIT] Saving:', { problemId, field, value, itemParamName, itemId });
+      
+      if (itemParamName === 'categoryId') {
+        // Category problem update - use row ID, not problemId
+        const problem = problems.find(p => p.id === problemId);
+        if (!problem) {
+          toast.error('Problem not found');
+          return;
+        }
+        
+        console.log('[EDIT] Calling update_category_problem with:', { 
+          problemId: problem.problemId, 
+          categoryId: itemId, 
+          year: field === 'year' ? value : undefined, 
+          contest: field === 'contest' ? value : undefined 
+        });
+        
+        await invoke('update_category_problem', {
+          problemId: problem.problemId,
+          categoryId: itemId,
+          year: field === 'year' ? (value || null) : undefined,
+          contest: field === 'contest' ? (value || null) : undefined,
+        });
+      } else {
+        // Ladder problem update - use row ID, not problemId
+        const problem = problems.find(p => p.id === problemId);
+        if (!problem) {
+          toast.error('Problem not found');
+          return;
+        }
+        
+        console.log('[EDIT] Calling update_ladder_problem with:', { 
+          problemId: problem.problemId, 
+          ladderId: itemId, 
+          problemName: field === 'problemName' ? value : undefined, 
+          onlineJudge: field === 'onlineJudge' ? value : undefined, 
+          difficulty: field === 'difficulty' ? value : undefined 
+        });
+        
+        await invoke('update_ladder_problem', {
+          problemId: problem.problemId,
+          ladderId: itemId,
+          problemName: field === 'problemName' ? (value || null) : undefined,
+          onlineJudge: field === 'onlineJudge' ? (value || null) : undefined,
+          difficulty: field === 'difficulty' ? (value ? parseInt(value) : null) : undefined,
+        });
+      }
 
+      console.log('[EDIT] Update successful, reloading data...');
       await loadData();
       toast.success('Updated successfully');
     } catch (err) {
+      console.error('[EDIT] Update failed:', err);
       toast.error('Failed to update', { description: String(err) });
     } finally {
       setEditingCell(null);
@@ -120,15 +164,16 @@ export function ProblemSetView({
     value
   }: {
     problemId: string;
-    field: 'year' | 'contest';
-    value: string | null;
+    field: 'year' | 'contest' | 'problemName' | 'onlineJudge' | 'difficulty';
+    value: string | number | null;
   }) => {
     const isEditing = editingCell?.problemId === problemId && editingCell?.field === field;
+    const displayValue = value != null ? String(value) : '';
 
     if (isEditing) {
       return (
         <input
-          type="text"
+          type={field === 'difficulty' ? 'number' : 'text'}
           value={editingCell.value}
           onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
           onBlur={() => handleSaveEdit(problemId, field, editingCell.value)}
@@ -143,7 +188,7 @@ export function ProblemSetView({
           style={{
             width: '100%',
             padding: '0.25rem 0.5rem',
-            background: 'var(--surface-secondary)',
+            background: 'var(--glass-bg-subtle)',
             border: '1px solid var(--color-accent-primary)',
             borderRadius: '0.25rem',
             color: 'var(--text-primary)',
@@ -152,21 +197,67 @@ export function ProblemSetView({
       );
     }
 
+    // For difficulty field, show colored badge when not editing
+    if (field === 'difficulty' && value != null) {
+      return (
+        <div
+          onDoubleClick={() => setEditingCell({ problemId, field, value: displayValue })}
+          style={{ cursor: 'pointer' }}
+          title="Double-click to edit"
+        >
+          <span style={{ 
+            padding: '0.25rem 0.5rem', 
+            background: getDifficultyColor(Number(value)), 
+            borderRadius: '0.375rem', 
+            fontSize: '0.75rem', 
+            fontWeight: '500',
+            display: 'inline-block'
+          }}>
+            {value}
+          </span>
+        </div>
+      );
+    }
+
+    // For onlineJudge field, show colored badge when not editing
+    if (field === 'onlineJudge' && value) {
+      return (
+        <div
+          onDoubleClick={() => setEditingCell({ problemId, field, value: displayValue })}
+          style={{ cursor: 'pointer' }}
+          title="Double-click to edit"
+        >
+          <span style={{ 
+            padding: '0.25rem 0.5rem', 
+            background: getJudgeColor(String(value)), 
+            borderRadius: '0.375rem', 
+            fontSize: '0.75rem', 
+            fontWeight: '500',
+            display: 'inline-block',
+            color: '#ffffff'
+          }}>
+            {value}
+          </span>
+        </div>
+      );
+    }
+
     return (
       <div
-        onDoubleClick={() => setEditingCell({ problemId, field, value: value || '' })}
+        onDoubleClick={() => setEditingCell({ problemId, field, value: displayValue })}
         style={{
           cursor: 'pointer',
           padding: '0.25rem 0.5rem',
           borderRadius: '0.25rem',
           transition: 'background 0.2s',
-          color: 'var(--text-secondary)',
-          fontSize: '0.875rem',
+          color: field === 'problemName' ? 'var(--text-primary)' : 'var(--text-secondary)',
+          fontSize: field === 'problemName' ? '1rem' : '0.875rem',
+          fontWeight: field === 'problemName' ? '400' : 'normal',
         }}
         className="hover:bg-zinc-800/30"
         title="Double-click to edit"
       >
-        {value || '-'}
+        {displayValue || '-'}
       </div>
     );
   };
@@ -178,6 +269,29 @@ export function ProblemSetView({
     if (level <= 1800) return 'var(--pos-heatmap-level-3)';
     if (level <= 2400) return 'var(--pos-heatmap-level-4)';
     return 'var(--pos-heatmap-level-5)';
+  };
+
+  const getJudgeColor = (judge: string | null) => {
+    if (!judge) return 'var(--surface-secondary)';
+    
+    // Better hash with prime multipliers for distribution
+    let hash = 0;
+    const str = judge.toLowerCase();
+    const primes = [31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+    
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * primes[i % primes.length] + str.charCodeAt(i)) | 0;
+    }
+    
+    // Use golden ratio for better hue distribution
+    const goldenRatio = 0.618033988749895;
+    const hue = Math.abs((hash * goldenRatio) % 1) * 360;
+    
+    // Vary saturation and lightness based on different hash bits
+    const saturation = 60 + (Math.abs(hash >> 8) % 30); // 60-90%
+    const lightness = 40 + (Math.abs(hash >> 16) % 20); // 40-60%
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   };
 
   const getProgressColor = (percent: number) => {
@@ -323,30 +437,50 @@ export function ProblemSetView({
                           : problem.status
                             ? <Circle size={16} style={{ color: 'var(--color-warning)' }} />
                             : <Circle size={16} style={{ color: 'var(--text-tertiary)' }} />}
-                        <span style={{ color: 'var(--text-primary)', fontWeight: problem.status === 'OK' ? '500' : '400' }}>
-                          {problem.problemName}
-                        </span>
+                        <EditableCell
+                          problemId={problem.id}
+                          field="problemName"
+                          value={problem.problemName}
+                        />
                       </div>
                       {problem.solvedByFriends && problem.solvedByFriends.length > 0 && (
-                        <div style={{ marginLeft: '1.5rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                          <span role="img" aria-label="friends">👥</span> Solved by: <span style={{ color: 'var(--text-secondary)' }}>{problem.solvedByFriends.slice(0, 3).join(', ')}</span>
-                          {problem.solvedByFriends.length > 3 && <span> (+{problem.solvedByFriends.length - 3} more)</span>}
+                        <div 
+                          style={{ 
+                            marginLeft: '1.5rem', 
+                            marginTop: '0.25rem', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.25rem',
+                            cursor: 'pointer'
+                          }}
+                          title={problem.solvedByFriends.join(', ')}
+                        >
+                          <Users size={14} style={{ color: 'var(--text-tertiary)' }} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            {problem.solvedByFriends.length}
+                          </span>
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{problem.onlineJudge}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <EditableCell
+                        problemId={problem.id}
+                        field="onlineJudge"
+                        value={problem.onlineJudge}
+                      />
+                    </td>
                     {itemParamName === 'categoryId' && (
                       <>
                         <td style={{ padding: '1rem' }}>
                           <EditableCell
-                            problemId={problem.problemId}
+                            problemId={problem.id}
                             field="year"
                             value={(problem as any).year}
                           />
                         </td>
                         <td style={{ padding: '1rem' }}>
                           <EditableCell
-                            problemId={problem.problemId}
+                            problemId={problem.id}
                             field="contest"
                             value={(problem as any).contest}
                           />
@@ -354,11 +488,11 @@ export function ProblemSetView({
                       </>
                     )}
                     <td style={{ padding: '1rem' }}>
-                      {problem.difficulty != null && (
-                        <span style={{ padding: '0.25rem 0.5rem', background: getDifficultyColor(problem.difficulty), borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '500' }}>
-                          {problem.difficulty}
-                        </span>
-                      )}
+                      <EditableCell
+                        problemId={problem.id}
+                        field="difficulty"
+                        value={problem.difficulty}
+                      />
                     </td>
                     {showStatusColumn && (
                       <td style={{ padding: '1rem', textAlign: 'center' }}>

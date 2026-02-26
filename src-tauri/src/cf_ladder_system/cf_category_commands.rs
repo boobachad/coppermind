@@ -243,9 +243,13 @@ pub async fn get_category_problems(
 pub async fn update_category_problem(
     db: State<'_, PosDb>,
     problem_id: String,
+    category_id: String,
     year: Option<String>,
     contest: Option<String>,
 ) -> PosResult<()> {
+    log::info!("[CF] update_category_problem called - problem_id: {}, category_id: {}, year: {:?}, contest: {:?}", 
+        problem_id, category_id, year, contest);
+    
     let mut query = String::from("UPDATE cf_category_problems SET ");
     let mut updates = Vec::new();
     let mut param_count = 1;
@@ -261,11 +265,14 @@ pub async fn update_category_problem(
     }
     
     if updates.is_empty() {
+        log::info!("[CF] No updates to perform");
         return Ok(());
     }
     
     query.push_str(&updates.join(", "));
-    query.push_str(&format!(" WHERE problem_id = ${}", param_count));
+    query.push_str(&format!(" WHERE problem_id = ${} AND category_id = ${}", param_count, param_count + 1));
+    
+    log::info!("[CF] Executing query: {}", query);
     
     let mut q = sqlx::query(&query);
     
@@ -277,12 +284,13 @@ pub async fn update_category_problem(
         q = q.bind(if c.is_empty() { None } else { Some(c) });
     }
     
-    q = q.bind(&problem_id);
+    q = q.bind(&problem_id).bind(&category_id);
     
-    q.execute(&db.0)
+    let result = q.execute(&db.0)
         .await
         .map_err(|e| db_context("update category problem", e))?;
     
+    log::info!("[CF] Updated category problem: {} (rows affected: {})", problem_id, result.rows_affected());
     Ok(())
 }
 

@@ -120,7 +120,11 @@ pub async fn get_ladders(
     db: State<'_, PosDb>,
 ) -> PosResult<Vec<CFLadderRow>> {
     let ladders = sqlx::query_as::<sqlx::Postgres, CFLadderRow>(
-        "SELECT id, name, description, rating_min, rating_max, difficulty, source, problem_count, created_at FROM cf_ladders ORDER BY created_at DESC"
+        r#"SELECT id, name, description, rating_min, rating_max, difficulty, source, problem_count, created_at 
+           FROM cf_ladders 
+           ORDER BY 
+               CASE WHEN source = 'Custom' THEN 0 ELSE 1 END,
+               created_at DESC"#
     )
     .fetch_all(&db.0)
     .await
@@ -446,4 +450,65 @@ pub async fn sync_ladder_progress_from_submissions(
     let msg = format!("Synced {} ladder items and {} category items", ladder_updated, category_updated);
     log::info!("[CF SYNC] {}", msg);
     Ok(msg)
+}
+
+// ─── Update Ladder Problem ──────────────────────────────────────────
+
+#[tauri::command]
+pub async fn update_ladder_problem(
+    db: State<'_, PosDb>,
+    problem_id: String,
+    ladder_id: String,
+    problem_name: Option<String>,
+    online_judge: Option<String>,
+    difficulty: Option<i32>,
+) -> PosResult<()> {
+    let mut query = String::from("UPDATE cf_ladder_problems SET ");
+    let mut updates = Vec::new();
+    let mut param_count = 1;
+    
+    if problem_name.is_some() {
+        updates.push(format!("problem_name = ${}", param_count));
+        param_count += 1;
+    }
+    
+    if online_judge.is_some() {
+        updates.push(format!("online_judge = ${}", param_count));
+        param_count += 1;
+    }
+    
+    if difficulty.is_some() {
+        updates.push(format!("difficulty = ${}", param_count));
+        param_count += 1;
+    }
+    
+    if updates.is_empty() {
+        return Ok(());
+    }
+    
+    query.push_str(&updates.join(", "));
+    query.push_str(&format!(" WHERE problem_id = ${} AND ladder_id = ${}", param_count, param_count + 1));
+    
+    let mut q = sqlx::query(&query);
+    
+    if let Some(name) = problem_name {
+        q = q.bind(if name.is_empty() { None } else { Some(name) });
+    }
+    
+    if let Some(judge) = online_judge {
+        q = q.bind(if judge.is_empty() { None } else { Some(judge) });
+    }
+    
+    if let Some(diff) = difficulty {
+        q = q.bind(Some(diff));
+    }
+    
+    q = q.bind(&problem_id).bind(&ladder_id);
+    
+    q.execute(&db.0)
+        .await
+        .map_err(|e| db_context("update ladder problem", e))?;
+    
+    log::info!("[CF] Updated ladder problem: {}", problem_id);
+    Ok(())
 }
