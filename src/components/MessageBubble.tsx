@@ -90,18 +90,18 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         onContextMenu={(e) => { e.preventDefault(); setShowContextMenu(false); }}
                     />
                     <div
-                        className="fixed z-[9999] material-panel border-white/10 shadow-xl rounded-lg py-1 min-w-[120px]"
+                        className="fixed z-[9999] material-glass shadow-xl rounded-xl py-1 min-w-[120px]"
                         style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
                     >
                         <button
-                            className="w-full text-left px-4 py-2 text-sm"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
                             style={{ color: 'var(--text-primary)' }}
                             onClick={openFocusMode}
                         >
                             Edit Message
                         </button>
                         <button
-                            className="w-full text-left px-4 py-2 text-sm text-red-400"
+                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                             onClick={async () => {
                                 setShowContextMenu(false);
                                 const confirmed = await confirm({

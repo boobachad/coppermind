@@ -31,6 +31,16 @@ const getPreviewText = (content: string) => {
     const json = JSON.parse(content);
     let text = '';
     const extract = (node: any) => {
+      // Handle Message object containing serialized ProseMirror doc
+      if (node.role && node.content) {
+        try {
+          const msgDoc = JSON.parse(node.content);
+          extract(msgDoc);
+        } catch {
+          text += node.content + ' ';
+        }
+        return;
+      }
       if (node.type === 'text' && node.text) {
         text += node.text + ' ';
       }
@@ -38,7 +48,12 @@ const getPreviewText = (content: string) => {
         node.content.forEach(extract);
       }
     };
-    extract(json);
+
+    if (Array.isArray(json)) {
+      json.forEach(extract);
+    } else {
+      extract(json);
+    }
     return text.trim();
   } catch {
     return content;
@@ -273,12 +288,12 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
       {contextMenu && createPortal(
         <>
           <div
-            className="fixed inset-0 z-9999"
+            className="fixed inset-0 z-[9999]"
             onClick={() => setContextMenu(null)}
             onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
           />
           <div
-            className="fixed material-glass rounded-lg shadow-2xl py-1 w-48 z-9999 overflow-hidden"
+            className="fixed material-glass rounded-lg shadow-2xl py-1 w-48 z-[9999] overflow-hidden"
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -311,7 +326,7 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-9999">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999]">
           <div className="material-glass rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl border" style={{ borderColor: 'var(--glass-border)' }}>
             <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Delete Note?</h3>
             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>

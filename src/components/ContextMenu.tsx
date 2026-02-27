@@ -108,14 +108,14 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <div
-        className="fixed z-50 min-w-[160px] overflow-hidden rounded-lg! material-panel border-white/10 p-1 shadow-md animate-in fade-in-80 zoom-in-95 w-xs flex flex-col text-sm"
+        className="fixed z-[9999] min-w-[160px] overflow-hidden rounded-xl material-glass p-1 shadow-md animate-in fade-in-80 zoom-in-95 w-xs flex flex-col text-sm border border-[var(--glass-border)]"
         style={{ top: position.y, left: position.x }}
       >
         <MenuItem icon={Copy} label="Copy" onClick={handleCopy} />
         <MenuItem icon={Clipboard} label="Paste" onClick={handlePaste} />
         <MenuItem icon={Maximize} label="Select All" onClick={handleSelectAll} />
 
-        <div className="h-px bg-glass-border my-1" />
+        <div className="h-px my-1" style={{ backgroundColor: 'var(--glass-border)' }} />
 
         <div className="relative">
           <MenuItem
@@ -126,7 +126,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'convert' && (
-            <div className="absolute left-full top-0 ml-1 glass-panel p-1 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl w-48 z-50 max-h-64 overflow-y-auto">
+            <div className="absolute left-full top-0 ml-1 material-glass p-1 !rounded-xl w-48 z-[10000] max-h-64 overflow-y-auto">
               <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
               <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
               <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
@@ -149,7 +149,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'text' && (
-            <div className="absolute left-full top-0 ml-1 glass-panel p-2 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 material-glass p-2 !rounded-xl grid grid-cols-4 gap-1 w-48 z-[10000]">
               {COLORS.map((c) => (
                 <button
                   key={c.value}
@@ -185,7 +185,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'bg' && (
-            <div className="absolute left-full top-0 ml-1 glass-panel p-2 !rounded-lg border-glass-border bg-glass-bg backdrop-blur-xl grid grid-cols-4 gap-1 w-48 z-50">
+            <div className="absolute left-full top-0 ml-1 material-glass p-2 !rounded-xl grid grid-cols-4 gap-1 w-48 z-[10000]">
               {BACKGROUNDS.map((c) => (
                 <button
                   key={c.value}
@@ -217,7 +217,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
           }}
         />
 
-        <div className="h-px bg-glass-border my-1" />
+        <div className="h-px my-1" style={{ backgroundColor: 'var(--glass-border)' }} />
 
         <MenuItem icon={ImageIcon} label="Add Image" onClick={handleImage} />
         <MenuItem icon={FileText} label="Add PDF" onClick={handlePDF} />
@@ -231,16 +231,16 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
 const MenuItem = ({ icon: Icon, label, onClick, hasSubmenu, active }: any) => (
   <button
     className={`relative flex cursor-pointer select-none items-center rounded-lg! px-2 py-1.5 text-sm outline-none transition-colors 
-      focus:bg-white/10 focus:text-white 
+      focus:bg-[var(--glass-bg-subtle)] focus:text-[var(--text-primary)] 
       data-[disabled]:pointer-events-none data-[disabled]:opacity-50 
-      text-white/70 hover:text-white hover:bg-white/10
-      ${active ? 'bg-white/15 text-white' : ''}`}
+      text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]
+      ${active ? 'bg-[var(--glass-bg-subtle)] text-[var(--text-primary)]' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center gap-3">
-      <Icon size={16} className="text-white/50 group-hover:text-white/80" />
+      <Icon size={16} className="text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]" />
       <span>{label}</span>
     </div>
-    {hasSubmenu && <span className="text-white/40 ml-auto flex underline-0">›</span>}
+    {hasSubmenu && <span className="text-[var(--text-tertiary)] ml-auto flex underline-0">›</span>}
   </button>
 );

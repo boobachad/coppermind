@@ -214,28 +214,28 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
 
   return (
     <>
-      <BubbleMenu editor={editor} className="flex material-glass-subtle p-1 rounded-lg! overflow-hidden divide-x divide-white/10">
+      <BubbleMenu editor={editor} className="flex material-glass p-1 rounded-xl overflow-hidden divide-x divide-white/10 shadow-xl border border-(--glass-border)">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('bold') ? 'text-white bg-white/10' : 'text-white/60'}`}
+          className={`p-2 hover:bg-(--glass-bg-subtle) transition-colors ${editor.isActive('bold') ? 'text-(--text-primary) bg-(--glass-bg-subtle)' : 'text-muted-foreground'}`}
         >
           <Bold className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('italic') ? 'text-white bg-white/10' : 'text-white/60'}`}
+          className={`p-2 hover:bg-(--glass-bg-subtle) transition-colors ${editor.isActive('italic') ? 'text-(--text-primary) bg-(--glass-bg-subtle)' : 'text-muted-foreground'}`}
         >
           <Italic className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('underline') ? 'text-white bg-white/10' : 'text-white/60'}`}
+          className={`p-2 hover:bg-(--glass-bg-subtle) transition-colors ${editor.isActive('underline') ? 'text-(--text-primary) bg-(--glass-bg-subtle)' : 'text-muted-foreground'}`}
         >
           <UnderlineIcon className="w-4 h-4" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={`p-2 hover:bg-white/10 transition-colors ${editor.isActive('code') ? 'text-white bg-white/10' : 'text-white/60'}`}
+          className={`p-2 hover:bg-(--glass-bg-subtle) transition-colors ${editor.isActive('code') ? 'text-(--text-primary) bg-(--glass-bg-subtle)' : 'text-muted-foreground'}`}
         >
           <Code className="w-4 h-4" />
         </button>

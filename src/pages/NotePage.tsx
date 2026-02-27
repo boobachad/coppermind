@@ -13,6 +13,157 @@ import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateDDMMYYYY } from '../pos/lib/time';
 
+function NoteTitleInput({ noteId, initialTitle }: { noteId: string, initialTitle: string }) {
+  const [title, setTitle] = useState(initialTitle);
+  const saveTimeoutRef = useRef<any>(null);
+  const isTypingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isTypingRef.current) {
+      setTitle(initialTitle);
+    }
+  }, [initialTitle]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isTypingRef.current = true;
+    const val = e.target.value;
+    setTitle(val);
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const db = await getDb();
+        await db.execute('UPDATE notes SET title = $1, updated_at = $2 WHERE id = $3', [
+          val,
+          Date.now(),
+          noteId
+        ]);
+        window.dispatchEvent(new Event('notes-updated'));
+        isTypingRef.current = false;
+      } catch (err) {
+        console.error("Error updating title:", err);
+        isTypingRef.current = false;
+      }
+    }, 1000);
+  };
+
+  return (
+    <input
+      type="text"
+      value={title}
+      onChange={handleChange}
+      placeholder="Untitled"
+      className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-4 px-4"
+      style={{ color: 'var(--text-primary)' }}
+    />
+  );
+}
+
+function MessageInputArea({ onSendMessage }: { onSendMessage: (role: 'question' | 'answer', content: string) => void }) {
+  const [inputValue, setInputValue] = useState('');
+  const [inputRole, setInputRole] = useState<'question' | 'answer'>('question');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSend = () => {
+    if (inputValue.trim()) {
+      onSendMessage(inputRole, inputValue);
+      setInputValue('');
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+      }
+    }
+  };
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 pb-8 pt-12 px-4 z-40" style={{
+      background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)'
+    }}>
+      <div className="max-w-5xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
+
+        {/* Role Selection Tabs - Floating above input */}
+        <div className="absolute -top-10 left-0 flex space-x-2">
+          <button
+            onClick={() => setInputRole('question')}
+            className={clsx(
+              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
+              inputRole === 'question'
+                ? "shadow-lg"
+                : "material-glass-subtle"
+            )}
+            style={inputRole === 'question' ? {
+              backgroundColor: 'var(--text-primary)',
+              color: 'var(--bg-base)'
+            } : {
+              color: 'var(--text-secondary)'
+            }}
+          >
+            Question
+          </button>
+          <button
+            onClick={() => setInputRole('answer')}
+            className={clsx(
+              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
+              inputRole === 'answer'
+                ? "shadow-lg"
+                : "material-glass-subtle"
+            )}
+            style={inputRole === 'answer' ? {
+              backgroundColor: 'var(--text-primary)',
+              color: 'var(--bg-base)'
+            } : {
+              color: 'var(--text-secondary)'
+            }}
+          >
+            Answer
+          </button>
+        </div>
+
+        <div className={clsx(
+          "material-glass-subtle rounded-2xl flex items-end p-2 transition-all ring-0 outline-none",
+        )}>
+          <textarea
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              // Auto-grow
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
+            className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 shadow-none ring-0 outline-none"
+            style={{ color: 'var(--text-primary)' }}
+            rows={1}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!inputValue.trim()}
+            className={clsx(
+              "mb-1 p-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shrink-0 shadow-md"
+            )}
+            style={{
+              backgroundColor: 'var(--text-primary)',
+              color: 'var(--bg-base)'
+            }}
+          >
+            {/* Arrow Up Icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
+          </button>
+        </div>
+        <div className="text-center text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+          Press Enter to send, Shift+Enter for new line
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NotePage() {
   const { id } = useParams<{ id: string }>();
   // const navigate = useNavigate(); // Unused
@@ -24,9 +175,6 @@ export function NotePage() {
 
   // Messages state
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [inputRole, setInputRole] = useState<'question' | 'answer'>('question');
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [sourceUrls, setSourceUrls] = useState<string[]>([]);
   const { confirm } = useConfirmDialog();
 
@@ -167,40 +315,19 @@ export function NotePage() {
     }
   };
 
-  const handleTitleChange = async (newTitle: string) => {
-    if (!note) return;
-    try {
-      const db = await getDb();
-      await db.execute('UPDATE notes SET title = $1, updated_at = $2 WHERE id = $3', [
-        newTitle,
-        Date.now(),
-        note.id
-      ]);
-      setNote(prev => prev ? { ...prev, title: newTitle } : null);
-      window.dispatchEvent(new Event('notes-updated'));
-    } catch (err) {
-      console.error("Error updating title:", err);
-    }
-  };
 
-  const handleSendMessage = () => {
-    if (inputValue.trim()) {
-      const newUserMsg: Message = {
-        id: uuidv4(),
-        role: inputRole,
-        content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: inputValue }] }] }),
-        created_at: Date.now()
-      };
 
-      const updatedMessages = [...messages, newUserMsg];
-      setMessages(updatedMessages);
-      saveMessages(updatedMessages);
+  const handleSendMessage = (role: 'question' | 'answer', content: string) => {
+    const newUserMsg: Message = {
+      id: uuidv4(),
+      role: role,
+      content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: content }] }] }),
+      created_at: Date.now()
+    };
 
-      setInputValue('');
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto';
-      }
-    }
+    const updatedMessages = [...messages, newUserMsg];
+    setMessages(updatedMessages);
+    saveMessages(updatedMessages);
   };
 
   const handleStickyReorder = (id: string, direction: 'front' | 'back') => {
@@ -317,14 +444,7 @@ export function NotePage() {
         <div className="max-w-3xl mx-auto w-full pt-12 relative animate-in fade-in duration-500">
 
           {/* Note Title Input */}
-          <input
-            type="text"
-            value={note.title || ''}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Untitled"
-            className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-4 px-4"
-            style={{ color: 'var(--text-primary)' }}
-          />
+          <NoteTitleInput noteId={note.id} initialTitle={note.title || ''} />
 
           {/* Meta Row */}
           <div className="flex items-center mb-8 text-sm gap-4 px-4" style={{ color: 'var(--text-secondary)' }}>
@@ -371,92 +491,7 @@ export function NotePage() {
       </div>
 
       {/* Input Pill Area */}
-      <div className="absolute bottom-0 left-0 right-0 pb-8 pt-12 px-4 z-40" style={{ 
-        background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)'
-      }}>
-        <div className="max-w-5xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
-
-          {/* Role Selection Tabs - Floating above input */}
-          <div className="absolute -top-10 left-0 flex space-x-2">
-            <button
-              onClick={() => setInputRole('question')}
-              className={clsx(
-                "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
-                inputRole === 'question'
-                  ? "shadow-lg"
-                  : "material-glass-subtle"
-              )}
-              style={inputRole === 'question' ? {
-                backgroundColor: 'var(--text-primary)',
-                color: 'var(--bg-base)'
-              } : {
-                color: 'var(--text-secondary)'
-              }}
-            >
-              Question
-            </button>
-            <button
-              onClick={() => setInputRole('answer')}
-              className={clsx(
-                "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
-                inputRole === 'answer'
-                  ? "shadow-lg"
-                  : "material-glass-subtle"
-              )}
-              style={inputRole === 'answer' ? {
-                backgroundColor: 'var(--text-primary)',
-                color: 'var(--bg-base)'
-              } : {
-                color: 'var(--text-secondary)'
-              }}
-            >
-              Answer
-            </button>
-          </div>
-
-          <div className={clsx(
-            "material-glass-subtle rounded-2xl flex items-end p-2 transition-all ring-0 outline-none",
-          )}>
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                // Auto-grow
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
-              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 shadow-none ring-0 outline-none"
-              style={{ color: 'var(--text-primary)' }}
-              rows={1}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
-              className={clsx(
-                "mb-1 p-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shrink-0 shadow-md"
-              )}
-              style={{
-                backgroundColor: 'var(--text-primary)',
-                color: 'var(--bg-base)'
-              }}
-            >
-              {/* Arrow Up Icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
-            </button>
-          </div>
-          <div className="text-center text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-            Press Enter to send, Shift+Enter for new line
-          </div>
-        </div>
-      </div>
+      <MessageInputArea onSendMessage={handleSendMessage} />
     </div>
   );
 }

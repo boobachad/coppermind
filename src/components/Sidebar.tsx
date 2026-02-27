@@ -52,25 +52,25 @@ export function Sidebar() {
   );
 
   const mainNavItems = [
-    { to: "/",           icon: FileText,     label: "Notes" },
-    { to: "/goals",      icon: Target,       label: "Goals" },
+    { to: "/", icon: FileText, label: "Notes" },
+    { to: "/goals", icon: Target, label: "Goals" },
     { to: "/milestones", icon: CalendarRange, label: "Milestones" },
-    { to: "/knowledge",  icon: Brain,        label: "Knowledge Base" },
-    { to: "/briefing",      icon: Sun,          label: "Daily Briefing" },
-    { to: "/nodes",         icon: Share2,       label: "Graph" },
-    { to: "/pos",           icon: Box,          label: "POS" },
-    { to: "/pos/grid",      icon: Grid3x3,      label: "Grid" },
-    { to: "/pos/sheets",    icon: FileSpreadsheet, label: "Sheets" },
-    { to: "/pos/github",    icon: Github,       label: "GitHub" },
-    { to: "/journal",       icon: BookOpen,     label: "Journal" },
+    { to: "/knowledge", icon: Brain, label: "Knowledge Base" },
+    { to: "/briefing", icon: Sun, label: "Daily Briefing" },
+    { to: "/nodes", icon: Share2, label: "Graph" },
+    { to: "/pos", icon: Box, label: "POS" },
+    { to: "/pos/grid", icon: Grid3x3, label: "Grid" },
+    { to: "/pos/sheets", icon: FileSpreadsheet, label: "Sheets" },
+    { to: "/pos/github", icon: Github, label: "GitHub" },
+    { to: "/journal", icon: BookOpen, label: "Journal" },
   ];
 
   const cfNavItems = [
-    { to: "/cf/ladders",      icon: List,     label: "Ladders" },
-    { to: "/cf/categories",   icon: Tag,      label: "Categories" },
-    { to: "/cf/friends",      icon: Users,    label: "CF Friends" },
-    { to: "/cf/friends-ladder", icon: Code,   label: "Friends Ladder" },
-    { to: "/cf/daily",        icon: Sparkles, label: "Daily Pick" },
+    { to: "/cf/ladders", icon: List, label: "Ladders" },
+    { to: "/cf/categories", icon: Tag, label: "Categories" },
+    { to: "/cf/friends", icon: Users, label: "CF Friends" },
+    { to: "/cf/friends-ladder", icon: Code, label: "Friends Ladder" },
+    { to: "/cf/daily", icon: Sparkles, label: "Daily Pick" },
   ];
 
   const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => (
@@ -98,7 +98,7 @@ export function Sidebar() {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Scrollable Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-6">
 
         {/* Main Navigation */}
         <div className="space-y-1">
