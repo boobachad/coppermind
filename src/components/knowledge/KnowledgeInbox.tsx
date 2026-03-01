@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Search, Filter, Plus, Link2 } from 'lucide-react';
+import { Search, Filter, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { KnowledgeItem, KnowledgeItemFilters } from '@/pos/lib/types';
 import { KnowledgeItemCard } from './KnowledgeItemCard';
@@ -17,8 +17,6 @@ export function KnowledgeInbox() {
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
-    const [quickSaveUrl, setQuickSaveUrl] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
 
     const loadItems = useCallback(async () => {
         setLoading(true);
@@ -93,49 +91,6 @@ export function KnowledgeInbox() {
         }
     };
 
-    const handleQuickSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        const url = quickSaveUrl.trim();
-        if (!url) return;
-
-        // Basic URL validation
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            toast.error('Invalid URL', { description: 'URL must start with http:// or https://' });
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            await invoke('quick_save_link', { url });
-            toast.success('Link saved to inbox');
-            setQuickSaveUrl('');
-            loadItems();
-        } catch (err) {
-            const errMsg = String(err);
-            if (errMsg.includes('already exists')) {
-                toast.warning('Duplicate link', { description: 'This link is already in your knowledge base' });
-            } else {
-                toast.error('Failed to save link', { description: errMsg });
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleQuickSaveKeyDown = (e: React.KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            const input = document.getElementById('quick-save-input') as HTMLInputElement;
-            input?.focus();
-        }
-    };
-
-    useEffect(() => {
-        document.addEventListener('keydown', handleQuickSaveKeyDown as any);
-        return () => document.removeEventListener('keydown', handleQuickSaveKeyDown as any);
-    }, []);
-
     return (
         <div className="flex flex-col h-full">
             {/* Header with glassmorphism */}
@@ -166,41 +121,6 @@ export function KnowledgeInbox() {
                         Add Item
                     </Button>
                 </div>
-
-                {/* Quick Save */}
-                <form onSubmit={handleQuickSave} className="mb-4">
-                    <div className="relative">
-                        <Link2
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                            style={{ color: 'var(--text-tertiary)' }}
-                        />
-                        <Input
-                            id="quick-save-input"
-                            type="url"
-                            placeholder="Quick save URL (Ctrl+K)"
-                            value={quickSaveUrl}
-                            onChange={(e) => setQuickSaveUrl(e.target.value)}
-                            disabled={isSaving}
-                            className="pl-10 pr-24"
-                            style={{
-                                background: 'var(--glass-bg-subtle)',
-                                border: '1px solid var(--glass-border)',
-                                color: 'var(--text-primary)',
-                            }}
-                        />
-                        <Button
-                            type="submit"
-                            disabled={isSaving || !quickSaveUrl.trim()}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 text-xs"
-                            style={{
-                                background: 'var(--pos-success-bg)',
-                                color: 'var(--pos-success-text)',
-                            }}
-                        >
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
-                    </div>
-                </form>
 
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -260,10 +180,6 @@ export function KnowledgeInbox() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="Link">Links</SelectItem>
-                            <SelectItem value="Problem">Problems</SelectItem>
-                            <SelectItem value="NoteRef">Note References</SelectItem>
-                            <SelectItem value="Quest">Quests</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

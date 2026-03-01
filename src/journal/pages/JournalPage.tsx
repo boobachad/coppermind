@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Loader } from '@/components/Loader';
 import { getLocalDateString, formatDateDDMMYYYY } from '../../pos/lib/time';
 import { JournalEntry } from '../types';
 import { getDb } from '../../lib/db';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 14);
@@ -18,6 +19,7 @@ export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadEntries();
@@ -76,6 +78,29 @@ export default function JournalPage() {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent, entryId: string, date: string) => {
+    e.stopPropagation();
+    
+    const confirmed = await confirm({
+      title: 'Delete Journal Entry',
+      description: 'Delete this journal entry? This cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const db = await getDb();
+      await db.execute('DELETE FROM journal_entries WHERE id = $1', [entryId]);
+      toast.success('Entry deleted');
+      await loadEntries();
+    } catch (error) {
+      toast.error('Failed to delete entry', { description: String(error) });
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -131,15 +156,24 @@ export default function JournalPage() {
               <Card
                 key={entry.id}
                 onClick={() => navigate(`/journal/${entry.date}`)}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer hover:shadow-md transition-shadow relative group"
                 style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
               >
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Day {entry.dayX}</h3>
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDateDDMMYYYY(new Date(entry.date))}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {formatDateDDMMYYYY(new Date(entry.date))}
+                      </span>
+                      <button
+                        onClick={(e) => handleDelete(e, entry.id, entry.date)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-opacity-10"
+                        style={{ color: 'var(--color-error)' }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-sm line-clamp-3" style={{ color: 'var(--text-secondary)' }}>
                     {entry.reflectionText || 'No reflection yet'}

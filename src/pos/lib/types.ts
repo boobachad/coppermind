@@ -256,12 +256,14 @@ export interface KnowledgeMetadata {
 
 export interface KnowledgeItem {
     id: string;
-    itemType: 'Link' | 'Problem' | 'NoteRef' | 'StickyRef' | 'Quest';
+    itemType: string;  // Free-text: "website", "book", "video", "inspiration", etc.
     source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
-    content: string;              // URL or Text or JSON array for Quests
+    content: string;              // Multi-line text, can contain URLs, notes, anything
     metadata: KnowledgeMetadata | null;  // Title, Tags, Difficulty, RelatedItemIds
     status: 'Inbox' | 'Planned' | 'Completed' | 'Archived';
     nextReviewDate: string | null;  // ISO 8601 UTC
+    linkedNoteId: string | null;      // Link to local SQLite notes
+    linkedJournalDate: string | null; // Link to journal entry (YYYY-MM-DD)
     createdAt: string;
     updatedAt: string;
 }

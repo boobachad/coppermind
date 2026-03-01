@@ -1,7 +1,9 @@
 import { ExternalLink, Edit2, Trash2, Archive, Calendar, Link as LinkIcon, FileText, Folder } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import type { KnowledgeItem } from '@/pos/lib/types';
 import { generatePreview, extractDomain, detectUrlType, formatReviewDate } from '@/lib/kb-utils';
 import { Button } from '@/components/ui/button';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
 
 interface KnowledgeItemCardProps {
     item: KnowledgeItem;
@@ -11,6 +13,8 @@ interface KnowledgeItemCardProps {
 }
 
 export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: KnowledgeItemCardProps) {
+    const { confirm } = useConfirmDialog();
+    
     const getTypeIcon = () => {
         switch (item.itemType) {
             case 'Link':
@@ -25,7 +29,8 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
     };
 
     const getTypeColor = () => {
-        const urlType = item.itemType === 'Link' ? detectUrlType(item.content) : null;
+        // Detect URL type from content
+        const urlType = hasUrl() ? detectUrlType(extractFirstUrl() || '') : null;
         
         switch (urlType) {
             case 'leetcode':
@@ -56,10 +61,67 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
         }
     };
 
+    const hasUrl = () => {
+        // Check if content contains a URL
+        const urlRegex = /https?:\/\/[^\s]+/g;
+        return urlRegex.test(item.content);
+    };
+
+    const extractAllUrls = () => {
+        const urlRegex = /https?:\/\/[^\s]+/g;
+        return item.content.match(urlRegex) || [];
+    };
+
+    const extractFirstUrl = () => {
+        const urls = extractAllUrls();
+        return urls.length > 0 ? urls[0] : null;
+    };
+
     const handleOpenLink = () => {
-        if (item.itemType === 'Link') {
-            window.open(item.content, '_blank');
+        const urls = extractAllUrls();
+        if (urls.length === 0) return;
+
+        // Open all URLs using Tauri command
+        urls.forEach(url => {
+            invoke('open_link', { url });
+        });
+
+        // If multiple URLs, show toast
+        if (urls.length > 1) {
+            console.log(`Opened ${urls.length} links`);
         }
+    };
+
+    const renderContentWithLinks = (content: string) => {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = content.split(urlRegex);
+        
+        return (
+            <>
+                {parts.map((part, index) => {
+                    if (part.match(urlRegex)) {
+                        return (
+                            <span
+                                key={index}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    invoke('open_link', { url: part });
+                                }}
+                                style={{
+                                    color: 'var(--color-accent-primary)',
+                                    textDecoration: 'underline',
+                                    cursor: 'pointer',
+                                }}
+                                className="hover:opacity-80"
+                            >
+                                [link]
+                            </span>
+                        );
+                    }
+                    return <span key={index}>{part}</span>;
+                })}
+            </>
+        );
     };
 
     return (
@@ -92,12 +154,12 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                             >
                                 {item.itemType}
                             </div>
-                            {item.itemType === 'Link' && (
+                            {hasUrl() && (
                                 <div
                                     className="text-xs truncate"
                                     style={{ color: 'var(--text-tertiary)' }}
                                 >
-                                    {extractDomain(item.content)}
+                                    {extractDomain(extractFirstUrl() || '')}
                                 </div>
                             )}
                         </div>
@@ -118,12 +180,12 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
 
             {/* Content */}
             <div className="p-4">
-                {/* Preview */}
+                {/* Preview with clickable links */}
                 <div
                     className="text-sm mb-3 line-clamp-3"
                     style={{ color: 'var(--text-secondary)' }}
                 >
-                    {generatePreview(item.content, 120)}
+                    {renderContentWithLinks(item.content)}
                 </div>
 
                 {/* Metadata */}
@@ -172,7 +234,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    {item.itemType === 'Link' && (
+                    {hasUrl() && (
                         <Button
                             size="sm"
                             onClick={handleOpenLink}
@@ -184,7 +246,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                             }}
                         >
                             <ExternalLink className="w-3 h-3" />
-                            Open
+                            Open {extractAllUrls().length > 1 && `(${extractAllUrls().length})`}
                         </Button>
                     )}
                     
@@ -219,8 +281,15 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
 
                     <Button
                         size="sm"
-                        onClick={() => {
-                            if (confirm('Delete this item?')) {
+                        onClick={async () => {
+                            const confirmed = await confirm({
+                                title: 'Delete Knowledge Item',
+                                description: 'Delete this item? This cannot be undone.',
+                                confirmText: 'Delete',
+                                cancelText: 'Cancel',
+                                variant: 'destructive',
+                            });
+                            if (confirmed) {
                                 onDelete(item.id);
                             }
                         }}

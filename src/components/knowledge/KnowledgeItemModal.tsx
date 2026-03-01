@@ -3,8 +3,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { KnowledgeItem, DuplicateCheckResult } from '@/pos/lib/types';
-import { extractUrls, parseTemporalKeywords } from '@/lib/kb-utils';
+import { parseTemporalKeywords } from '@/lib/kb-utils';
 import { formatDateDDMMYYYY } from '@/pos/lib/time';
+import { getDb } from '@/lib/db';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +20,55 @@ interface KnowledgeItemModalProps {
 }
 
 export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: KnowledgeItemModalProps) {
-    const [itemType, setItemType] = useState<string>('Link');
+    const [itemType, setItemType] = useState<string>('');
     const [source, setSource] = useState<string>('Manual');
     const [content, setContent] = useState('');
     const [status, setStatus] = useState<string>('Inbox');
+    const [linkedNoteId, setLinkedNoteId] = useState<string>('');
+    const [linkedJournalDate, setLinkedJournalDate] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResult | null>(null);
+    const [notes, setNotes] = useState<{ id: string; title: string }[]>([]);
+    const [journalDates, setJournalDates] = useState<string[]>([]);
+    const [loadingNotes, setLoadingNotes] = useState(false);
+    const [loadingJournals, setLoadingJournals] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadNotes();
+            loadJournalDates();
+        }
+    }, [isOpen]);
+
+    const loadNotes = async () => {
+        setLoadingNotes(true);
+        try {
+            const db = await getDb();
+            const result = await db.select<{ id: string; title: string }[]>(
+                'SELECT id, title FROM notes WHERE parent_id IS NULL ORDER BY updated_at DESC'
+            );
+            setNotes(result);
+        } catch (err) {
+            console.error('Failed to load notes:', err);
+        } finally {
+            setLoadingNotes(false);
+        }
+    };
+
+    const loadJournalDates = async () => {
+        setLoadingJournals(true);
+        try {
+            const db = await getDb();
+            const result = await db.select<{ date: string }[]>(
+                'SELECT date FROM journal_entries ORDER BY date DESC'
+            );
+            setJournalDates(result.map(r => r.date));
+        } catch (err) {
+            console.error('Failed to load journal dates:', err);
+        } finally {
+            setLoadingJournals(false);
+        }
+    };
 
     useEffect(() => {
         if (editingItem) {
@@ -32,30 +76,35 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
             setSource(editingItem.source);
             setContent(editingItem.content);
             setStatus(editingItem.status);
+            setLinkedNoteId(editingItem.linkedNoteId || '');
+            setLinkedJournalDate(editingItem.linkedJournalDate || '');
         } else {
             resetForm();
         }
     }, [editingItem, isOpen]);
 
     const resetForm = () => {
-        setItemType('Link');
+        setItemType('');
         setSource('Manual');
         setContent('');
         setStatus('Inbox');
+        setLinkedNoteId('');
+        setLinkedJournalDate('');
         setDuplicateCheck(null);
     };
 
     const checkForDuplicates = async (text: string) => {
-        const urls = extractUrls(text);
-        if (urls.length === 0) return;
+        if (!text.trim()) return;
 
         try {
             const result = await invoke<DuplicateCheckResult>('check_knowledge_duplicates', {
-                content: urls[0] // Check first URL
+                content: text
             });
             
             if (result.isDuplicate) {
                 setDuplicateCheck(result);
+            } else {
+                setDuplicateCheck(null);
             }
         } catch (err) {
             console.error('Duplicate check failed:', err);
@@ -65,18 +114,21 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
     const handleContentChange = (value: string) => {
         setContent(value);
         
-        // Debounced duplicate check
-        if (itemType === 'Link') {
-            const timer = setTimeout(() => {
-                checkForDuplicates(value);
-            }, 500);
-            return () => clearTimeout(timer);
-        }
+        // Debounced duplicate check for any content with URLs
+        const timer = setTimeout(() => {
+            checkForDuplicates(value);
+        }, 500);
+        return () => clearTimeout(timer);
     };
 
     const handleSubmit = async () => {
         if (!content.trim()) {
             toast.error('Content is required');
+            return;
+        }
+
+        if (!itemType.trim()) {
+            toast.error('Type is required');
             return;
         }
 
@@ -87,9 +139,11 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 await invoke('update_knowledge_item', {
                     id: editingItem.id,
                     req: {
-                        itemType: itemType,
+                        itemType: itemType.trim(),
                         content: content.trim(),
                         status,
+                        linkedNoteId: linkedNoteId.trim() || null,
+                        linkedJournalDate: linkedJournalDate.trim() || null,
                     }
                 });
                 toast.success('Knowledge item updated');
@@ -97,12 +151,14 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 // Create new item
                 await invoke('create_knowledge_item', {
                     req: {
-                        itemType: itemType,
+                        itemType: itemType.trim(),
                         source,
                         content: content.trim(),
                         status,
                         metadata: null,
                         nextReviewDate: null,
+                        linkedNoteId: linkedNoteId.trim() || null,
+                        linkedJournalDate: linkedJournalDate.trim() || null,
                     }
                 });
                 toast.success('Knowledge item created');
@@ -141,7 +197,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* Type Selection */}
+                    {/* Type Input (Free Text) */}
                     <div>
                         <label
                             className="block text-sm font-medium mb-2"
@@ -149,58 +205,41 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                         >
                             Type
                         </label>
-                        <Select value={itemType} onValueChange={setItemType}>
-                            <SelectTrigger
-                                style={{
-                                    background: 'var(--glass-bg-subtle)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
-                                }}
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Link">Link</SelectItem>
-                                <SelectItem value="Problem">Problem</SelectItem>
-                                <SelectItem value="NoteRef">Note Reference</SelectItem>
-                                <SelectItem value="Quest">Quest</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Input
+                            type="text"
+                            placeholder="e.g., website, book, video, inspiration"
+                            value={itemType}
+                            onChange={(e) => setItemType(e.target.value)}
+                            style={{
+                                background: 'var(--glass-bg-subtle)',
+                                border: '1px solid var(--glass-border)',
+                                color: 'var(--text-primary)',
+                            }}
+                        />
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                            Enter any category that makes sense to you
+                        </p>
                     </div>
 
-                    {/* Content */}
+                    {/* Content (Always Textarea) */}
                     <div>
                         <label
                             className="block text-sm font-medium mb-2"
                             style={{ color: 'var(--text-secondary)' }}
                         >
-                            Content {itemType === 'Link' && '(URL)'}
+                            Content
                         </label>
-                        {itemType === 'Link' ? (
-                            <Input
-                                type="text"
-                                placeholder="https://example.com"
-                                value={content}
-                                onChange={(e) => handleContentChange(e.target.value)}
-                                style={{
-                                    background: 'var(--glass-bg-subtle)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
-                                }}
-                            />
-                        ) : (
-                            <Textarea
-                                placeholder="Enter content..."
-                                value={content}
-                                onChange={(e) => handleContentChange(e.target.value)}
-                                rows={4}
-                                style={{
-                                    background: 'var(--glass-bg-subtle)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
-                                }}
-                            />
-                        )}
+                        <Textarea
+                            placeholder="Enter content, URLs, notes, anything..."
+                            value={content}
+                            onChange={(e) => handleContentChange(e.target.value)}
+                            rows={6}
+                            style={{
+                                background: 'var(--glass-bg-subtle)',
+                                border: '1px solid var(--glass-border)',
+                                color: 'var(--text-primary)',
+                            }}
+                        />
                     </div>
 
                     {/* Duplicate Warning */}
@@ -221,18 +260,111 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                                     className="text-sm font-medium mb-1"
                                     style={{ color: 'var(--color-warning)' }}
                                 >
-                                    Duplicate Found
+                                    Duplicate URL Found
                                 </div>
                                 <div
-                                    className="text-xs"
+                                    className="text-xs mb-2"
                                     style={{ color: 'var(--text-secondary)' }}
                                 >
-                                    This URL already exists in {duplicateCheck.existingItems.length} item(s).
-                                    You can still create it if needed.
+                                    This URL exists in {duplicateCheck.existingItems.length} item(s):
                                 </div>
+                                {duplicateCheck.existingItems.slice(0, 3).map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="text-xs p-2 rounded mb-1 cursor-pointer hover:opacity-80"
+                                        style={{
+                                            background: 'var(--glass-bg)',
+                                            border: '1px solid var(--glass-border)',
+                                            color: 'var(--text-primary)',
+                                        }}
+                                        onClick={() => {
+                                            // Navigate to existing item
+                                            onClose();
+                                            // TODO: Implement navigation to item
+                                            toast.info(`Item: ${item.itemType} - ${item.content.slice(0, 50)}...`);
+                                        }}
+                                    >
+                                        <span style={{ color: 'var(--color-accent-primary)' }}>
+                                            {item.itemType}
+                                        </span>
+                                        {' • '}
+                                        {item.content.slice(0, 60)}...
+                                    </div>
+                                ))}
+                                {duplicateCheck.existingItems.length > 3 && (
+                                    <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                        +{duplicateCheck.existingItems.length - 3} more
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
+
+                    {/* Linked Note */}
+                    <div>
+                        <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
+                            Linked Note (Optional)
+                        </label>
+                        <Select 
+                            value={linkedNoteId || 'none'} 
+                            onValueChange={(val) => setLinkedNoteId(val === 'none' ? '' : val)}
+                            disabled={loadingNotes}
+                        >
+                            <SelectTrigger
+                                style={{
+                                    background: 'var(--glass-bg-subtle)',
+                                    border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-primary)',
+                                }}
+                            >
+                                <SelectValue placeholder={loadingNotes ? "Loading notes..." : "Select a note"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {notes.map((note) => (
+                                    <SelectItem key={note.id} value={note.id}>
+                                        {note.title || 'Untitled'}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Linked Journal Date */}
+                    <div>
+                        <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
+                            Linked Journal Entry (Optional)
+                        </label>
+                        <Select 
+                            value={linkedJournalDate || 'none'} 
+                            onValueChange={(val) => setLinkedJournalDate(val === 'none' ? '' : val)}
+                            disabled={loadingJournals}
+                        >
+                            <SelectTrigger
+                                style={{
+                                    background: 'var(--glass-bg-subtle)',
+                                    border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-primary)',
+                                }}
+                            >
+                                <SelectValue placeholder={loadingJournals ? "Loading journal entries..." : "Select a journal entry"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {journalDates.map((date) => (
+                                    <SelectItem key={date} value={date}>
+                                        {formatDateDDMMYYYY(new Date(date + 'T00:00:00'))}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     {/* Status */}
                     <div>

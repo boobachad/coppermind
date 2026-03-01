@@ -12,6 +12,9 @@ pub async fn init_pos_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
 }
 
 const POS_DDL_STATEMENTS: &[&str] = &[
+    // ─── Enable Extensions ──────────────────────────────────────────
+    "CREATE EXTENSION IF NOT EXISTS pg_trgm",
+    
     // ─── Activities ─────────────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS pos_activities (
         id            TEXT PRIMARY KEY,

@@ -12,12 +12,14 @@ use crate::pos::utils::gen_id;
 #[serde(rename_all = "camelCase")]
 pub struct KnowledgeItemRow {
     pub id: String,
-    pub item_type: String,           // "Link" | "Problem" | "NoteRef" | "StickyRef" | "Quest"
+    pub item_type: String,           // Free-text: "website", "book", "video", "inspiration", etc.
     pub source: String,              // "ActivityLog" | "Manual" | "BrowserExtension" | "Journal"
-    pub content: String,             // URL or Text or JSON array of URLs for Quests
+    pub content: String,             // Multi-line text, can contain URLs, notes, anything
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>, // Title, Tags, Difficulty, RelatedItemIds
     pub status: String,              // "Inbox" | "Planned" | "Completed" | "Archived"
     pub next_review_date: Option<DateTime<Utc>>,
+    pub linked_note_id: Option<String>,        // Link to local SQLite notes table
+    pub linked_journal_date: Option<String>,   // Link to journal entry (YYYY-MM-DD)
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -43,6 +45,8 @@ pub struct CreateKnowledgeItemRequest {
     pub metadata: Option<serde_json::Value>,
     pub status: Option<String>,
     pub next_review_date: Option<String>, // ISO 8601
+    pub linked_note_id: Option<String>,
+    pub linked_journal_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,6 +57,8 @@ pub struct UpdateKnowledgeItemRequest {
     pub metadata: Option<serde_json::Value>,
     pub status: Option<String>,
     pub next_review_date: Option<String>, // ISO 8601
+    pub linked_note_id: Option<String>,
+    pub linked_journal_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,9 +105,11 @@ pub async fn create_knowledge_item(
 
     let row = sqlx::query_as::<_, KnowledgeItemRow>(
         r#"INSERT INTO knowledge_items (
-            id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-        RETURNING id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at"#,
+            id, item_type, source, content, metadata, status, next_review_date, 
+            linked_note_id, linked_journal_date, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+        RETURNING id, item_type, source, content, metadata, status, next_review_date, 
+                  linked_note_id, linked_journal_date, created_at, updated_at"#,
     )
     .bind(&id)
     .bind(&req.item_type)
@@ -110,6 +118,8 @@ pub async fn create_knowledge_item(
     .bind(metadata_json)
     .bind(req.status.unwrap_or_else(|| "Inbox".to_string()))
     .bind(next_review)
+    .bind(&req.linked_note_id)
+    .bind(&req.linked_journal_date)
     .bind(now)
     .fetch_one(pool)
     .await
@@ -127,7 +137,7 @@ pub async fn get_knowledge_items(
 ) -> PosResult<Vec<KnowledgeItemRow>> {
     let pool = &db.0;
 
-    let mut query = "SELECT id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at FROM knowledge_items WHERE 1=1".to_string();
+    let mut query = "SELECT id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at FROM knowledge_items WHERE 1=1".to_string();
     let mut bindings: Vec<String> = Vec::new();
 
     if let Some(f) = filters {
@@ -200,11 +210,19 @@ pub async fn update_knowledge_item(
         updates.push(format!("next_review_date = ${}", bind_index));
         bind_index += 1;
     }
+    if req.linked_note_id.is_some() {
+        updates.push(format!("linked_note_id = ${}", bind_index));
+        bind_index += 1;
+    }
+    if req.linked_journal_date.is_some() {
+        updates.push(format!("linked_journal_date = ${}", bind_index));
+        bind_index += 1;
+    }
 
     updates.push(format!("updated_at = ${}", bind_index));
 
     let query = format!(
-        "UPDATE knowledge_items SET {} WHERE id = ${} RETURNING id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at",
+        "UPDATE knowledge_items SET {} WHERE id = ${} RETURNING id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at",
         updates.join(", "),
         bind_index + 1
     );
@@ -226,6 +244,12 @@ pub async fn update_knowledge_item(
     if let Some(v) = req.next_review_date {
         let parsed = v.parse::<DateTime<Utc>>().ok();
         q = q.bind(parsed);
+    }
+    if let Some(v) = req.linked_note_id {
+        q = q.bind(v);
+    }
+    if let Some(v) = req.linked_journal_date {
+        q = q.bind(v);
     }
 
     q = q.bind(now).bind(&id);
@@ -336,7 +360,7 @@ pub async fn delete_knowledge_link(
     Ok(())
 }
 
-/// Check for duplicate URLs in knowledge items
+/// Check for duplicate URLs in knowledge items (extracts URLs from content)
 #[tauri::command]
 pub async fn check_knowledge_duplicates(
     db: State<'_, PosDb>,
@@ -344,18 +368,40 @@ pub async fn check_knowledge_duplicates(
 ) -> PosResult<DuplicateCheckResult> {
     let pool = &db.0;
 
-    // Check exact content match
-    let rows = sqlx::query_as::<_, KnowledgeItemRow>(
-        "SELECT id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at FROM knowledge_items WHERE content = $1"
-    )
-    .bind(&content)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| db_context("check_knowledge_duplicates", e))?;
+    // Extract URLs from content
+    let urls = extract_urls(&content);
+    
+    if urls.is_empty() {
+        return Ok(DuplicateCheckResult {
+            is_duplicate: false,
+            existing_items: vec![],
+        });
+    }
+
+    // Check if any extracted URL exists in any KB item's content
+    let mut all_duplicates: Vec<KnowledgeItemRow> = Vec::new();
+    
+    for url in urls {
+        let rows = sqlx::query_as::<_, KnowledgeItemRow>(
+            "SELECT id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at 
+             FROM knowledge_items 
+             WHERE content LIKE $1"
+        )
+        .bind(format!("%{}%", url))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| db_context("check_knowledge_duplicates", e))?;
+        
+        all_duplicates.extend(rows);
+    }
+
+    // Deduplicate by ID
+    all_duplicates.sort_by(|a, b| a.id.cmp(&b.id));
+    all_duplicates.dedup_by(|a, b| a.id == b.id);
 
     Ok(DuplicateCheckResult {
-        is_duplicate: !rows.is_empty(),
-        existing_items: rows,
+        is_duplicate: !all_duplicates.is_empty(),
+        existing_items: all_duplicates,
     })
 }
 
@@ -383,11 +429,14 @@ pub async fn quick_save_link(
 ) -> PosResult<KnowledgeItemRow> {
     let pool = &db.0;
     
-    // Check for duplicate URL
+    // Check for duplicate URL using LIKE to find URL anywhere in content
     let existing = sqlx::query_as::<_, KnowledgeItemRow>(
-        "SELECT * FROM knowledge_items WHERE content = $1 AND item_type = 'Link'"
+        "SELECT id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at 
+         FROM knowledge_items 
+         WHERE content LIKE $1 
+         LIMIT 1"
     )
-    .bind(&url)
+    .bind(format!("%{}%", url))
     .fetch_optional(pool)
     .await
     .map_err(|e| db_context("check duplicate link", e))?;
@@ -402,9 +451,9 @@ pub async fn quick_save_link(
     
     let row = sqlx::query_as::<_, KnowledgeItemRow>(
         r#"INSERT INTO knowledge_items 
-           (id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at)
-           VALUES ($1, 'Link', 'Manual', $2, NULL, 'Inbox', NULL, $3, $3)
-           RETURNING *"#
+           (id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at)
+           VALUES ($1, 'link', 'Manual', $2, NULL, 'Inbox', NULL, NULL, NULL, $3, $3)
+           RETURNING id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at"#
     )
     .bind(&id)
     .bind(&url)
@@ -427,7 +476,7 @@ pub async fn get_backlinks(
     
     // Get both forward links (where item is source) and backlinks (where item is target)
     let links = sqlx::query_as::<_, KnowledgeLinkRow>(
-        r#"SELECT * FROM knowledge_links 
+        r#"SELECT id, source_id, target_id, link_type, created_at FROM knowledge_links 
            WHERE source_id = $1 OR target_id = $1
            ORDER BY created_at DESC"#
     )
