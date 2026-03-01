@@ -423,7 +423,7 @@ export function SheetsPage() {
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
                                                     {sub.tags && sub.tags.length > 0 ? (
-                                                        sub.tags.slice(0, 3).map((tag: string) => (
+                                                        sub.tags.map((tag: string) => (
                                                             <span key={tag} className="text-[10px] px-1.5 py-0.5 text-secondary-foreground rounded border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                                                                 {tag}
                                                             </span>

@@ -5,11 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TimePickerInput } from '@/components/ui/time-picker-input';
-import { Flame, Link2, Calendar, AlertCircle } from 'lucide-react';
+import { Flame, AlertCircle } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
-import type { UnifiedGoal, Activity, DuplicateCheckResult, Book, Milestone } from '../lib/types';
+import type { UnifiedGoal, Activity, Book, Milestone } from '../lib/types';
 import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
-import { extractUrls, detectUrlType, parseTemporalKeywords } from '@/lib/kb-utils';
+import { extractUrls, detectUrlType } from '@/lib/kb-utils';
 import { toast } from 'sonner';
 import { BookSelector } from './BookSelector';
 
@@ -46,12 +46,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [availableMilestones, setAvailableMilestones] = useState<Milestone[]>([]);
     const [selectedGoalId, setSelectedGoalId] = useState<string>('none');
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
-
-    // NEW: Smart Input Enhancement State
-    const [detectedUrls, setDetectedUrls] = useState<string[]>([]);
-    const [urlDuplicates, setUrlDuplicates] = useState<DuplicateCheckResult | null>(null);
-    const [showUrlPrompt, setShowUrlPrompt] = useState(false);
-    const [temporalInfo, setTemporalInfo] = useState<{ date?: Date; keyword?: string } | null>(null);
 
     // NEW: Book Tracking State
     const [selectedBookId, setSelectedBookId] = useState<string | null>(editingActivity?.bookId || null);
@@ -179,77 +173,15 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
     const selectedGoal = availableGoals.find(g => g.id === selectedGoalId);
 
-    // NEW: URL Detection Handler
-    const handleTitleChange = async (value: string) => {
+    const handleTitleChange = (value: string) => {
         setTitle(value);
-
-        // Extract URLs from title
-        const urls = extractUrls(value);
-        if (urls.length > 0) {
-            setDetectedUrls(urls);
-
-            // Check for duplicates
-            try {
-                const result = await invoke<DuplicateCheckResult>('check_knowledge_duplicates', {
-                    urls,
-                });
-
-                if (result.isDuplicate) {
-                    setUrlDuplicates(result);
-                    setShowUrlPrompt(true);
-                }
-            } catch (err) {
-                console.error('Failed to check duplicates:', err);
-            }
-        } else {
-            setDetectedUrls([]);
-            setUrlDuplicates(null);
-            setShowUrlPrompt(false);
-        }
     };
 
-    // NEW: Description Change with Temporal Keywords
     const handleDescriptionChange = (value: string) => {
         setDescription(value);
-
-        // Parse temporal keywords
-        const temporal = parseTemporalKeywords(value);
-        if (temporal) {
-            setTemporalInfo(temporal);
-            toast.info(`Detected temporal keyword: "${temporal.keyword}"`, {
-                description: `Will create goal for ${formatDateDDMMYYYY(temporal.date)}`,
-            });
-        } else {
-            setTemporalInfo(null);
-        }
     };
 
-    // NEW: Create Knowledge Item
-    const handleCreateKnowledgeItem = async (url: string) => {
-        try {
-            const urlType = detectUrlType(url);
-            // Map lowercase types to proper case
-            const itemType = (urlType === 'leetcode' || urlType === 'codeforces') ? 'Problem' : 'Link';
-
-            await invoke('create_knowledge_item', {
-                itemType,
-                source: 'ActivityLog',
-                content: url,
-                metadata: {
-                    title: title || 'Activity Link',
-                    tags: [category],
-                },
-                status: 'Inbox',
-            });
-
-            toast.success('Added to Knowledge Base');
-            setShowUrlPrompt(false);
-        } catch (err) {
-            toast.error('Failed to create knowledge item', { description: String(err) });
-        }
-    };
-
-    // Existing submit handler (ENHANCED)
+    // Existing submit handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!startDate || !endDate || !title) {
@@ -267,6 +199,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
         setLoading(true);
         try {
+            let activityId: string;
+            
             if (editingActivity) {
                 // Existing update logic (UNCHANGED)
                 await invoke('update_activity', {
@@ -282,6 +216,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     }
                 });
                 toast.success('Activity updated successfully');
+                activityId = editingActivity.id;
                 onCancelEdit?.();
             } else {
                 // Create activity (ENHANCED WITH BOOK TRACKING)
@@ -299,6 +234,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         date,
                     }
                 });
+                
+                activityId = activityResult.id;
 
                 // Link to goal/milestone if selected
                 if (selectedGoalId !== 'none') {
@@ -323,7 +260,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         // Regular goal linking
                         await invoke('link_activity_to_unified_goal', {
                             goalId: selectedGoalId,
-                            activityId: activityResult.id,
+                            activityId,
                         });
 
                         if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
@@ -356,33 +293,32 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     }
                 }
 
-                // NEW: Create KB item if URL detected and not duplicate
-                if (detectedUrls.length > 0 && !urlDuplicates?.isDuplicate) {
-                    for (const url of detectedUrls) {
-                        await handleCreateKnowledgeItem(url);
-                    }
-                }
-
-                // NEW: Create goal from temporal keyword
-                if (temporalInfo?.date) {
-                    try {
-                        const d = temporalInfo.date;
-                        const goalDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        await invoke('create_unified_goal', {
-                            req: {
-                                text: title,
-                                dueDate: `${goalDate}T00:00:00Z`,
-                                urgent: false,
-                                priority: 'medium',
-                            }
-                        });
-                        toast.success(`Created goal for ${goalDate}`);
-                    } catch (err) {
-                        console.error('Failed to create temporal goal:', err);
-                    }
-                }
-
                 toast.success('Activity logged successfully');
+            }
+
+            // Auto-capture URLs to KB
+            const allText = `${title} ${description}`;
+            const detectedUrls = extractUrls(allText);
+            
+            if (detectedUrls.length > 0) {
+                try {
+                    const urlCaptures = detectedUrls.map(url => ({
+                        url,
+                        activityId,
+                        activityTitle: title,
+                        activityCategory: category,
+                        detectedIn: title.includes(url) ? 'title' : 'description',
+                        urlType: detectUrlType(url)
+                    }));
+                    
+                    await invoke('capture_daily_urls', {
+                        date,
+                        urls: urlCaptures
+                    });
+                } catch (err) {
+                    console.error('Failed to capture URLs to KB:', err);
+                    // Non-blocking - activity still succeeds
+                }
             }
 
             // Reset form (ENHANCED)
@@ -394,10 +330,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setDescription('');
             setSelectedGoalId('none');
             setMetricValues({});
-            setDetectedUrls([]);
-            setUrlDuplicates(null);
-            setShowUrlPrompt(false);
-            setTemporalInfo(null);
             setSelectedBookId(null);
             setPagesRead('');
             setShowBookSelector(false);
@@ -417,55 +349,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            {/* NEW: URL Detection Alert */}
-            {showUrlPrompt && urlDuplicates && (
-                <div
-                    className="p-4 rounded-lg border flex items-start gap-3"
-                    style={{
-                        backgroundColor: 'var(--surface-secondary)',
-                        borderColor: 'var(--color-warning)',
-                    }}
-                >
-                    <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-warning)' }} />
-                    <div className="flex-1">
-                        <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                            URL Already in Knowledge Base
-                        </p>
-                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                            This URL already exists. You can still log the activity without creating a duplicate.
-                        </p>
-                        {urlDuplicates.existingItems.map((item, idx) => (
-                            <div key={idx} className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                • {item.itemType} - {item.content.substring(0, 50)}...
-                            </div>
-                        ))}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => setShowUrlPrompt(false)}
-                        className="text-sm underline"
-                        style={{ color: 'var(--text-secondary)' }}
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
-
-            {/* NEW: Temporal Keyword Detection */}
-            {temporalInfo?.date && (
-                <div
-                    className="p-3 rounded-lg border flex items-center gap-2"
-                    style={{
-                        backgroundColor: 'var(--surface-secondary)',
-                        borderColor: 'var(--color-accent-primary)',
-                    }}
-                >
-                    <Calendar className="w-4 h-4" style={{ color: 'var(--color-accent-primary)' }} />
-                    <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                        Will create goal for <strong>{formatDateDDMMYYYY(temporalInfo.date)}</strong> ({temporalInfo.keyword})
-                    </p>
-                </div>
-            )}
 
             {/* EXISTING: Time Pickers (UNCHANGED) */}
             <div className="grid grid-cols-2 gap-4">
@@ -560,19 +443,13 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
             {/* Row 2: Title */}
             <div>
-                <label className="block text-sm font-medium mb-2 items-center gap-2">
+                <label className="block text-sm font-medium mb-2">
                     Title
-                    {detectedUrls.length > 0 && (
-                        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-accent-primary)' }}>
-                            <Link2 className="w-3 h-3" />
-                            {detectedUrls.length} URL{detectedUrls.length > 1 ? 's' : ''} detected
-                        </span>
-                    )}
                 </label>
                 <Input
                     value={title}
                     onChange={(e) => handleTitleChange(e.target.value)}
-                    placeholder="What did you do? (Paste URLs to auto-detect)"
+                    placeholder="What did you do?"
                     required
                 />
             </div>
@@ -583,7 +460,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 <Textarea
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
-                    placeholder="Try: 'Read this tomorrow' or 'Review next week'"
+                    placeholder="Additional details about this activity..."
                     rows={3}
                 />
             </div>
@@ -683,7 +560,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     <div className="space-y-2">
                         <label className="block text-sm font-medium">Progress on Milestone</label>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm flex-1">{milestone.label || milestone.targetMetric}</span>
+                            <span className="text-sm flex-1">{milestone.targetMetric}</span>
                             <Input
                                 type="number"
                                 min="0"

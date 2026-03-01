@@ -173,34 +173,42 @@ function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role
                   <div className="space-y-1">
                     <button
                       onClick={() => handleStickySelect('note')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
                       style={{ color: 'var(--text-primary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
                       Sticky Note
                     </button>
-                    <div className="h-px bg-white/10 my-1" />
+                    <div className="h-px my-1" style={{ backgroundColor: 'var(--border-primary)' }} />
                     <div className="text-xs px-3 py-1" style={{ color: 'var(--text-secondary)' }}>Stamps:</div>
                     <button
                       onClick={() => handleStickySelect('postal')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
                       style={{ color: 'var(--color-error)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2"/><path d="M5 7 3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9l-2-2"/><path d="M9 7v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V7"/></svg>
                       Postal
                     </button>
                     <button
                       onClick={() => handleStickySelect('check')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
                       style={{ color: 'var(--color-success)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                       Approved
                     </button>
                     <button
                       onClick={() => handleStickySelect('smile')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
                       style={{ color: 'var(--color-warning)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
                       Smile

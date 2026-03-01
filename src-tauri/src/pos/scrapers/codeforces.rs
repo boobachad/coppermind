@@ -120,26 +120,38 @@ pub async fn scrape_codeforces(
         let problem_id = format!("cf-{}{}", contest_id, sub.problem.index);
         let verdict = sub.verdict.as_deref().unwrap_or("TESTING");
 
-        // Idempotency check
-        let existing: Option<(String, Option<i32>, Vec<String>)> = sqlx::query_as(
-            "SELECT id, rating, tags FROM pos_submissions WHERE submitted_time = $1",
+        // Idempotency check - fetch existing with verdict
+        let existing: Option<(String, Option<i32>, Vec<String>, String)> = sqlx::query_as(
+            "SELECT id, rating, tags, verdict FROM pos_submissions WHERE submitted_time = $1",
         )
         .bind(submitted_time)
         .fetch_optional(pool)
         .await
         .map_err(|e| db_context("Check existing", e))?;
 
-        if let Some((ref id, rating, ref tags)) = existing {
-            // Backfill if metadata missing
-            if rating.is_none() || tags.is_empty() {
-                sqlx::query("UPDATE pos_submissions SET rating = $1, tags = $2 WHERE id = $3")
+        if let Some((ref id, rating, ref tags, ref old_verdict)) = existing {
+            // Check if ANY field needs updating
+            let needs_rating = rating.is_none() && sub.problem.rating.is_some();
+            let needs_tags = tags.is_empty() && !sub.problem.tags.is_empty();
+            let needs_verdict = old_verdict != verdict;
+            
+            if needs_rating || needs_tags || needs_verdict {
+                sqlx::query("UPDATE pos_submissions SET rating = $1, tags = $2, verdict = $3 WHERE id = $4")
                     .bind(sub.problem.rating)
                     .bind(&sub.problem.tags)
+                    .bind(verdict)
                     .bind(id)
                     .execute(pool)
                     .await
                     .map_err(|e| db_context("Backfill", e))?;
-                log::info!("[CODEFORCES] Backfilled metadata for {}", sub.problem.name);
+                
+                let mut updates = Vec::new();
+                if needs_rating { updates.push("rating".to_string()); }
+                if needs_tags { updates.push("tags".to_string()); }
+                if needs_verdict { 
+                    updates.push(format!("verdict: {} → {}", old_verdict, verdict)); 
+                }
+                log::info!("[CODEFORCES] Backfilled {} for {}", updates.join(", "), sub.problem.name);
             }
             skipped_count += 1;
             continue;

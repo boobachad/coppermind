@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tauri::State;
 
 use crate::PosDb;
@@ -35,6 +36,17 @@ pub struct KnowledgeLinkRow {
 }
 
 // ─── Request types ──────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UrlCapture {
+    pub url: String,
+    pub activity_id: String,
+    pub activity_title: String,
+    pub activity_category: String,
+    pub detected_in: String,  // "title" | "description"
+    pub url_type: String,     // "leetcode" | "codeforces" | "github" | "generic"
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -510,4 +522,83 @@ pub async fn bulk_update_kb_status(
     
     log::info!("[KB] Bulk updated {} items to status: {}", result.rows_affected(), status);
     Ok(result.rows_affected() as i64)
+}
+
+/// Capture URLs from activity to daily KB item
+#[tauri::command]
+pub async fn capture_daily_urls(
+    db: State<'_, PosDb>,
+    date: String,  // YYYY-MM-DD
+    urls: Vec<UrlCapture>,
+) -> PosResult<KnowledgeItemRow> {
+    let pool = &db.0;
+    let daily_id = format!("daily_{}", date);
+    let now = Utc::now();
+    
+    if urls.is_empty() {
+        return Err(PosError::InvalidInput("No URLs provided".to_string()));
+    }
+    
+    // Fetch existing daily KB item
+    let existing = sqlx::query_as::<_, KnowledgeItemRow>(
+        "SELECT id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at 
+         FROM knowledge_items WHERE id = $1"
+    )
+    .bind(&daily_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| db_context("fetch daily KB", e))?;
+    
+    // Build new URL entries
+    let new_urls: Vec<serde_json::Value> = urls.iter().map(|u| {
+        json!({
+            "url": u.url,
+            "activity_id": u.activity_id,
+            "activity_title": u.activity_title,
+            "activity_category": u.activity_category,
+            "detected_in": u.detected_in,
+            "url_type": u.url_type,
+            "timestamp": now
+        })
+    }).collect();
+    
+    let metadata = if let Some(item) = existing {
+        // Append to existing metadata
+        let mut meta: serde_json::Value = item.metadata
+            .map(|m| m.0)
+            .unwrap_or_else(|| json!({"urls": []}));
+        
+        if let Some(urls_array) = meta.get_mut("urls").and_then(|v| v.as_array_mut()) {
+            urls_array.extend(new_urls);
+        } else {
+            meta["urls"] = json!(new_urls);
+        }
+        
+        meta
+    } else {
+        json!({"urls": new_urls})
+    };
+    
+    let total_urls = metadata["urls"].as_array().map(|a| a.len()).unwrap_or(0);
+    
+    // Atomic upsert
+    let row = sqlx::query_as::<_, KnowledgeItemRow>(
+        r#"INSERT INTO knowledge_items 
+           (id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at)
+           VALUES ($1, 'DailyCapture', 'ActivityLog', $2, $3, 'Inbox', NULL, NULL, NULL, $4, $4)
+           ON CONFLICT (id) DO UPDATE SET
+              metadata = EXCLUDED.metadata,
+              updated_at = EXCLUDED.updated_at
+           RETURNING id, item_type, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at"#
+    )
+    .bind(&daily_id)
+    .bind(format!("{} URLs captured on {}", total_urls, date))
+    .bind(sqlx::types::Json(metadata))
+    .bind(now)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("upsert daily KB", e))?;
+    
+    log::info!("[KB] Captured {} URLs for date {}", urls.len(), date);
+    Ok(row)
 }
