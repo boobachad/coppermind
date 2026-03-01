@@ -18,6 +18,7 @@ interface ScheduleViewerProps {
   onImageChange: (base64: string) => void;
   isLocked?: boolean;
   title: string;
+  date?: string;
 }
 
 export default function ScheduleViewer({
@@ -27,6 +28,7 @@ export default function ScheduleViewer({
   onImageChange,
   isLocked,
   title,
+  date,
 }: ScheduleViewerProps) {
   const [mode, setMode] = useState<'image' | 'editor'>(scheduleData ? 'editor' : 'image');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -188,6 +190,7 @@ export default function ScheduleViewer({
         data={scheduleData}
         onSave={handleSaveSchedule}
         title={title}
+        date={date}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import { setActiveNote } from '../lib/CaptureService';
 import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateDDMMYYYY } from '../pos/lib/time';
+import { softDelete } from '../lib/softDelete';
 
 function NoteTitleInput({ noteId, initialTitle }: { noteId: string, initialTitle: string }) {
   const [title, setTitle] = useState(initialTitle);
@@ -59,9 +60,10 @@ function NoteTitleInput({ noteId, initialTitle }: { noteId: string, initialTitle
   );
 }
 
-function MessageInputArea({ onSendMessage }: { onSendMessage: (role: 'question' | 'answer', content: string) => void }) {
+function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role: 'question' | 'answer', content: string) => void, onAddSticky: (type: 'note' | 'postal' | 'check' | 'smile') => void }) {
   const [inputValue, setInputValue] = useState('');
   const [inputRole, setInputRole] = useState<'question' | 'answer'>('question');
+  const [showStickyMenu, setShowStickyMenu] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = () => {
@@ -72,6 +74,11 @@ function MessageInputArea({ onSendMessage }: { onSendMessage: (role: 'question' 
         inputRef.current.style.height = 'auto';
       }
     }
+  };
+
+  const handleStickySelect = (type: 'note' | 'postal' | 'check' | 'smile') => {
+    onAddSticky(type);
+    setShowStickyMenu(false);
   };
 
   return (
@@ -141,6 +148,69 @@ function MessageInputArea({ onSendMessage }: { onSendMessage: (role: 'question' 
             style={{ color: 'var(--text-primary)' }}
             rows={1}
           />
+          
+          {/* Sticky Note Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowStickyMenu(!showStickyMenu)}
+              className="mb-1 p-2 rounded-xl transition-all shrink-0"
+              style={{
+                backgroundColor: 'var(--color-accent-primary)',
+                color: 'var(--bg-primary)',
+              }}
+              title="Add Sticky Note or Stamp"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
+            </button>
+            
+            {showStickyMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setShowStickyMenu(false)}
+                />
+                <div className="absolute bottom-full right-0 mb-2 material-glass-subtle rounded-lg shadow-xl border p-2 z-20 min-w-[160px]" style={{ borderColor: 'var(--border-color)' }}>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => handleStickySelect('note')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
+                      Sticky Note
+                    </button>
+                    <div className="h-px bg-white/10 my-1" />
+                    <div className="text-xs px-3 py-1" style={{ color: 'var(--text-secondary)' }}>Stamps:</div>
+                    <button
+                      onClick={() => handleStickySelect('postal')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      style={{ color: 'var(--color-error)' }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2"/><path d="M5 7 3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9l-2-2"/><path d="M9 7v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V7"/></svg>
+                      Postal
+                    </button>
+                    <button
+                      onClick={() => handleStickySelect('check')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      style={{ color: 'var(--color-success)' }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                      Approved
+                    </button>
+                    <button
+                      onClick={() => handleStickySelect('smile')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors"
+                      style={{ color: 'var(--color-warning)' }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+                      Smile
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
           <button
             onClick={handleSend}
             disabled={!inputValue.trim()}
@@ -189,7 +259,7 @@ export function NotePage() {
   }, [id]);
 
 
-  // Listen for capture events
+  // Listen for capture events and sticky note updates
   useEffect(() => {
     const handleUrlUpdate = (e: CustomEvent<{ noteId: string }>) => {
       console.log('[NotePage] Received note-urls-updated for:', e.detail.noteId, 'current id:', id);
@@ -219,13 +289,21 @@ export function NotePage() {
       console.log('[NotePage] Received notes-updated, reloading note');
       loadNote();
     };
+    const handleStickyNotesUpdated = () => {
+      console.log('[NotePage] Received sticky-notes-updated, reloading sticky notes');
+      loadStickyNotes();
+    };
+    
     window.addEventListener('note-urls-updated', handleUrlUpdate as EventListener);
     window.addEventListener('note-content-updated', handleContentUpdate as EventListener);
     window.addEventListener('notes-updated', handleNotesUpdated);
+    window.addEventListener('sticky-notes-updated', handleStickyNotesUpdated);
+    
     return () => {
       window.removeEventListener('note-urls-updated', handleUrlUpdate as EventListener);
       window.removeEventListener('note-content-updated', handleContentUpdate as EventListener);
       window.removeEventListener('notes-updated', handleNotesUpdated);
+      window.removeEventListener('sticky-notes-updated', handleStickyNotesUpdated);
     };
   }, [id]);
 
@@ -290,7 +368,8 @@ export function NotePage() {
     if (!id) return;
     try {
       const db = await getDb();
-      const result = await db.select<StickyNoteType[]>('SELECT * FROM sticky_notes WHERE note_id = $1', [id]);
+      // Only load text sticky notes, not stamps (stamps are handled by StickerLayer)
+      const result = await db.select<StickyNoteType[]>('SELECT * FROM sticky_notes WHERE note_id = $1 AND type = $2', [id, 'text']);
       setStickyNotes(result);
     } catch (err) {
       console.error("Error loading sticky notes:", err);
@@ -316,6 +395,37 @@ export function NotePage() {
   };
 
 
+
+  const handleAddSticky = (type: 'note' | 'postal' | 'check' | 'smile') => {
+    if (type === 'note') {
+      // Add sticky note directly to state and DB
+      const stickyId = uuidv4();
+      const newSticky: StickyNoteType = {
+        id: stickyId,
+        note_id: id!, // Use the actual note ID from URL params
+        content: '',
+        color: 'yellow',
+        x: 100,
+        y: 100,
+        created_at: Date.now(),
+        type: 'text',
+        rotation: 0,
+        scale: 1
+      };
+      setStickyNotes(prev => [...prev, newSticky]);
+      
+      // Save to DB
+      getDb().then(db => {
+        db.execute(
+          'INSERT INTO sticky_notes (id, note_id, content, color, x, y, created_at, type, rotation, scale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [stickyId, id!, '', 'yellow', 100, 100, Date.now(), 'text', 0, 1]
+        );
+      });
+    } else {
+      // Add stamp via StickerLayer
+      stickerLayerRef.current?.addSticker(type);
+    }
+  };
 
   const handleSendMessage = (role: 'question' | 'answer', content: string) => {
     const newUserMsg: Message = {
@@ -376,8 +486,7 @@ export function NotePage() {
       variant: 'destructive'
     });
     if (!confirmed) return;
-    const db = await getDb();
-    await db.execute('DELETE FROM sticky_notes WHERE id = $1', [stickyId]);
+    await softDelete('sticky_notes', stickyId);
     setStickyNotes(prev => prev.filter(s => s.id !== stickyId));
   };
 
@@ -479,7 +588,7 @@ export function NotePage() {
         </div>
 
         {/* Sticky Notes Overlay */}
-        {stickyNotes.filter(sn => sn.type !== 'stamp').map(sn => (
+        {stickyNotes.map(sn => (
           <StickyNote
             key={sn.id}
             data={sn}
@@ -491,7 +600,10 @@ export function NotePage() {
       </div>
 
       {/* Input Pill Area */}
-      <MessageInputArea onSendMessage={handleSendMessage} />
+      <MessageInputArea 
+        onSendMessage={handleSendMessage} 
+        onAddSticky={handleAddSticky}
+      />
     </div>
   );
 }

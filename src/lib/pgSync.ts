@@ -276,6 +276,9 @@ async function syncTable(sqliteDb: Database, table: TableDef): Promise<{ pushed:
 async function syncDeletions(sqliteDb: Database): Promise<{ pushed: number; pulled: number; deleted: number }> {
     if (!pgDb) return { pushed: 0, pulled: 0, deleted: 0 };
 
+    // Tables that have updated_at column for timestamp comparison
+    const tablesWithTimestamp = new Set(['notes', 'todos', 'journal_entries']);
+
     // Fetch tombstones from both sides
     const pgTombstones = await pgDb.select<{ id: string; table_name: string; deleted_at: number }[]>(
         'SELECT id, table_name, deleted_at FROM deleted_items'
@@ -302,21 +305,32 @@ async function syncDeletions(sqliteDb: Database): Promise<{ pushed: number; pull
         
         let shouldPull = false;
         if (!localTomb) {
-            // Check if item exists locally with updated_at timestamp
-            const localItem = await sqliteDb.select<{ id: string; updated_at?: number }[]>(
-                `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = ?`,
-                [tomb.id]
-            );
+            // Check if item exists locally
+            if (tablesWithTimestamp.has(tomb.table_name)) {
+                // Table has updated_at, check timestamp
+                const localItem = await sqliteDb.select<{ id: string; updated_at?: number }[]>(
+                    `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = ?`,
+                    [tomb.id]
+                );
 
-            if (localItem.length > 0 && localItem[0].updated_at) {
-                // Item exists locally, check if deletion is newer
-                if (tomb.deleted_at > localItem[0].updated_at) {
+                if (localItem.length > 0 && localItem[0].updated_at) {
+                    // Item exists locally, check if deletion is newer
+                    if (tomb.deleted_at > localItem[0].updated_at) {
+                        shouldPull = true;
+                    }
+                    // else: local item is newer than deletion, keep it
+                } else {
+                    // Item doesn't exist locally or has no timestamp, accept tombstone
                     shouldPull = true;
                 }
-                // else: local item is newer than deletion, keep it
             } else {
-                // Item doesn't exist locally or has no timestamp, accept tombstone
-                shouldPull = true;
+                // Table doesn't have updated_at, just check existence
+                const localItem = await sqliteDb.select<{ id: string }[]>(
+                    `SELECT id FROM ${tomb.table_name} WHERE id = ?`,
+                    [tomb.id]
+                );
+                // If item doesn't exist locally, accept tombstone
+                shouldPull = localItem.length === 0;
             }
         } else if (tomb.deleted_at > localTomb.deleted_at) {
             // Tombstone exists locally but PG version is newer
@@ -341,21 +355,32 @@ async function syncDeletions(sqliteDb: Database): Promise<{ pushed: number; pull
         
         let shouldPush = false;
         if (!pgTomb) {
-            // Check if item exists in PG with updated_at timestamp
-            const pgItem = await pgDb.select<{ id: string; updated_at?: number }[]>(
-                `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = $1`,
-                [tomb.id]
-            );
+            // Check if item exists in PG
+            if (tablesWithTimestamp.has(tomb.table_name)) {
+                // Table has updated_at, check timestamp
+                const pgItem = await pgDb.select<{ id: string; updated_at?: number }[]>(
+                    `SELECT id, updated_at FROM ${tomb.table_name} WHERE id = $1`,
+                    [tomb.id]
+                );
 
-            if (pgItem.length > 0 && pgItem[0].updated_at) {
-                // Item exists in PG, check if deletion is newer
-                if (tomb.deleted_at > pgItem[0].updated_at) {
+                if (pgItem.length > 0 && pgItem[0].updated_at) {
+                    // Item exists in PG, check if deletion is newer
+                    if (tomb.deleted_at > pgItem[0].updated_at) {
+                        shouldPush = true;
+                    }
+                    // else: PG item is newer than deletion, keep it
+                } else {
+                    // Item doesn't exist in PG or has no timestamp, push tombstone
                     shouldPush = true;
                 }
-                // else: PG item is newer than deletion, keep it
             } else {
-                // Item doesn't exist in PG or has no timestamp, push tombstone
-                shouldPush = true;
+                // Table doesn't have updated_at, just check existence
+                const pgItem = await pgDb.select<{ id: string }[]>(
+                    `SELECT id FROM ${tomb.table_name} WHERE id = $1`,
+                    [tomb.id]
+                );
+                // If item doesn't exist in PG, push tombstone
+                shouldPush = pgItem.length === 0;
             }
         } else if (tomb.deleted_at > pgTomb.deleted_at) {
             // Tombstone exists in PG but local version is newer

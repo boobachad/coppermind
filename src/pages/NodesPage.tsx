@@ -20,6 +20,7 @@ import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
 import { Image as ImageIcon, FileText, CheckSquare, Type, BarChart, Trash2 } from 'lucide-react';
 import { getDb } from '../lib/db';
+import { softDelete } from '../lib/softDelete';
 
 
 // Custom Node Components
@@ -210,7 +211,7 @@ export function NodesPage() {
     if (!db) return;
     for (const node of deleted) {
       try {
-        await db.execute('DELETE FROM nodes WHERE id = ?', [node.id]);
+        await softDelete('nodes', node.id);
       } catch (e) {
         console.error("Failed to delete node", e);
       }

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Calendar, Save, Activity, Trash2, Sparkles } from 'lucide-react';
+import { Calendar, Save, Activity, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Navbar } from '../../pos/components/Navbar';
@@ -14,8 +13,7 @@ import MarkdownEditor from '../components/MarkdownEditor';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { getDb } from '../../lib/db';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
-import { activitiesToNapchart } from '../utils/activityToNapchart';
-import type { Activity as ActivityType } from '@/pos/lib/types';
+import { softDelete } from '@/lib/softDelete';
 
 export default function EntryPage() {
   const { date } = useParams<{ date: string }>();
@@ -143,8 +141,8 @@ export default function EntryPage() {
     if (!confirmed) return;
 
     try {
-      const db = await getDb();
-      await db.execute('DELETE FROM journal_entries WHERE date = $1', [date]);
+      if (!entry) return;
+      await softDelete('journal_entries', entry.id);
       toast.success('Entry deleted');
       navigate('/journal');
     } catch (error) {
@@ -152,26 +150,7 @@ export default function EntryPage() {
     }
   };
 
-  const handleGenerateActualSchedule = async () => {
-    if (!date) return;
 
-    try {
-      const response = await invoke<{ activities: ActivityType[] }>('get_activities', { date });
-      const activities = response.activities;
-
-      if (activities.length === 0) {
-        toast.error('No activities logged for this date');
-        return;
-      }
-
-      const napchartData = activitiesToNapchart(activities);
-      setActualScheduleData(napchartData);
-      setHasChanges(true);
-      toast.success(`Generated schedule from ${activities.length} activities`);
-    } catch (error) {
-      toast.error('Failed to generate schedule', { description: String(error) });
-    }
-  };
 
   if (loading) {
     return (
@@ -277,28 +256,10 @@ export default function EntryPage() {
 
           <Card style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                  <Calendar className="h-5 w-5" />
-                  Actual Schedule
-                </h3>
-                {!isPast && (
-                  <Button
-                    onClick={handleGenerateActualSchedule}
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-1"
-                    style={{
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-accent-primary)',
-                      color: 'var(--color-accent-primary)',
-                    }}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    Generate
-                  </Button>
-                )}
-              </div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Calendar className="h-5 w-5" />
+                Actual Schedule
+              </h3>
               <ScheduleViewer
                 scheduleData={actualScheduleData}
                 imageUrl={actualImage}
@@ -306,6 +267,7 @@ export default function EntryPage() {
                 onImageChange={handleActualImageChange}
                 isLocked={isPast}
                 title="Actual Schedule"
+                date={date}
               />
             </CardContent>
           </Card>

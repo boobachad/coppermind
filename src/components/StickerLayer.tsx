@@ -4,24 +4,26 @@ import { StickyNote } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { X, RotateCw, Maximize2 } from 'lucide-react';
 import { STICKER_TYPES } from '../lib/constants';
+import { softDelete } from '../lib/softDelete';
 
 interface StickerProps {
   noteId: string;
 }
 
 export interface StickerLayerRef {
-  addSticker: (type: string) => void;
+  addSticker: (type: 'text' | 'postal' | 'check' | 'smile') => void;
 }
 
 export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId }, ref) => {
   const [stickers, setStickers] = useState<StickyNote[]>([]);
   const [selectedSticker, setSelectedSticker] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render key
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string, startX: number, startY: number, initialX: number, initialY: number } | null>(null);
   const transformRef = useRef<{ id: string, type: 'rotate' | 'scale', startX: number, startY: number, initialVal: number } | null>(null);
 
   useImperativeHandle(ref, () => ({
-    addSticker: (type: string) => {
+    addSticker: (type: 'text' | 'postal' | 'check' | 'smile') => {
       // Spawn in center of container (or screen if container is large)
       const container = containerRef.current;
       let x = 100;
@@ -117,23 +119,43 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
     }
   };
 
-  const addStickerToDb = async (type: string, x: number, y: number) => {
+  const addStickerToDb = async (type: 'text' | 'postal' | 'check' | 'smile', x: number, y: number) => {
     const id = uuidv4();
-    const stickerData = STICKER_TYPES.find(s => s.id === type);
-    if (!stickerData) return;
-
-    const newSticker: StickyNote = {
-      id,
-      note_id: noteId,
-      content: type,
-      color: stickerData.color,
-      x,
-      y,
-      created_at: Date.now(),
-      type: 'stamp',
-      rotation: 0,
-      scale: 1
-    };
+    
+    let newSticker: StickyNote;
+    
+    if (type === 'text') {
+      // Create sticky note with text
+      newSticker = {
+        id,
+        note_id: noteId,
+        content: '', // Empty content for user to fill
+        color: 'yellow', // Default sticky note color
+        x,
+        y,
+        created_at: Date.now(),
+        type: 'text',
+        rotation: 0,
+        scale: 1
+      };
+    } else {
+      // Create stamp sticker
+      const stickerData = STICKER_TYPES.find(s => s.id === type);
+      if (!stickerData) return;
+      
+      newSticker = {
+        id,
+        note_id: noteId,
+        content: type,
+        color: stickerData.color,
+        x,
+        y,
+        created_at: Date.now(),
+        type: 'stamp',
+        rotation: 0,
+        scale: 1
+      };
+    }
 
     setStickers(prev => [...prev, newSticker]);
     
@@ -141,7 +163,7 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
       const db = await getDb();
       await db.execute(
         'INSERT INTO sticky_notes (id, note_id, content, color, x, y, created_at, type, rotation, scale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, noteId, type, newSticker.color, x, y, newSticker.created_at, 'stamp', newSticker.rotation, newSticker.scale]
+        [id, noteId, newSticker.content, newSticker.color, x, y, newSticker.created_at, newSticker.type, newSticker.rotation, newSticker.scale]
       );
     } catch (err) {
       console.error("Failed to save sticker", err);
@@ -170,17 +192,26 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
   };
 
   const removeSticker = async (id: string) => {
-    setStickers(prev => prev.filter(s => s.id !== id));
     try {
-      const db = await getDb();
-      await db.execute('DELETE FROM sticky_notes WHERE id = ?', [id]);
+      // Perform soft delete in database first
+      await softDelete('sticky_notes', id);
+      
+      // Remove from local state after successful DB operation
+      // This ensures React re-renders and removes the element
+      setStickers(prev => prev.filter(s => s.id !== id));
+      
+      // Force re-render to ensure DOM update
+      setRenderKey(prev => prev + 1);
+      
     } catch (err) {
       console.error("Failed to remove sticker", err);
+      // Reload on error to ensure consistency
+      loadStickers();
     }
   };
 
   return (
-    <div ref={containerRef} className="absolute inset-0 pointer-events-none overflow-visible z-20">
+    <div ref={containerRef} className="absolute inset-0 pointer-events-none overflow-visible z-20" key={renderKey}>
       {stickers.map(sticker => {
         const typeData = STICKER_TYPES.find(s => s.id === sticker.content);
         if (!typeData) return null;
@@ -202,7 +233,13 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
             }}
           >
             {/* Sticker Content */}
-            <div className={`relative p-2 ${isSelected ? 'ring-2 ring-blue-500 rounded-lg bg-white/10' : ''}`}>
+            <div 
+              className={`relative p-2 rounded-lg transition-all ${isSelected ? 'ring-2' : ''}`}
+              style={isSelected ? {
+                borderColor: 'var(--color-accent-primary)',
+                backgroundColor: 'var(--bg-hover)'
+              } : {}}
+            >
                <Icon className="w-16 h-16 opacity-90 drop-shadow-md" />
                
                {/* Controls (Only when selected) */}
@@ -210,15 +247,29 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
                  <>
                    {/* Delete Button */}
                    <button 
-                     className="absolute -top-3 -right-3 p-1 bg-white dark:bg-dark-surface text-red-500 dark:text-red-400 rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                     onClick={(e) => { e.stopPropagation(); removeSticker(sticker.id); }}
+                     className="absolute -top-3 -right-3 p-1 rounded-full shadow-md transition-all hover:scale-110"
+                     style={{
+                       backgroundColor: 'var(--bg-secondary)',
+                       color: 'var(--color-error)',
+                       border: '1px solid var(--border-color)'
+                     }}
+                     onClick={async (e) => { 
+                       e.stopPropagation(); 
+                       await removeSticker(sticker.id);
+                       setSelectedSticker(null);
+                     }}
                    >
                      <X className="w-3 h-3" />
                    </button>
 
                    {/* Rotate Handle */}
                    <div 
-                     className="absolute -top-6 left-1/2 transform -translate-x-1/2 cursor-ew-resize p-1 bg-white dark:bg-dark-surface text-blue-500 dark:text-blue-400 rounded-full shadow-md"
+                     className="absolute -top-6 left-1/2 transform -translate-x-1/2 cursor-ew-resize p-1 rounded-full shadow-md transition-all hover:scale-110"
+                     style={{
+                       backgroundColor: 'var(--bg-secondary)',
+                       color: 'var(--color-accent-primary)',
+                       border: '1px solid var(--border-color)'
+                     }}
                      onMouseDown={(e) => {
                        e.stopPropagation();
                        transformRef.current = { id: sticker.id, type: 'rotate', startX: e.clientX, startY: e.clientY, initialVal: sticker.rotation || 0 };
@@ -229,7 +280,12 @@ export const StickerLayer = forwardRef<StickerLayerRef, StickerProps>(({ noteId 
 
                    {/* Scale Handle */}
                    <div 
-                     className="absolute -bottom-3 -right-3 cursor-nwse-resize p-1 bg-white dark:bg-dark-surface text-blue-500 dark:text-blue-400 rounded-full shadow-md"
+                     className="absolute -bottom-3 -right-3 cursor-nwse-resize p-1 rounded-full shadow-md transition-all hover:scale-110"
+                     style={{
+                       backgroundColor: 'var(--bg-secondary)',
+                       color: 'var(--color-accent-primary)',
+                       border: '1px solid var(--border-color)'
+                     }}
                      onMouseDown={(e) => {
                        e.stopPropagation();
                        transformRef.current = { id: sticker.id, type: 'scale', startX: e.clientX, startY: e.clientY, initialVal: sticker.scale || 1 };

@@ -26,46 +26,66 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const noteRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, elementX: 0, elementY: 0 });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 || isEditing) return; // Only left click, ignore if editing text
+    if (e.button !== 0) return; // Only left click
+    
+    // Only prevent dragging if we're actively editing (contentEditable has focus)
+    if (isEditing) return;
+    
+    // Prevent default to enable dragging
+    e.preventDefault();
     e.stopPropagation();
+    
+    // Store initial mouse position and element position
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elementX: data.x,
+      elementY: data.y
+    };
     setIsDragging(true);
-    const rect = noteRef.current?.getBoundingClientRect();
-    if (rect) {
-      dragOffset.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      };
-    }
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
 
-      const parentRect = noteRef.current?.offsetParent?.getBoundingClientRect();
-      if (!parentRect) return;
-
-      const x = e.clientX - parentRect.left - dragOffset.current.x;
-      const y = e.clientY - parentRect.top - dragOffset.current.y;
+      // Prevent default during dragging
+      e.preventDefault();
+      
+      // Calculate delta from initial mouse position
+      const deltaX = e.clientX - dragStart.current.mouseX;
+      const deltaY = e.clientY - dragStart.current.mouseY;
+      
+      // New position = initial element position + mouse delta
+      const x = Math.max(0, dragStart.current.elementX + deltaX);
+      const y = Math.max(0, dragStart.current.elementY + deltaY);
 
       onUpdate(data.id, { x, y });
     };
 
     const handleMouseUp = () => {
-      setIsDragging(false);
+      if (isDragging) {
+        setIsDragging(false);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+      }
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mousemove', handleMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'grabbing';
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
     };
   }, [isDragging, data.id, onUpdate]);
 
@@ -111,15 +131,19 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
           style={{
             backgroundImage: 'linear-gradient(transparent 31px, var(--color-shadow-line) 32px)',
             backgroundSize: '100% 32px',
-            backgroundAttachment: 'local'
+            backgroundAttachment: 'local',
+            pointerEvents: isEditing ? 'auto' : 'none' // Disable pointer events when not editing
           }}
-          contentEditable
+          contentEditable={isEditing}
           suppressContentEditableWarning
           onBlur={(e) => {
             setIsEditing(false);
             onUpdate(data.id, { content: e.currentTarget.textContent || '' });
           }}
-          onFocus={() => setIsEditing(true)}
+          onDoubleClick={() => {
+            setIsEditing(true);
+            setTimeout(() => contentRef.current?.focus(), 10);
+          }}
         >
           {data.content}
         </div>
@@ -134,15 +158,25 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
             onContextMenu={(e) => { e.preventDefault(); setShowMenu(false); }}
           />
           <div
-            className="fixed material-glass-subtle rounded-lg shadow-xl border border-white/10 p-2 z-[9999] flex flex-col gap-1 min-w-[140px]"
-            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+            className="fixed rounded-lg shadow-xl p-2 z-[9999] flex flex-col gap-1 min-w-[140px] border"
+            style={{ 
+              top: contextMenuPos.y, 
+              left: contextMenuPos.x,
+              backgroundColor: 'var(--bg-secondary)',
+              borderColor: 'var(--border-color)',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}
           >
-            <div className="flex gap-1 p-1 mb-1 border-b border-white/10">
+            <div className="flex gap-1 p-1 mb-1 border-b" style={{ borderColor: 'var(--border-color)' }}>
               {Object.keys(COLORS).map(color => (
                 <button
                   key={color}
-                  className={clsx("w-4 h-4 rounded-full border border-black/10", COLORS[color])}
-                  onClick={() => onUpdate(data.id, { color })}
+                  className={clsx("w-4 h-4 rounded-full border transition-all hover:scale-110", COLORS[color])}
+                  style={{ borderColor: 'var(--border-color)' }}
+                  onClick={() => {
+                    onUpdate(data.id, { color });
+                    setShowMenu(false);
+                  }}
                 />
               ))}
             </div>
@@ -153,30 +187,87 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
                 setTimeout(() => contentRef.current?.focus(), 10);
                 setShowMenu(false);
               }}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white hover:bg-white/10 rounded"
+              className="flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all"
+              style={{ 
+                color: 'var(--text-primary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
             >
               <Edit className="w-3 h-3" /> Edit
             </button>
 
             <button
-              onClick={() => onReorder(data.id, 'front')}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white/80 hover:bg-white/10 rounded"
+              onClick={() => {
+                onReorder(data.id, 'front');
+                setShowMenu(false);
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all"
+              style={{ 
+                color: 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
             >
               <ArrowUp className="w-3 h-3" /> Bring to front
             </button>
 
             <button
-              onClick={() => onReorder(data.id, 'back')}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-white/80 hover:bg-white/10 rounded"
+              onClick={() => {
+                onReorder(data.id, 'back');
+                setShowMenu(false);
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all"
+              style={{ 
+                color: 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
             >
               <ArrowDown className="w-3 h-3" /> Send to back
             </button>
 
-            <div className="h-px bg-white/10 my-1" />
+            <div className="h-px my-1" style={{ backgroundColor: 'var(--border-color)' }} />
 
             <button
-              onClick={() => onDelete(data.id)}
-              className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-300 hover:bg-red-500/20 rounded"
+              onClick={() => {
+                onDelete(data.id);
+                setShowMenu(false);
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all"
+              style={{ 
+                color: 'var(--color-error)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-error-bg)';
+                e.currentTarget.style.color = 'var(--color-error)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-error)';
+              }}
             >
               <Trash2 className="w-3 h-3" /> Delete
             </button>

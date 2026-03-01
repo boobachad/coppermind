@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { NapchartData } from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
+import { activitiesToNapchart } from '../utils/activityToNapchart';
 
 declare global {
   interface Window {
@@ -16,6 +19,7 @@ interface NapchartModalProps {
   data: NapchartData | null;
   onSave: (data: NapchartData) => void;
   title: string;
+  date?: string; // Optional date for generating from activities
 }
 
 const COLORS = [
@@ -29,7 +33,7 @@ const COLORS = [
   { value: 'pink', hex: '#ff94d4' },
 ];
 
-export default function NapchartModal({ isOpen, onClose, data, onSave, title }: NapchartModalProps) {
+export default function NapchartModal({ isOpen, onClose, data, onSave, title, date }: NapchartModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -91,26 +95,29 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
         defaultColor: currentColor,
       });
 
-      chartRef.current.onSetSelected = (id: number | false) => {
+      // CRITICAL: Set callbacks immediately to prevent null reference errors
+      const chart = chartRef.current;
+      
+      chart.onSetSelected = (id: number | false) => {
         setSelectedElement(id);
         if (id !== false) {
-          const element = chartRef.current.data.elements.find((e: any) => e.id === id);
+          const element = chart.data.elements.find((e: any) => e.id === id);
           if (element) {
             setElementText(element.text || '');
             setTimeout(() => inputRef.current?.focus(), 0);
           }
-          chartRef.current.penMode = false;
-          chartRef.current.interaction = true;
+          chart.penMode = false;
+          chart.interaction = true;
         } else {
           setElementText('');
-          chartRef.current.penMode = true;
+          chart.penMode = true;
         }
       };
 
-      chartRef.current.onUpdate = () => {
-        if (!chartRef.current) return;
+      chart.onUpdate = () => {
+        if (!chart) return;
         if (selectedElement !== false) {
-          const element = chartRef.current.data.elements.find((e: any) => e.id === selectedElement);
+          const element = chart.data.elements.find((e: any) => e.id === selectedElement);
           if (element && element.text !== elementText) {
             setElementText(element.text || '');
           }
@@ -134,8 +141,6 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
     return () => {
       observer.disconnect();
       if (chartRef.current) {
-        chartRef.current.onSetSelected = null;
-        chartRef.current.onUpdate = null;
         chartRef.current = null;
       }
     };
@@ -191,6 +196,83 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
       };
       onSave(napchartData);
       onClose();
+    }
+  };
+
+  const handleGenerateFromActivities = async () => {
+    if (!date) {
+      toast.error('No date provided');
+      return;
+    }
+
+    try {
+      const response = await invoke<{ activities: any[] }>('get_activities', { date });
+      const activities = response.activities;
+      
+      if (!activities || activities.length === 0) {
+        toast.info('No activities found for this date');
+        return;
+      }
+
+      const napchartData = activitiesToNapchart(activities);
+      
+      if (chartRef.current && canvasRef.current) {
+        // Destroy old chart and reinitialize with new data
+        const ctx = canvasRef.current.getContext('2d');
+        if (!ctx) return;
+
+        const getThemeColor = () => {
+          const style = getComputedStyle(document.documentElement);
+          const color = style.getPropertyValue('--text-primary').trim();
+          return color || '#1a1a1f';
+        };
+
+        // Reinitialize chart with new data
+        chartRef.current = window.Napchart.init(ctx, napchartData, {
+          interaction: true,
+          penMode: true,
+          background: 'transparent',
+          fontColor: getThemeColor(),
+          defaultColor: currentColor,
+        });
+
+        // Restore event handlers
+        chartRef.current.onSetSelected = (id: number | false) => {
+          setSelectedElement(id);
+          if (id !== false) {
+            const element = chartRef.current.data.elements.find((e: any) => e.id === id);
+            if (element) {
+              setElementText(element.text || '');
+              setTimeout(() => inputRef.current?.focus(), 0);
+            }
+            chartRef.current.penMode = false;
+            chartRef.current.interaction = true;
+          } else {
+            setElementText('');
+            chartRef.current.penMode = true;
+          }
+        };
+
+        chartRef.current.onUpdate = () => {
+          if (!chartRef.current) return;
+          if (selectedElement !== false) {
+            const element = chartRef.current.data.elements.find((e: any) => e.id === selectedElement);
+            if (element && element.text !== elementText) {
+              setElementText(element.text || '');
+            }
+          }
+        };
+        
+        setCurrentShape(napchartData.shape);
+        setLanes(napchartData.lanes);
+        setSelectedElement(false);
+        setElementText('');
+        
+        toast.success(`Generated schedule from ${activities.length} activities`);
+      }
+    } catch (error) {
+      console.error('Failed to generate schedule:', error);
+      toast.error(`Failed to generate schedule: ${error}`);
     }
   };
 
@@ -293,6 +375,16 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title }: 
           <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
             <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
             <div className="flex items-center gap-2">
+              {date && (
+                <Button 
+                  onClick={handleGenerateFromActivities} 
+                  variant="outline" 
+                  className="font-medium"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate from Activities
+                </Button>
+              )}
               <Button onClick={handleSave} variant="default" className="font-medium">Save</Button>
               <button onClick={onClose} className="p-2 rounded hover:bg-white/10 transition-colors">
                 <X className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />

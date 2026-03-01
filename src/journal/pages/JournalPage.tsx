@@ -10,6 +10,7 @@ import { getLocalDateString, formatDateDDMMYYYY } from '../../pos/lib/time';
 import { JournalEntry } from '../types';
 import { getDb } from '../../lib/db';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
+import { softDelete } from '@/lib/softDelete';
 
 function genId(): string {
   return Math.random().toString(36).substring(2, 14);
@@ -78,7 +79,7 @@ export default function JournalPage() {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, entryId: string, date: string) => {
+  const handleDelete = async (e: React.MouseEvent, entryId: string) => {
     e.stopPropagation();
     
     const confirmed = await confirm({
@@ -92,8 +93,7 @@ export default function JournalPage() {
     if (!confirmed) return;
 
     try {
-      const db = await getDb();
-      await db.execute('DELETE FROM journal_entries WHERE id = $1', [entryId]);
+      await softDelete('journal_entries', entryId);
       toast.success('Entry deleted');
       await loadEntries();
     } catch (error) {
@@ -167,7 +167,7 @@ export default function JournalPage() {
                         {formatDateDDMMYYYY(new Date(entry.date))}
                       </span>
                       <button
-                        onClick={(e) => handleDelete(e, entry.id, entry.date)}
+                        onClick={(e) => handleDelete(e, entry.id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-opacity-10"
                         style={{ color: 'var(--color-error)' }}
                       >
