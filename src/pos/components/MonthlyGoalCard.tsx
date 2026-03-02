@@ -8,9 +8,10 @@ interface MonthlyGoalCardProps {
   goal: Milestone;
   onEdit: () => void;
   onDelete: () => void;
+  isArchived?: boolean;
 }
 
-export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps) {
+export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: MonthlyGoalCardProps) {
   const [showDetails, setShowDetails] = useState(false);
 
   // Calculate progress percentage
@@ -52,6 +53,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
       style={{
         backgroundColor: 'var(--glass-bg)',
         borderColor: 'var(--glass-border)',
+        opacity: isArchived ? 0.85 : 1,
       }}
     >
       {/* Header */}
@@ -71,30 +73,32 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onEdit}
-            className="p-2 rounded-lg transition-colors"
-            style={{
-              backgroundColor: 'var(--surface-secondary)',
-              color: 'var(--text-secondary)',
-            }}
-            title="Edit goal"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-2 rounded-lg transition-colors"
-            style={{
-              backgroundColor: 'var(--surface-secondary)',
-              color: 'var(--color-error)',
-            }}
-            title="Delete goal"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+        {!isArchived && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onEdit}
+              className="p-2 rounded-lg transition-colors"
+              style={{
+                backgroundColor: 'var(--glass-bg-subtle)',
+                color: 'var(--text-secondary)',
+              }}
+              title="Edit goal"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-2 rounded-lg transition-colors"
+              style={{
+                backgroundColor: 'var(--glass-bg-subtle)',
+                color: 'var(--color-error)',
+              }}
+              title="Delete goal"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Progress Bar */}
@@ -111,7 +115,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
         {/* Progress bar with heatmap colors */}
         <div
           className="h-3 rounded-full overflow-hidden"
-          style={{ backgroundColor: 'var(--surface-secondary)' }}
+          style={{ backgroundColor: 'var(--glass-bg-subtle)' }}
         >
           <div
             className="h-full transition-all duration-500 rounded-full"
@@ -136,7 +140,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
       <div
         className="mb-4 p-3 rounded-lg"
         style={{
-          backgroundColor: 'var(--surface-secondary)',
+          backgroundColor: 'var(--glass-bg-subtle)',
         }}
       >
         <div className="flex items-center justify-between">
@@ -184,7 +188,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete }: MonthlyGoalCardProps
         <div
           className="mt-3 p-3 rounded-lg text-sm space-y-1"
           style={{
-            backgroundColor: 'var(--surface-secondary)',
+            backgroundColor: 'var(--glass-bg-subtle)',
             color: 'var(--text-secondary)',
           }}
         >

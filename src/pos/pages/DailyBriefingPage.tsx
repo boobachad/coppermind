@@ -35,15 +35,6 @@ export function DailyBriefingPage() {
     }
   };
 
-  const toggleGoalCompletion = async (goalId: string) => {
-    try {
-      await invoke('toggle_unified_goal_completion', { id: goalId });
-      loadBriefing(); // Refresh
-    } catch (err) {
-      toast.error('Failed to toggle goal', { description: String(err) });
-    }
-  };
-
   const updateKbStatus = async (itemId: string, newStatus: string) => {
     try {
       await invoke('update_knowledge_item', {
@@ -98,7 +89,7 @@ export function DailyBriefingPage() {
   }
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="h-screen overflow-y-auto p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -208,11 +199,7 @@ export function DailyBriefingPage() {
           ) : (
             <div className="space-y-2">
               {briefing.goals.map(goal => (
-                <GoalItem
-                  key={goal.id}
-                  goal={goal}
-                  onToggle={() => toggleGoalCompletion(goal.id)}
-                />
+                <GoalItem key={goal.id} goal={goal} />
               ))}
             </div>
           )}
@@ -227,12 +214,7 @@ export function DailyBriefingPage() {
           >
             <div className="space-y-2">
               {briefing.debtGoals.map(goal => (
-                <GoalItem
-                  key={goal.id}
-                  goal={goal}
-                  onToggle={() => toggleGoalCompletion(goal.id)}
-                  isDebt
-                />
+                <GoalItem key={goal.id} goal={goal} isDebt />
               ))}
             </div>
           </Section>
@@ -340,11 +322,10 @@ function Section({ title, count, alert, children }: SectionProps) {
 
 interface GoalItemProps {
   goal: UnifiedGoal;
-  onToggle: () => void;
   isDebt?: boolean;
 }
 
-function GoalItem({ goal, onToggle, isDebt }: GoalItemProps) {
+function GoalItem({ goal, isDebt }: GoalItemProps) {
   return (
     <div
       className="flex items-start gap-3 p-3 rounded-lg transition-colors hover:bg-opacity-80"
@@ -352,17 +333,18 @@ function GoalItem({ goal, onToggle, isDebt }: GoalItemProps) {
         backgroundColor: 'var(--surface-secondary)',
       }}
     >
-      <button
-        onClick={onToggle}
-        className="mt-0.5 transition-colors"
+      {/* Read-only completion indicator */}
+      <div
+        className="mt-0.5"
         style={{ color: goal.completed ? 'var(--color-success)' : 'var(--text-tertiary)' }}
+        title={goal.completed ? 'Completed (linked to activity)' : 'Not completed - link to activity to complete'}
       >
         {goal.completed ? (
           <CheckCircle2 className="w-5 h-5" />
         ) : (
           <Circle className="w-5 h-5" />
         )}
-      </button>
+      </div>
       <div className="flex-1">
         <p
           className={goal.completed ? 'line-through' : ''}
@@ -405,6 +387,17 @@ function GoalItem({ goal, onToggle, isDebt }: GoalItemProps) {
               }}
             >
               Debt
+            </span>
+          )}
+          {goal.verified && (
+            <span
+              className="px-2 py-0.5 rounded text-xs font-medium"
+              style={{
+                backgroundColor: 'var(--color-success)',
+                color: 'white',
+              }}
+            >
+              Verified
             </span>
           )}
         </div>
@@ -464,7 +457,7 @@ function KbItem({ item, onUpdateStatus }: KbItemProps) {
             {item.metadata?.title || item.content}
           </p>
           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            {item.itemType} • {item.status}
+            {item.source} • {item.status}
           </p>
         </div>
         <div className="flex gap-2">

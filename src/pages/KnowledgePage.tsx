@@ -139,7 +139,7 @@ export default function KnowledgePage() {
                                             Viewing backlinks for
                                         </div>
                                         <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                            {selectedItem.itemType}: {selectedItem.content?.slice(0, 80)}{(selectedItem.content?.length ?? 0) > 80 ? '…' : ''}
+                                            {selectedItem.source}: {selectedItem.content?.slice(0, 80)}{(selectedItem.content?.length ?? 0) > 80 ? '…' : ''}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>

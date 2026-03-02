@@ -349,7 +349,7 @@ pub fn run() {
             unified_goals::get_unified_goals,
             unified_goals::update_unified_goal,
             unified_goals::delete_unified_goal,
-            unified_goals::toggle_unified_goal_completion,
+            // REMOVED: toggle_unified_goal_completion - goals only completable via activity linkage
             unified_goals::link_activity_to_unified_goal,
             daily_briefing::get_daily_briefing,
             knowledge_base::create_knowledge_item,

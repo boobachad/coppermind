@@ -1,7 +1,7 @@
 import { ExternalLink, Edit2, Trash2, Archive, Calendar, Link as LinkIcon, FileText, Folder } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { KnowledgeItem } from '@/pos/lib/types';
-import { generatePreview, extractDomain, detectUrlType, formatReviewDate } from '@/lib/kb-utils';
+import { extractDomain, detectUrlType, formatReviewDate } from '@/lib/kb-utils';
 import { Button } from '@/components/ui/button';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 

@@ -56,6 +56,15 @@ pub async fn get_daily_briefing(
     .await
     .map_err(|e| db_context("fetch today's goals", e))?;
 
+    // 1.5. Query completed goals count for today (separate query to get accurate count)
+    let completed_goals = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM unified_goals WHERE due_date_local = $1 AND completed = TRUE"
+    )
+    .bind(&local_date)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("count completed goals", e))? as i32;
+
     // 2. Query debt goals (is_debt = TRUE AND completed = FALSE)
     let debt_goals = sqlx::query_as::<_, UnifiedGoalRow>(
         "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE is_debt = TRUE AND completed = FALSE ORDER BY due_date ASC"
@@ -119,13 +128,12 @@ pub async fn get_daily_briefing(
 
     // 5. Calculate stats
     let total_goals = goals.len() as i32;
-    let completed_goals = goals.iter().filter(|g| g.completed).count() as i32;
     let debt_count = debt_goals.len() as i32;
     let kb_items_due_count = kb_items_due.len() as i32;
 
     let stats = BriefingStats {
         total_goals,
-        completed_goals,
+        completed_goals,  // Now uses separate query result
         debt_count,
         kb_items_due_count,
         milestones_on_track,

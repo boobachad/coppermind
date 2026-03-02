@@ -211,7 +211,7 @@ export function NodesPage() {
     if (!db) return;
     for (const node of deleted) {
       try {
-        await softDelete('nodes', node.id);
+        await softDelete('nodes', String(node.id));
       } catch (e) {
         console.error("Failed to delete node", e);
       }

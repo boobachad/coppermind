@@ -21,9 +21,13 @@ interface MilestoneWidgetProps {
    * If true, opens the create modal on mount
    */
   openCreateModal?: boolean;
+  /**
+   * If true, the selected month is in the past (read-only mode)
+   */
+  isArchived?: boolean;
 }
 
-export function MilestoneWidget({ month, showAll = false, openCreateModal = false }: MilestoneWidgetProps) {
+export function MilestoneWidget({ month, showAll = false, openCreateModal = false, isArchived = false }: MilestoneWidgetProps) {
   const [goals, setGoals] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,17 +47,33 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
     setLoading(true);
     try {
       const result = await invoke<Milestone[]>('get_milestones', {
-        activeOnly: !showAll,
+        activeOnly: false, // Always fetch all milestones for month filtering
       });
 
       // Filter by month if specified
       let filtered = result;
       if (month) {
+        // Get month boundaries
+        const [year, monthNum] = month.split('-').map(Number);
+        const monthStart = new Date(year, monthNum - 1, 1);
+        const monthEnd = new Date(year, monthNum, 0); // Last day of month
+        
+        const monthStartStr = monthStart.toISOString().split('T')[0];
+        const monthEndStr = monthEnd.toISOString().split('T')[0];
+
         filtered = result.filter(goal => {
-          const startMonth = goal.periodStart.substring(0, 7); // Extract YYYY-MM
-          const endMonth = goal.periodEnd.substring(0, 7);
-          return month >= startMonth && month <= endMonth;
+          const goalStart = goal.periodStart.split('T')[0];
+          const goalEnd = goal.periodEnd.split('T')[0];
+          
+          // Milestone overlaps with month if:
+          // - It starts before month ends AND
+          // - It ends after month starts
+          return goalStart <= monthEndStr && goalEnd >= monthStartStr;
         });
+      } else if (!showAll) {
+        // If no month specified and not showAll, filter active only
+        const now = new Date().toISOString();
+        filtered = result.filter(goal => goal.periodEnd >= now);
       }
 
       setGoals(filtered);
@@ -114,17 +134,19 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
             Track period-based targets with automatic daily distribution
           </p>
         </div>
-        <button
-          onClick={handleCreateGoal}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-          style={{
-            backgroundColor: 'var(--btn-primary-bg)',
-            color: 'var(--btn-primary-text)',
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Milestone</span>
-        </button>
+        {!isArchived && (
+          <button
+            onClick={handleCreateGoal}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg)',
+              color: 'var(--btn-primary-text)',
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Milestone</span>
+          </button>
+        )}
       </div>
 
       {/* Goals Grid */}
@@ -161,6 +183,7 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
               goal={goal}
               onEdit={() => handleEditGoal(goal)}
               onDelete={() => handleDeleteGoal(goal.id)}
+              isArchived={isArchived}
             />
           ))}
         </div>

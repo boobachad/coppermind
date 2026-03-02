@@ -104,19 +104,29 @@ pub async fn create_unified_goal(
     let metrics_json = req.metrics.as_ref().map(|m| sqlx::types::Json(m.clone()));
     let labels_json = req.labels.as_ref().map(|l| sqlx::types::Json(l.clone()));
 
+    // Calculate due_date_local: extract YYYY-MM-DD from due_date OR use created_at date
+    // This ensures goals always have a local date for Daily Briefing queries
+    let due_date_local = if let Some(dt) = due_date_parsed {
+        dt.format("%Y-%m-%d").to_string()
+    } else {
+        // Default: use created_at date as due_date_local
+        now.format("%Y-%m-%d").to_string()
+    };
+
     let row = sqlx::query_as::<_, UnifiedGoalRow>(
         r#"INSERT INTO unified_goals (
             id, text, description, completed, completed_at, verified,
-            due_date, recurring_pattern, recurring_template_id, priority, urgent,
+            due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
             created_at, updated_at, original_date, is_debt
-        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
+        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, $6, NULL, $7, $8, $9, $10, NULL, $11, $12, $13, $13, NULL, false)
         RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(&id)
     .bind(&req.text)
     .bind(&req.description)
     .bind(due_date_parsed)
+    .bind(&due_date_local)
     .bind(&req.recurring_pattern)
     .bind(req.priority.unwrap_or_else(|| "medium".to_string()))
     .bind(req.urgent.unwrap_or(false))
@@ -442,30 +452,9 @@ pub async fn delete_unified_goal(
     Ok(())
 }
 
-#[tauri::command]
-pub async fn toggle_unified_goal_completion(
-    db: State<'_, PosDb>,
-    id: String,
-) -> PosResult<UnifiedGoalRow> {
-    let pool = &db.0;
-    let now = Utc::now();
-
-    let row = sqlx::query_as::<_, UnifiedGoalRow>(
-        r#"UPDATE unified_goals 
-           SET completed = NOT completed,
-               completed_at = CASE WHEN NOT completed THEN $1 ELSE NULL END,
-               updated_at = $1
-           WHERE id = $2
-           RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
-    )
-    .bind(now)
-    .bind(id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| db_context("toggle_unified_goal_completion", e))?;
-
-    Ok(row)
-}
+// REMOVED: toggle_unified_goal_completion
+// Goals can ONLY be completed via link_activity_to_unified_goal
+// This enforces that all completed goals have verified activity proof
 
 #[tauri::command]
 pub async fn link_activity_to_unified_goal(
