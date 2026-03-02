@@ -94,7 +94,7 @@ function KbRow({ k }: { k: KbGraphItem }) {
         <div className="flex items-center gap-2 py-1.5 border-b"
             style={{ borderColor: 'var(--glass-border)', fontSize: '12px' }}>
             <span style={{ color: 'var(--text-tertiary)', fontSize: '10px', textTransform: 'uppercase' }}>
-                {k.itemType}
+                {k.tags.join(', ')}
             </span>
             <div className="flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
                 {k.metadataTitle ?? k.content.substring(0, 60)}

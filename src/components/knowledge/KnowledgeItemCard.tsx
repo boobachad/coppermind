@@ -16,16 +16,18 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
     const { confirm } = useConfirmDialog();
     
     const getTypeIcon = () => {
-        switch (item.itemType) {
-            case 'Link':
-                return <LinkIcon className="w-4 h-4" />;
-            case 'Problem':
-                return <FileText className="w-4 h-4" />;
-            case 'Quest':
-                return <Folder className="w-4 h-4" />;
-            default:
-                return <FileText className="w-4 h-4" />;
+        // Use first tag to determine icon
+        const firstTag = item.tags[0]?.toLowerCase() || '';
+        if (firstTag.includes('link') || firstTag.includes('website')) {
+            return <LinkIcon className="w-4 h-4" />;
         }
+        if (firstTag.includes('problem') || firstTag.includes('coding')) {
+            return <FileText className="w-4 h-4" />;
+        }
+        if (firstTag.includes('quest') || firstTag.includes('project')) {
+            return <Folder className="w-4 h-4" />;
+        }
+        return <FileText className="w-4 h-4" />;
     };
 
     const getTypeColor = () => {
@@ -148,11 +150,20 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
                             {getTypeIcon()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div
-                                className="text-xs font-medium uppercase tracking-wider mb-0.5"
-                                style={{ color: getTypeColor() }}
-                            >
-                                {item.itemType}
+                            {/* Display all tags as badges with wrapping */}
+                            <div className="flex flex-wrap gap-1 mb-1">
+                                {item.tags.map((tag, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded whitespace-nowrap"
+                                        style={{
+                                            background: `${getTypeColor()}15`,
+                                            color: getTypeColor(),
+                                        }}
+                                    >
+                                        {tag}
+                                    </div>
+                                ))}
                             </div>
                             {hasUrl() && (
                                 <div

@@ -256,7 +256,7 @@ export interface KnowledgeMetadata {
 
 export interface KnowledgeItem {
     id: string;
-    itemType: string;  // Free-text: "website", "book", "video", "inspiration", etc.
+    tags: string[];           // Array of tags like ["thinking", "space", "inspiration"]
     source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
     content: string;              // Multi-line text, can contain URLs, notes, anything
     metadata: KnowledgeMetadata | null;  // Title, Tags, Difficulty, RelatedItemIds
@@ -563,7 +563,7 @@ export interface SubmissionSummary {
 export interface KbGraphItem {
     id: string;
     date: string;           // YYYY-MM-DD
-    itemType: string;
+    tags: string[];
     content: string;
     status: string;
     createdAt: string;      // ISO UTC

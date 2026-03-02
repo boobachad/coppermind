@@ -225,17 +225,19 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     // ─── Knowledge Base - Items ─────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS knowledge_items (
         id                  TEXT PRIMARY KEY,
-        item_type           TEXT NOT NULL CHECK (item_type IN ('Link', 'Problem', 'NoteRef', 'StickyRef', 'Quest')),
+        tags                TEXT[] DEFAULT '{}',
         source              TEXT NOT NULL CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal')),
         content             TEXT NOT NULL,
         metadata            JSONB,
         status              TEXT NOT NULL DEFAULT 'Inbox' CHECK (status IN ('Inbox', 'Planned', 'Completed', 'Archived')),
         next_review_date    TIMESTAMPTZ,
+        linked_note_id      TEXT,
+        linked_journal_date TEXT,
         created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_status ON knowledge_items(status)",
-    "CREATE INDEX IF NOT EXISTS idx_kb_items_type ON knowledge_items(item_type)",
+    "CREATE INDEX IF NOT EXISTS idx_kb_items_tags ON knowledge_items USING gin(tags)",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_review ON knowledge_items(next_review_date) WHERE next_review_date IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_content ON knowledge_items USING gin(to_tsvector('english', content))",
 

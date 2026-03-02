@@ -133,7 +133,7 @@ export function BacklinksPanel({ itemId, onItemClick }: BacklinksPanelProps) {
                             className="text-sm font-medium truncate"
                             style={{ color: 'var(--text-primary)' }}
                         >
-                            {item.itemType}
+                            {item.tags.join(', ')}
                         </div>
                         {badge && (
                             <span

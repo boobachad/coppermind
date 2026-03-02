@@ -6,7 +6,7 @@ use tauri::State;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ContextItem {
     pub id: String,
-    pub item_type: String,
+    pub tags: Vec<String>,
     pub content: String,
     pub title: Option<String>,
     pub relevance_score: f32,
@@ -22,7 +22,7 @@ struct GoalRow {
 #[derive(sqlx::FromRow)]
 struct ContextSearchRow {
     id: String,
-    item_type: String,
+    tags: Vec<String>,
     content: String,
     metadata: Option<serde_json::Value>,
     relevance: Option<f32>,
@@ -70,7 +70,7 @@ pub async fn get_context_for_goal(
         r#"
         SELECT 
             id,
-            item_type,
+            tags,
             content,
             metadata,
             ts_rank(
@@ -101,7 +101,7 @@ pub async fn get_context_for_goal(
 
             ContextItem {
                 id: row.id,
-                item_type: row.item_type,
+                tags: row.tags,
                 content: row.content,
                 title,
                 relevance_score: row.relevance.unwrap_or(0.0) as f32,

@@ -25,7 +25,11 @@ export function DailyBriefingPage() {
       });
       setBriefing(result);
     } catch (err) {
-      toast.error('Failed to load daily briefing', { description: String(err) });
+      const errorMsg = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : String(err);
+      console.error('Failed to load daily briefing:', err);
+      toast.error('Failed to load daily briefing', { description: errorMsg });
     } finally {
       setLoading(false);
     }

@@ -110,7 +110,7 @@ pub async fn get_daily_briefing(
 
     // 4. Query KB items due for review (next_review_date <= date AND status != 'Completed')
     let kb_items_due = sqlx::query_as::<_, KnowledgeItemRow>(
-        "SELECT id, item_type, source, content, metadata, status, next_review_date, created_at, updated_at FROM knowledge_items WHERE next_review_date <= $1 AND status != 'Completed' ORDER BY next_review_date ASC"
+        "SELECT id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at FROM knowledge_items WHERE next_review_date <= $1 AND status != 'Completed' ORDER BY next_review_date ASC"
     )
     .bind(date_parsed)
     .fetch_all(pool)

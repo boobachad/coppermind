@@ -218,7 +218,11 @@ export function KnowledgeGraph({ selectedItemId, onNodeClick, onDateClick, onDat
             nodesRef.current = nodes;
             initSim(nodes, hierarchyLinks, kbLinks, w, h);
         } catch (err) {
-            toast.error('Failed to load graph', { description: String(err) });
+            const errorMsg = err && typeof err === 'object' && 'message' in err
+                ? String(err.message)
+                : String(err);
+            console.error('Failed to load graph:', err);
+            toast.error('Failed to load graph', { description: errorMsg });
         } finally {
             setLoading(false);
         }

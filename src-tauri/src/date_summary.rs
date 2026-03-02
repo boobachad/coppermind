@@ -52,7 +52,7 @@ pub struct SubmissionSummary {
 pub struct KbGraphItem {
     pub id: String,
     pub date: String,           // created_at cast to YYYY-MM-DD
-    pub item_type: String,
+    pub tags: Vec<String>,
     pub content: String,
     pub status: String,
     pub created_at: DateTime<Utc>,
@@ -131,7 +131,7 @@ struct SubmissionRow {
 
 #[derive(sqlx::FromRow)]
 struct KbItemRow {
-    id: String, date_str: String, item_type: String, content: String,
+    id: String, date_str: String, tags: Vec<String>, content: String,
     status: String, created_at: DateTime<Utc>, metadata_title: Option<String>,
 }
 
@@ -219,7 +219,7 @@ pub async fn get_yearly_graph_data(
     // ── KB items (created_at TIMESTAMPTZ; JSONB title extracted in SQL) ──
     let kb_rows = sqlx::query_as::<_, KbItemRow>(
         r#"SELECT id, created_at::date::text AS date_str,
-                  item_type, content, status, created_at,
+                  tags, content, status, created_at,
                   metadata->>'title' AS metadata_title
            FROM knowledge_items
            WHERE EXTRACT(YEAR FROM created_at) = $1
@@ -232,7 +232,7 @@ pub async fn get_yearly_graph_data(
         kb_rows.iter().map(|r| r.id.clone()).collect();
 
     let kb_items = kb_rows.into_iter().map(|r| KbGraphItem {
-        id: r.id, date: r.date_str, item_type: r.item_type,
+        id: r.id, date: r.date_str, tags: r.tags,
         content: r.content, status: r.status, created_at: r.created_at,
         metadata_title: r.metadata_title,
     }).collect();

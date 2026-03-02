@@ -17,6 +17,7 @@ export function KnowledgeInbox() {
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+    const [availableTags, setAvailableTags] = useState<string[]>([]);
 
     const loadItems = useCallback(async () => {
         setLoading(true);
@@ -27,16 +28,26 @@ export function KnowledgeInbox() {
                 filters.status = statusFilter;
             }
             
-            if (typeFilter !== 'all') {
-                filters.item_type = typeFilter;
-            }
-            
             if (searchQuery.trim()) {
                 filters.search = searchQuery.trim();
             }
 
             const result = await invoke<KnowledgeItem[]>('get_knowledge_items', { filters });
-            setItems(result);
+            
+            // Client-side tag filtering (since backend doesn't support array filtering yet)
+            let filteredItems = result;
+            if (typeFilter !== 'all') {
+                filteredItems = result.filter(item => item.tags.includes(typeFilter));
+            }
+            
+            setItems(filteredItems);
+            
+            // Extract unique tags from ALL items (not just filtered)
+            const tagsSet = new Set<string>();
+            result.forEach(item => {
+                item.tags.forEach(tag => tagsSet.add(tag));
+            });
+            setAvailableTags(Array.from(tagsSet).sort());
         } catch (err) {
             toast.error('Failed to load knowledge items', { description: String(err) });
         } finally {
@@ -166,7 +177,7 @@ export function KnowledgeInbox() {
                         </SelectContent>
                     </Select>
 
-                    {/* Type Filter */}
+                    {/* Tag Filter */}
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger
                             className="w-[160px]"
@@ -179,7 +190,10 @@ export function KnowledgeInbox() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="all">All Tags</SelectItem>
+                            {availableTags.map(tag => (
+                                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
