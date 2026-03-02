@@ -364,6 +364,7 @@ pub fn run() {
             knowledge_base::get_backlinks,
             knowledge_base::bulk_update_kb_status,
             knowledge_base::capture_daily_urls,
+            knowledge_base::get_kb_items_for_activity,
             milestones::create_milestone,
             milestones::get_milestones,
             milestones::update_milestone,

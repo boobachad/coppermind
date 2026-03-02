@@ -1,5 +1,6 @@
 import { ExternalLink, Edit2, Trash2, Archive, Calendar, Link as LinkIcon, FileText, Folder } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useEffect, useRef } from 'react';
 import type { KnowledgeItem } from '@/pos/lib/types';
 import { extractDomain, detectUrlType, formatReviewDate } from '@/lib/kb-utils';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,18 @@ interface KnowledgeItemCardProps {
     onEdit: (item: KnowledgeItem) => void;
     onDelete: (id: string) => void;
     onUpdateStatus: (id: string, status: string) => void;
+    isHighlighted?: boolean;
 }
 
-export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: KnowledgeItemCardProps) {
+export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHighlighted }: KnowledgeItemCardProps) {
     const { confirm } = useConfirmDialog();
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isHighlighted && cardRef.current) {
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [isHighlighted]);
     
     const getTypeIcon = () => {
         // Use first tag to determine icon
@@ -126,12 +135,71 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
         );
     };
 
+    const isDailyCapture = item.tags.includes('daily-capture');
+    const dailyCaptureUrls = isDailyCapture && item.metadata?.urls 
+        ? (Array.isArray(item.metadata.urls) ? item.metadata.urls : [])
+        : [];
+
+    const renderDailyCaptureContent = () => {
+        if (!isDailyCapture || dailyCaptureUrls.length === 0) return null;
+
+        return (
+            <div className="space-y-2">
+                {dailyCaptureUrls.map((urlData: any, idx: number) => (
+                    <div
+                        key={idx}
+                        className="p-2 rounded-lg border"
+                        style={{
+                            background: 'var(--glass-bg-subtle)',
+                            borderColor: 'var(--glass-border)',
+                        }}
+                    >
+                        <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                                <div
+                                    onClick={() => invoke('open_link', { url: urlData.url })}
+                                    className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
+                                    style={{ color: 'var(--color-accent-primary)' }}
+                                >
+                                    {urlData.url}
+                                </div>
+                                <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                                    From: {urlData.activity_title} ({urlData.activity_category})
+                                </div>
+                                {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                                    <div
+                                        className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
+                                        style={{
+                                            background: `${getTypeColor()}15`,
+                                            color: getTypeColor(),
+                                        }}
+                                    >
+                                        {urlData.url_type}
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => invoke('open_link', { url: urlData.url })}
+                                className="flex-shrink-0 p-1 rounded hover:bg-secondary"
+                            >
+                                <ExternalLink className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div
-            className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.002]"
+            ref={cardRef}
+            className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.002] ${
+                isHighlighted ? 'animate-blink-border' : ''
+            }`}
             style={{
                 background: 'var(--glass-bg)',
-                border: '1px solid var(--glass-border)',
+                border: isHighlighted ? '2px solid var(--color-accent-primary)' : '1px solid var(--glass-border)',
                 borderRadius: 'var(--radius)',
                 backdropFilter: 'blur(12px)',
             }}
@@ -191,13 +259,25 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
 
             {/* Content */}
             <div className="p-4">
-                {/* Preview with clickable links */}
-                <div
-                    className="text-sm mb-3"
-                    style={{ color: 'var(--text-secondary)' }}
-                >
-                    {renderContentWithLinks(item.content)}
-                </div>
+                {/* Daily Capture Special Rendering */}
+                {isDailyCapture ? (
+                    <>
+                        <div className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                            {dailyCaptureUrls.length} URL{dailyCaptureUrls.length !== 1 ? 's' : ''} captured from activities
+                        </div>
+                        {renderDailyCaptureContent()}
+                    </>
+                ) : (
+                    <>
+                        {/* Preview with clickable links */}
+                        <div
+                            className="text-sm mb-3"
+                            style={{ color: 'var(--text-secondary)' }}
+                        >
+                            {renderContentWithLinks(item.content)}
+                        </div>
+                    </>
+                )}
 
                 {/* Metadata */}
                 {item.metadata && (
@@ -245,7 +325,25 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    {hasUrl() && (
+                    {isDailyCapture && dailyCaptureUrls.length > 0 ? (
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                dailyCaptureUrls.forEach((urlData: any) => {
+                                    invoke('open_link', { url: urlData.url });
+                                });
+                            }}
+                            className="flex items-center gap-1"
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--glass-border)',
+                                color: 'var(--text-secondary)',
+                            }}
+                        >
+                            <ExternalLink className="w-3 h-3" />
+                            Open All ({dailyCaptureUrls.length})
+                        </Button>
+                    ) : hasUrl() && (
                         <Button
                             size="sm"
                             onClick={handleOpenLink}

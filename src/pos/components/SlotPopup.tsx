@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, AlertCircle, BookOpen, ExternalLink } from 'lucide-react';
+import { Star, AlertCircle, BookOpen, ExternalLink, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
 import { formatSlotTime, activityOverlapsSlot, formatActivityTime } from '../lib/time';
-import type { Activity, UnifiedGoal, Book } from '../lib/types';
+import type { Activity, UnifiedGoal, Book, KnowledgeItem } from '../lib/types';
 
 interface SlotPopupProps {
     open: boolean;
@@ -17,10 +17,17 @@ interface SlotPopupProps {
 }
 
 export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
+    const navigate = useNavigate();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
     const [debtGoals, setDebtGoals] = useState<UnifiedGoal[]>([]);
     const [booksMap, setBooksMap] = useState<Map<string, Book>>(new Map());
+    const [kbItemsMap, setKbItemsMap] = useState<Map<string, KnowledgeItem[]>>(new Map());
+
+    const handleKbItemClick = (itemId: string) => {
+        onClose();
+        navigate('/knowledge', { state: { highlightItemId: itemId } });
+    };
 
     useEffect(() => {
         if (open && slotIndex !== null) {
@@ -56,6 +63,22 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                             .catch(err => console.error('Failed to fetch books:', err));
                     }
 
+                    // Fetch KB items for each activity
+                    const kbMap = new Map<string, KnowledgeItem[]>();
+                    Promise.all(
+                        overlapping.map(activity =>
+                            invoke<KnowledgeItem[]>('get_kb_items_for_activity', { activityId: activity.id })
+                                .then(items => {
+                                    if (items.length > 0) {
+                                        kbMap.set(activity.id, items);
+                                    }
+                                })
+                                .catch(err => console.error(`Failed to fetch KB items for activity ${activity.id}:`, err))
+                        )
+                    ).then(() => {
+                        setKbItemsMap(kbMap);
+                    });
+
                     setLoading(false);
 
                     // Fetch debt goals for this date
@@ -74,7 +97,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="material-glass border-border sm:max-w-[425px] shadow-xl">
+            <DialogContent className="material-glass border-border sm:max-w-[700px] max-h-[85vh] shadow-xl">
                 <DialogHeader>
                     <DialogTitle className="text-foreground">
                         Slot {slotIndex} ({slotStartTime} - {slotEndTime})
@@ -89,9 +112,9 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                         <Loader className="text-primary" />
                     </div>
                 ) : activities && activities.length > 0 ? (
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                        {activities.map((activity) => {
+                    <div className="space-y-3 max-h-[calc(85vh-180px)] overflow-y-auto custom-scrollbar pr-2">{activities.map((activity) => {
                             const book = activity.bookId ? booksMap.get(activity.bookId) : null;
+                            const kbItems = kbItemsMap.get(activity.id) || [];
                             
                             return (
                                 <div
@@ -140,6 +163,58 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* KB Items Section */}
+                                    {kbItems.length > 0 && (
+                                        <div className="mt-3 pt-3 border-t border-border/30">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Lightbulb className="w-4 h-4 text-purple-500" />
+                                                <span className="text-sm font-medium text-foreground">
+                                                    Knowledge Items ({kbItems.length})
+                                                </span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {kbItems.map((item) => (
+                                                    <button
+                                                        key={item.id}
+                                                        onClick={() => handleKbItemClick(item.id)}
+                                                        className="w-full text-left p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all cursor-pointer group"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="text-sm text-foreground line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                                                    {item.content}
+                                                                </div>
+                                                                {item.tags.length > 0 && (
+                                                                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                                                                        {item.tags.slice(0, 4).map((tag) => (
+                                                                            <span
+                                                                                key={tag}
+                                                                                className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                                                                            >
+                                                                                {tag}
+                                                                            </span>
+                                                                        ))}
+                                                                        {item.tags.length > 4 && (
+                                                                            <span className="text-xs text-muted-foreground self-center">
+                                                                                +{item.tags.length - 4} more
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                                <span className="text-xs px-2 py-1 rounded bg-secondary/80 text-muted-foreground border border-border/50">
+                                                                    {item.status}
+                                                                </span>
+                                                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-purple-500 transition-colors" />
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="flex items-center justify-between">
                                         <div className="text-xs text-muted-foreground">

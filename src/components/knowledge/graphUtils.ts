@@ -218,6 +218,15 @@ export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyRe
         });
     }
 
+    // Activity-KB temporal links (auto-linked by creation time overlap)
+    for (const akl of data.activityKbLinks) {
+        kbLinks.push({
+            source: akl.activityId,
+            target: akl.kbItemId,
+            linkKind: 'related',
+        });
+    }
+
     return { nodes, hierarchyLinks, kbLinks };
 }
 

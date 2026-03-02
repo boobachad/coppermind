@@ -252,6 +252,15 @@ export interface KnowledgeMetadata {
     tags?: string[];
     difficulty?: string;
     relatedItemIds?: string[];
+    urls?: Array<{
+        url: string;
+        activity_id: string;
+        activity_title: string;
+        activity_category: string;
+        detected_in: string;
+        url_type: string;
+        timestamp: string;
+    }>;
 }
 
 export interface KnowledgeItem {
@@ -273,6 +282,14 @@ export interface KnowledgeLink {
     sourceId: string;
     targetId: string;
     linkType: 'related' | 'blocks' | 'requires';
+    createdAt: string;
+}
+
+export interface ActivityKnowledgeLink {
+    id: string;
+    activityId: string;
+    kbItemId: string;
+    linkType: 'temporal' | 'manual';
     createdAt: string;
 }
 
@@ -577,6 +594,13 @@ export interface KbGraphLink {
     linkType: string;
 }
 
+export interface ActivityKbLink {
+    id: string;
+    activityId: string;
+    kbItemId: string;
+    linkType: string;
+}
+
 export interface RetroSummary {
     id: string;
     date: string;           // YYYY-MM-DD
@@ -604,6 +628,7 @@ export interface YearlyGraphData {
     submissions: SubmissionSummary[];
     kbItems: KbGraphItem[];
     kbLinks: KbGraphLink[];
+    activityKbLinks: ActivityKbLink[];
     retrospectives: RetroSummary[];
     journalEntries: JournalSummary[];
     notes: NoteSummary[];

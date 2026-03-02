@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export function KnowledgeInbox() {
+interface KnowledgeInboxProps {
+    highlightItemId?: string | null;
+}
+
+export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
     const [items, setItems] = useState<KnowledgeItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -236,6 +240,7 @@ export function KnowledgeInbox() {
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
                                 onUpdateStatus={handleUpdateStatus}
+                                isHighlighted={highlightItemId === item.id}
                             />
                         ))}
                     </div>

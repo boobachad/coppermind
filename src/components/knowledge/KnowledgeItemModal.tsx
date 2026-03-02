@@ -120,6 +120,11 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
         }
     }, [editingItem, isOpen]);
 
+    const isDailyCapture = editingItem?.tags.includes('daily-capture');
+    const dailyCaptureUrls = isDailyCapture && editingItem?.metadata?.urls 
+        ? (Array.isArray(editingItem.metadata.urls) ? editingItem.metadata.urls : [])
+        : [];
+
     const resetForm = () => {
         setItemType('');
         setSource('Manual');
@@ -289,26 +294,90 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                         </p>
                     </div>
 
-                    {/* Content (Always Textarea) */}
-                    <div>
-                        <label
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            Content
-                        </label>
-                        <Textarea
-                            placeholder="Enter content, URLs, notes, anything..."
-                            value={content}
-                            onChange={(e) => handleContentChange(e.target.value)}
-                            rows={6}
-                            style={{
-                                background: 'var(--glass-bg-subtle)',
-                                border: '1px solid var(--glass-border)',
-                                color: 'var(--text-primary)',
-                            }}
-                        />
-                    </div>
+                    {/* Content - Special handling for daily-capture */}
+                    {isDailyCapture ? (
+                        <div>
+                            <label
+                                className="block text-sm font-medium mb-2"
+                                style={{ color: 'var(--text-secondary)' }}
+                            >
+                                Captured URLs ({dailyCaptureUrls.length})
+                            </label>
+                            <div
+                                className="p-3 rounded-lg border max-h-[300px] overflow-y-auto space-y-2"
+                                style={{
+                                    background: 'var(--glass-bg-subtle)',
+                                    borderColor: 'var(--glass-border)',
+                                }}
+                            >
+                                {dailyCaptureUrls.length === 0 ? (
+                                    <div className="text-sm text-center py-4" style={{ color: 'var(--text-tertiary)' }}>
+                                        No URLs captured
+                                    </div>
+                                ) : (
+                                    dailyCaptureUrls.map((urlData: any, idx: number) => (
+                                        <div
+                                            key={idx}
+                                            className="p-2 rounded border"
+                                            style={{
+                                                background: 'var(--glass-bg)',
+                                                borderColor: 'var(--glass-border)',
+                                            }}
+                                        >
+                                            <div className="flex items-start gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <div
+                                                        className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
+                                                        style={{ color: 'var(--color-accent-primary)' }}
+                                                        onClick={() => invoke('open_link', { url: urlData.url })}
+                                                    >
+                                                        {urlData.url}
+                                                    </div>
+                                                    <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                                                        From: {urlData.activity_title} ({urlData.activity_category})
+                                                    </div>
+                                                    {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                                                        <div
+                                                            className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
+                                                            style={{
+                                                                background: 'var(--color-accent-primary)15',
+                                                                color: 'var(--color-accent-primary)',
+                                                            }}
+                                                        >
+                                                            {urlData.url_type}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                                Daily capture items are automatically generated from activity logs. URLs cannot be edited manually.
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <label
+                                className="block text-sm font-medium mb-2"
+                                style={{ color: 'var(--text-secondary)' }}
+                            >
+                                Content
+                            </label>
+                            <Textarea
+                                placeholder="Enter content, URLs, notes, anything..."
+                                value={content}
+                                onChange={(e) => handleContentChange(e.target.value)}
+                                rows={6}
+                                style={{
+                                    background: 'var(--glass-bg-subtle)',
+                                    border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-primary)',
+                                }}
+                            />
+                        </div>
+                    )}
 
                     {/* Duplicate Warning */}
                     {duplicateCheck && duplicateCheck.isDuplicate && (

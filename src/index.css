@@ -70,6 +70,17 @@
     }
   }
 
+  @keyframes blinkBorder {
+    0%, 100% {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 0 rgba(var(--color-accent-primary-rgb, 99, 102, 241), 0);
+    }
+    50% {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 4px rgba(var(--color-accent-primary-rgb, 99, 102, 241), 0.3);
+    }
+  }
+
   /* Material Tokens */
   --color-material-base: var(--bg-base);
   --color-material-glass: var(--glass-bg);
@@ -457,6 +468,11 @@ body {
   /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
+}
+
+/* Blink border animation for highlighted items */
+.animate-blink-border {
+  animation: blinkBorder 1s ease-in-out 5;
 }
 
 /* Global Selection Style */

@@ -70,6 +70,15 @@ pub struct KbGraphLink {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ActivityKbLink {
+    pub id: String,
+    pub activity_id: String,
+    pub kb_item_id: String,
+    pub link_type: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RetroSummary {
     pub id: String,
     pub date: String,           // period_start cast to YYYY-MM-DD
@@ -105,6 +114,7 @@ pub struct YearlyGraphData {
     pub submissions:     Vec<SubmissionSummary>,
     pub kb_items:        Vec<KbGraphItem>,
     pub kb_links:        Vec<KbGraphLink>,
+    pub activity_kb_links: Vec<ActivityKbLink>,
     pub retrospectives:  Vec<RetroSummary>,
     pub journal_entries: Vec<JournalSummary>,
     pub notes:           Vec<NoteSummary>,
@@ -138,6 +148,11 @@ struct KbItemRow {
 #[derive(sqlx::FromRow)]
 struct KbLinkRow {
     id: String, source_id: String, target_id: String, link_type: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct ActivityKbLinkRow {
+    id: String, activity_id: String, kb_item_id: String, link_type: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -178,7 +193,7 @@ pub async fn get_yearly_graph_data(
     .fetch_all(pool).await
     .map_err(|e| db_context("get_yearly_graph_data:activities", e))?;
 
-    let activities = act_rows.into_iter().map(|r| ActivitySummary {
+    let activities: Vec<ActivitySummary> = act_rows.into_iter().map(|r| ActivitySummary {
         id: r.id, date: r.date, title: r.title, category: r.category,
         start_time: r.start_time, end_time: r.end_time, is_productive: r.is_productive,
     }).collect();
@@ -252,6 +267,24 @@ pub async fn get_yearly_graph_data(
         })
         .collect();
 
+    // ── Activity-KB temporal links ───────────────────────────────────────
+    let activity_ids: std::collections::HashSet<String> =
+        activities.iter().map(|a| a.id.clone()).collect();
+
+    let all_activity_kb_links = sqlx::query_as::<_, ActivityKbLinkRow>(
+        "SELECT id, activity_id, kb_item_id, link_type FROM activity_knowledge_links",
+    )
+    .fetch_all(pool).await
+    .map_err(|e| db_context("get_yearly_graph_data:activity_kb_links", e))?;
+
+    let activity_kb_links = all_activity_kb_links.into_iter()
+        .filter(|r| activity_ids.contains(&r.activity_id) && kb_ids.contains(&r.kb_item_id))
+        .map(|r| ActivityKbLink {
+            id: r.id, activity_id: r.activity_id,
+            kb_item_id: r.kb_item_id, link_type: r.link_type,
+        })
+        .collect();
+
     // ── Retrospectives (period_start TIMESTAMPTZ) ────────────────────────
     let retro_rows = sqlx::query_as::<_, RetroRow>(
         r#"SELECT id, period_start::date::text AS date_str,
@@ -300,7 +333,7 @@ pub async fn get_yearly_graph_data(
     }).collect();
 
     Ok(YearlyGraphData {
-        activities, goals, submissions, kb_items, kb_links,
+        activities, goals, submissions, kb_items, kb_links, activity_kb_links,
         retrospectives, journal_entries, notes,
     })
 }

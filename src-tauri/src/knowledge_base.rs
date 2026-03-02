@@ -137,6 +137,37 @@ pub async fn create_knowledge_item(
     .await
     .map_err(|e| db_context("create_knowledge_item", e))?;
 
+    // Temporal linking: Find activities that overlap with KB item creation time
+    // Query activities where created_at falls between start_time and end_time
+    let overlapping_activities: Vec<(String,)> = sqlx::query_as(
+        r#"SELECT id FROM pos_activities 
+           WHERE $1 >= start_time AND $1 <= end_time
+           ORDER BY start_time DESC
+           LIMIT 5"#
+    )
+    .bind(now)
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default();
+
+    // Create temporal links to overlapping activities using activity_knowledge_links table
+    for (activity_id,) in overlapping_activities {
+        let link_id = gen_id();
+        let _ = sqlx::query(
+            r#"INSERT INTO activity_knowledge_links (id, activity_id, kb_item_id, link_type, created_at)
+               VALUES ($1, $2, $3, 'temporal', $4)
+               ON CONFLICT (activity_id, kb_item_id) DO NOTHING"#
+        )
+        .bind(&link_id)
+        .bind(&activity_id)
+        .bind(&id)
+        .bind(now)
+        .execute(pool)
+        .await;
+        
+        log::info!("[KB] Temporal link created: KB {} -> Activity {}", id, activity_id);
+    }
+
     log::info!("[KB] Created knowledge item {} with tags {:?}", id, req.tags);
     Ok(row)
 }
@@ -524,6 +555,32 @@ pub async fn bulk_update_kb_status(
     Ok(result.rows_affected() as i64)
 }
 
+/// Get KB items linked to an activity (temporal or manual links)
+#[tauri::command]
+pub async fn get_kb_items_for_activity(
+    db: State<'_, PosDb>,
+    activity_id: String,
+) -> PosResult<Vec<KnowledgeItemRow>> {
+    let pool = &db.0;
+    
+    let items = sqlx::query_as::<_, KnowledgeItemRow>(
+        r#"SELECT ki.id, ki.tags, ki.source, ki.content, ki.metadata, ki.status, 
+                  ki.next_review_date, ki.linked_note_id, ki.linked_journal_date, 
+                  ki.created_at, ki.updated_at
+           FROM knowledge_items ki
+           INNER JOIN activity_knowledge_links akl ON ki.id = akl.kb_item_id
+           WHERE akl.activity_id = $1
+           ORDER BY akl.created_at DESC"#
+    )
+    .bind(&activity_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("get_kb_items_for_activity", e))?;
+    
+    log::info!("[KB] Retrieved {} KB items for activity {}", items.len(), activity_id);
+    Ok(items)
+}
+
 /// Capture URLs from activity to daily KB item
 #[tauri::command]
 pub async fn capture_daily_urls(
@@ -585,13 +642,16 @@ pub async fn capture_daily_urls(
     let row = sqlx::query_as::<_, KnowledgeItemRow>(
         r#"INSERT INTO knowledge_items 
            (id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at)
-           VALUES ($1, ARRAY['daily-capture']::TEXT[], 'ActivityLog', $2, $3, 'Inbox', NULL, NULL, NULL, $4, $4)
+           VALUES ($1, ARRAY['daily-capture', 'log-activity', $2]::TEXT[], 'ActivityLog', $3, $4, 'Inbox', NULL, NULL, NULL, $5, $5)
            ON CONFLICT (id) DO UPDATE SET
+              tags = EXCLUDED.tags,
+              content = EXCLUDED.content,
               metadata = EXCLUDED.metadata,
               updated_at = EXCLUDED.updated_at
            RETURNING id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at"#
     )
     .bind(&daily_id)
+    .bind(&date)  // Add date as tag
     .bind(format!("{} URLs captured on {}", total_urls, date))
     .bind(sqlx::types::Json(metadata))
     .bind(now)
