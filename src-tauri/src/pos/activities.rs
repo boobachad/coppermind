@@ -264,8 +264,9 @@ pub async fn update_activity(
     sqlx::query(
         r#"UPDATE pos_activities SET
            date = $1, start_time = $2, end_time = $3, category = $4,
-           title = $5, description = $6, is_productive = $7
-           WHERE id = $8"#,
+           title = $5, description = $6, is_productive = $7, goal_id = $8,
+           book_id = $9, pages_read = $10
+           WHERE id = $11"#,
     )
     .bind(&date)
     .bind(start)
@@ -274,6 +275,9 @@ pub async fn update_activity(
     .bind(&req.title)
     .bind(&req.description)
     .bind(is_productive)
+    .bind(&req.goal_id)
+    .bind(&req.book_id)
+    .bind(&req.pages_read)
     .bind(&id)
     .execute(pool)
     .await

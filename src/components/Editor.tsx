@@ -6,6 +6,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { all, createLowlight } from 'lowlight';
+import Link from '@tiptap/extension-link';
 
 import Highlight from '@tiptap/extension-highlight';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
@@ -24,7 +25,9 @@ import { DragHandle } from './DragHandle';
 import { ContextMenu } from './ContextMenu';
 import { PDFExtension } from './extensions/PDFExtension';
 import { MindMapTreeExtension, MindMapBlockExtension } from './extensions/MindMapExtension';
+import { AutolinkPlugin } from './extensions/AutolinkPlugin';
 import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { TableControls } from './extensions/TableControls';
 
 const lowlight = createLowlight(all);
@@ -67,9 +70,14 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
         lowlight,
       }),
       // Underline, // Duplicate
-      // Link.configure({ // Duplicate
-      //   openOnClick: false,
-      // }),
+      Link.configure({
+        openOnClick: false, // Disable default click behavior, we'll handle it manually
+        autolink: true, // Auto-detect and linkify URLs
+        linkOnPaste: true, // Convert pasted URLs to links
+        HTMLAttributes: {
+          class: 'text-blue-400 hover:text-blue-300 underline cursor-pointer',
+        },
+      }),
       Highlight.configure({
         multicolor: true,
       }),
@@ -94,6 +102,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
       PDFExtension,
       MindMapTreeExtension,
       MindMapBlockExtension,
+      AutolinkPlugin,
       SlashCommand.configure({
         suggestion,
       }),
@@ -111,6 +120,19 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
           event.preventDefault();
           setMenuPos({ x: event.clientX, y: event.clientY });
           return true;
+        },
+        click: (view, event) => {
+          // Handle link clicks in read-only mode
+          if (!editable) {
+            const target = event.target as HTMLElement;
+            const link = target.closest('a');
+            if (link && link.href) {
+              event.preventDefault();
+              invoke('open_link', { url: link.href });
+              return true;
+            }
+          }
+          return false;
         },
       },
       handleDrop: (view, event: any, _slice, moved) => {

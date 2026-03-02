@@ -66,7 +66,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         content={message.content}
                         editable={false} // Read-only by default
                         className={clsx(
-                            "prose-sm w-full !max-w-none focus:outline-none pointer-events-none", // pointer-events-none to prevent interaction
+                            "prose-sm w-full !max-w-none focus:outline-none",
                             // Only apply prose-invert (white text) for Answer/Assistant bubbles
                             "dark:prose-invert",
                             // Ensure Question text remains dark even in dark mode (on white bg)

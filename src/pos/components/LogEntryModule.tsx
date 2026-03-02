@@ -45,7 +45,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
     const [availableMilestones, setAvailableMilestones] = useState<Milestone[]>([]);
-    const [selectedGoalId, setSelectedGoalId] = useState<string>('none');
+    const [selectedGoalId, setSelectedGoalId] = useState<string>(editingActivity?.goalId || 'none');
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
 
     // NEW: Book Tracking State
@@ -207,7 +207,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             let activityId: string;
             
             if (editingActivity) {
-                // Existing update logic (UNCHANGED)
+                // Update activity with goal and book linking
                 await invoke('update_activity', {
                     id: editingActivity.id,
                     req: {
@@ -218,8 +218,20 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         description,
                         isProductive,
                         date,
+                        goalId: selectedGoalId !== 'none' && !selectedGoalId.startsWith('milestone-') ? selectedGoalId : null,
+                        bookId: selectedBookId,
+                        pagesRead: pagesRead ? parseInt(pagesRead) : null,
                     }
                 });
+
+                // If goal was linked, mark it as completed/verified
+                if (selectedGoalId !== 'none' && !selectedGoalId.startsWith('milestone-')) {
+                    await invoke('link_activity_to_unified_goal', {
+                        goalId: selectedGoalId,
+                        activityId: editingActivity.id,
+                    });
+                }
+
                 toast.success('Activity updated successfully');
                 activityId = editingActivity.id;
                 onCancelEdit?.();
@@ -362,7 +374,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         <>
         <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* EXISTING: Time Pickers (UNCHANGED) */}
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium mb-2">Start Time</label>
@@ -382,7 +393,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
             </div>
 
-            {/* EXISTING: Category (UPDATED) */}
+
             {/* Row 1: Category & Goal Link */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -540,8 +551,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
             )}
 
-            {/* EXISTING: Metrics (UNCHANGED) */}
-            {/* EXISTING: Metrics (UPDATED FOR MILESTONES) */}
+
             {selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (
                 <div className="space-y-2">
                     <label className="block text-sm font-medium">Progress on Metrics</label>
@@ -564,7 +574,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
             )}
             
-            {/* NEW: Milestone Metrics */}
             {selectedGoalId.startsWith('milestone-') && (() => {
                 const milestoneId = selectedGoalId.replace('milestone-', '');
                 const milestone = availableMilestones.find(m => m.id === milestoneId);
@@ -589,7 +598,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 );
             })()}
 
-            {/* EXISTING: Submit Buttons (UNCHANGED) */}
             <div className="flex gap-2">
                 {editingActivity && (
                     <Button type="button" variant="outline" onClick={onCancelEdit}>
