@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Navbar } from '../components/Navbar';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
+import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '../../components/Loader';
 import { TrendingUp, TrendingDown, Activity as ActivityIcon, Target, Code2, Zap } from 'lucide-react';
 import type { Activity, Submission, Milestone } from '../lib/types';
@@ -28,15 +29,21 @@ export function HomePage() {
   const [activeMilestones, setActiveMilestones] = useState<Milestone[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [totalStats, setTotalStats] = useState({ totalTime: 0, productiveTime: 0, activitiesCount: 0 });
+  
+  // Month selector state
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+  const isArchived = selectedMonth < currentMonth;
 
   useEffect(() => {
     loadDashboardAnalytics();
-  }, []);
+  }, [selectedMonth]); // Reload when month changes
 
   const loadDashboardAnalytics = async () => {
     setLoading(true);
     try {
-      const dates = getLast30Days();
+      const dates = getMonthDates(selectedMonth);
       const batchResponse = await invoke<Record<string, { activities: Activity[] }>>('get_activities_batch', { dates });
       
       const trends = calculateWeeklyTrends(batchResponse, dates);
@@ -61,27 +68,42 @@ export function HomePage() {
     }
   };
 
-  const getLast30Days = (): string[] => {
+  const getMonthDates = (monthStr: string): string[] => {
     const dates: string[] = [];
+    const [year, month] = monthStr.split('-').map(Number);
+    
+    // Get first day of selected month
+    const firstDay = new Date(year, month - 1, 1);
+    // Get last day of selected month
+    const lastDay = new Date(year, month, 0);
+    
+    // For current month, only go up to today
     const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      const offset = date.getTimezoneOffset() * 60000;
-      const localDate = new Date(date.getTime() - offset);
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+    const endDate = isCurrentMonth ? now : lastDay;
+    
+    // Generate all dates from first day to end date using time utils
+    const current = new Date(firstDay);
+    while (current <= endDate) {
+      const offset = current.getTimezoneOffset() * 60000;
+      const localDate = new Date(current.getTime() - offset);
       dates.push(localDate.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
     }
+    
     return dates;
   };
 
   const calculateWeeklyTrends = (batchData: Record<string, { activities: Activity[] }>, dates: string[]): WeeklyTrend[] => {
     const weeks: WeeklyTrend[] = [];
-    const weeksCount = 4;
+    
+    // Calculate number of complete weeks in current month so far
+    const weeksCount = Math.ceil(dates.length / 7);
     const daysPerWeek = 7;
 
     // Build weeks in chronological order (oldest to newest)
     for (let w = 0; w < weeksCount; w++) {
-      const weekDates = dates.slice(w * daysPerWeek, (w + 1) * daysPerWeek);
+      const weekDates = dates.slice(w * daysPerWeek, Math.min((w + 1) * daysPerWeek, dates.length));
       let totalMinutes = 0;
       let productiveMinutes = 0;
       let activitiesCount = 0;
@@ -190,6 +212,13 @@ export function HomePage() {
 
       <main className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-[1800px] mx-auto p-6 space-y-6">
+
+          {/* Month Selector */}
+          <MonthSelector
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            isArchived={isArchived}
+          />
 
           {/* Hero Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

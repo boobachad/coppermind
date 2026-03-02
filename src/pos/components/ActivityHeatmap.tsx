@@ -115,30 +115,48 @@ export function ActivityHeatmap() {
   };
 
   const calculateStreaks = (data: HeatmapData[]): StreakData => {
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let totalDays = 0;
+    // Filter to only dates with activities, sorted chronologically
+    const activeDates = data
+      .filter(d => d.count > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
 
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].count > 0) {
+    if (activeDates.length === 0) {
+      return { current: 0, longest: 0, total: 0 };
+    }
+
+    let currentStreak = 1; // Start at 1 if we have at least one active day
+    let longestStreak = 1;
+    let tempStreak = 1;
+
+    // Calculate longest streak by checking consecutive dates
+    for (let i = 1; i < activeDates.length; i++) {
+      const prevDate = new Date(activeDates[i - 1].date);
+      const currDate = new Date(activeDates[i].date);
+      const daysDiff = Math.round((currDate.getTime() - prevDate.getTime()) / 86400000);
+
+      if (daysDiff === 1) {
         tempStreak++;
-        totalDays++;
         longestStreak = Math.max(longestStreak, tempStreak);
       } else {
-        tempStreak = 0;
+        tempStreak = 1;
       }
     }
 
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (data[i].count > 0) {
+    // Calculate current streak by checking backwards from most recent date
+    currentStreak = 1;
+    for (let i = activeDates.length - 2; i >= 0; i--) {
+      const currDate = new Date(activeDates[i].date);
+      const nextDate = new Date(activeDates[i + 1].date);
+      const daysDiff = Math.round((nextDate.getTime() - currDate.getTime()) / 86400000);
+
+      if (daysDiff === 1) {
         currentStreak++;
       } else {
         break;
       }
     }
 
-    return { current: currentStreak, longest: longestStreak, total: totalDays };
+    return { current: currentStreak, longest: longestStreak, total: activeDates.length };
   };
 
   const getHeatmapStyle = (level: number): React.CSSProperties => {

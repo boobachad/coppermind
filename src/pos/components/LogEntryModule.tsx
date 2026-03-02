@@ -12,6 +12,7 @@ import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
 import { extractUrls, detectUrlType } from '@/lib/kb-utils';
 import { toast } from 'sonner';
 import { BookSelector } from './BookSelector';
+import { ReflectionPrompt } from '@/components/goal/ReflectionPrompt';
 
 interface LogEntryModuleProps {
     date: string;
@@ -53,6 +54,10 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [showBookSelector, setShowBookSelector] = useState(false);
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
     const [totalPages, setTotalPages] = useState<string>('');
+
+    // NEW: Reflection State
+    const [showReflectionPrompt, setShowReflectionPrompt] = useState(false);
+    const [completedGoal, setCompletedGoal] = useState<UnifiedGoal | null>(null);
 
     // Existing useEffect hooks (PRESERVED)
     useEffect(() => {
@@ -290,6 +295,12 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                                 }
                             }
                         }
+
+                        // Trigger reflection prompt for completed goal
+                        if (selectedGoal && !selectedGoal.completed) {
+                            setCompletedGoal(selectedGoal);
+                            setShowReflectionPrompt(true);
+                        }
                     }
                 }
 
@@ -348,6 +359,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     };
 
     return (
+        <>
         <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* EXISTING: Time Pickers (UNCHANGED) */}
@@ -589,5 +601,23 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </Button>
             </div>
         </form>
+
+        {/* Reflection Prompt Modal */}
+        {showReflectionPrompt && completedGoal && (
+            <ReflectionPrompt
+                goalId={completedGoal.id}
+                goalText={completedGoal.text}
+                onClose={() => {
+                    setShowReflectionPrompt(false);
+                    setCompletedGoal(null);
+                }}
+                onSaved={() => {
+                    setShowReflectionPrompt(false);
+                    setCompletedGoal(null);
+                    toast.success('Reflection saved');
+                }}
+            />
+        )}
+        </>
     );
 }

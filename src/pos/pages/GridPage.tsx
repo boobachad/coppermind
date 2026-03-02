@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Link } from 'react-router-dom';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SlotPopup } from '../components/SlotPopup';
+import { MonthSelector } from '../components/MonthSelector';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
 import { AlertCircle } from 'lucide-react';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
-import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot, formatMonthYear } from '../lib/time';
+import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot } from '../lib/time';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -35,10 +35,12 @@ function getMonthDates(year: number, month: number): string[] {
 export function GridPage() {
     const todayRef = useRef<HTMLTableRowElement>(null);
     const currentSlotRef = useRef<HTMLTableCellElement>(null);
-    const [currentMonth, setCurrentMonth] = useState(() => {
-        const now = new Date();
-        return { year: now.getFullYear(), month: now.getMonth() };
-    });
+    
+    // Month selector state (YYYY-MM format)
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+    const isArchived = selectedMonth < currentMonth;
 
     const [dates, setDates] = useState<string[]>([]);
     const [gridData, setGridData] = useState<Map<string, GridSlot[]>>(new Map());
@@ -47,7 +49,6 @@ export function GridPage() {
     const [showPopup, setShowPopup] = useState(false);
     const [todayStr, setTodayStr] = useState('');
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
-    const [availableMonths, setAvailableMonths] = useState<{ year: number; month: number; label: string }[]>([]);
     const [journalEntries, setJournalEntries] = useState<Set<string>>(new Set());
     const [debtDates, setDebtDates] = useState<Set<string>>(new Set());
 
@@ -70,22 +71,10 @@ export function GridPage() {
     }, [loading]);
 
     useEffect(() => {
-        const months = Array.from({ length: 12 }, (_, i) => {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            return {
-                year: d.getFullYear(),
-                month: d.getMonth(),
-                label: formatMonthYear(d),
-            };
-        });
-        setAvailableMonths(months);
-    }, []);
-
-    useEffect(() => {
-        const newDates = getMonthDates(currentMonth.year, currentMonth.month);
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const newDates = getMonthDates(year, month - 1);
         setDates(newDates);
-    }, [currentMonth]);
+    }, [selectedMonth]);
 
     useEffect(() => {
         if (dates.length > 0) {
@@ -205,11 +194,6 @@ export function GridPage() {
         }
     };
 
-    const handleMonthChange = (value: string) => {
-        const [year, month] = value.split('-').map(Number);
-        setCurrentMonth({ year, month });
-    };
-
     if (loading) {
         return (
             <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -226,27 +210,14 @@ export function GridPage() {
             <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid' }]} />
             <div className="flex-1">
                 <div className="max-w-[1800px] mx-auto space-y-6 p-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-bold tracking-tight">Life Grid</h1>
-                        <Select
-                            value={`${currentMonth.year}-${currentMonth.month}`}
-                            onValueChange={handleMonthChange}
-                        >
-                            <SelectTrigger className="w-[180px] h-8 text-xs border" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="material-glass border-(--glass-border)">
-                                {availableMonths.map((m) => (
-                                    <SelectItem key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`} className="text-xs text-(--text-primary)">
-                                        {m.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <MonthSelector
+                        selectedMonth={selectedMonth}
+                        onMonthChange={setSelectedMonth}
+                        isArchived={isArchived}
+                    />
 
                     <div className="rounded-lg border overflow-hidden border-(--glass-border) bg-(--glass-bg-subtle)">
-                        <div className="overflow-auto max-h-[calc(100vh-140px)]">
+                        <div className="overflow-auto max-h-[calc(100vh-240px)]">
                             <table className="w-full border-separate border-spacing-1 text-xs">
                                 <thead className="sticky top-0 z-20 shadow-md">
                                     <tr>

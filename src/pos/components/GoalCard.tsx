@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import clsx from 'clsx';
 import { CheckCircle2, Repeat, Flame, AlertTriangle, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { GoalResources } from '../../components/goal/GoalResources';
+import { ReflectionList } from '../../components/goal/ReflectionPrompt';
 
 interface GoalCardProps {
     goal: UnifiedGoal;
@@ -191,6 +192,16 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             
             {/* Resources Section */}
             {!goal.completed && <GoalResources goalId={goal.id} />}
+
+            {/* Reflections Section */}
+            {goal.completed && (
+                <div className="px-5 pb-5">
+                    <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                        Reflections
+                    </h4>
+                    <ReflectionList goalId={goal.id} />
+                </div>
+            )}
         </div>
     );
 }

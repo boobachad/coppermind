@@ -106,37 +106,41 @@ export function DailyPage() {
                 parseActivityTime(a.startTime).getTime() - parseActivityTime(b.startTime).getTime()
             );
 
-            const mergedIntervals: Array<{ start: number; end: number; productive: boolean; goalDirected: boolean }> = [];
-
-            for (const act of sortedActivities) {
-                const start = parseActivityTime(act.startTime).getTime();
-                const end = parseActivityTime(act.endTime).getTime();
-
-                if (mergedIntervals.length === 0 || mergedIntervals[mergedIntervals.length - 1].end < start) {
-                    mergedIntervals.push({
-                        start,
-                        end,
-                        productive: act.isProductive,
-                        goalDirected: !!act.goalId
-                    });
-                } else {
-                    const last = mergedIntervals[mergedIntervals.length - 1];
-                    last.end = Math.max(last.end, end);
-                    last.productive = last.productive || act.isProductive;
-                    last.goalDirected = last.goalDirected || !!act.goalId;
-                }
-            }
-
+            // Calculate metrics directly from activities without merging
+            // This ensures productive/goal-directed time is calculated per activity, not per merged interval
             let total = 0;
             let productive = 0;
             let goalDirected = 0;
 
-            mergedIntervals.forEach(interval => {
-                const duration = (interval.end - interval.start) / 60000;
-                total += duration;
-                if (interval.productive) productive += duration;
-                if (interval.goalDirected) goalDirected += duration;
-            });
+            const processedIntervals: Array<{ start: number; end: number }> = [];
+
+            for (const act of sortedActivities) {
+                const start = parseActivityTime(act.startTime).getTime();
+                const end = parseActivityTime(act.endTime).getTime();
+                const duration = (end - start) / 60000;
+
+                // Check if this activity overlaps with any already processed interval
+                let overlapDuration = 0;
+                for (const processed of processedIntervals) {
+                    const overlapStart = Math.max(start, processed.start);
+                    const overlapEnd = Math.min(end, processed.end);
+                    if (overlapStart < overlapEnd) {
+                        overlapDuration += (overlapEnd - overlapStart) / 60000;
+                    }
+                }
+
+                // Only count non-overlapping time
+                const uniqueDuration = duration - overlapDuration;
+                
+                if (uniqueDuration > 0) {
+                    total += uniqueDuration;
+                    if (act.isProductive) productive += uniqueDuration;
+                    if (act.goalId) goalDirected += uniqueDuration;
+                }
+
+                // Add this activity to processed intervals
+                processedIntervals.push({ start, end });
+            }
 
             setMetrics({
                 totalMinutes: Math.round(total),

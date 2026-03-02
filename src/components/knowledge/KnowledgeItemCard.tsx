@@ -193,7 +193,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus }: Kn
             <div className="p-4">
                 {/* Preview with clickable links */}
                 <div
-                    className="text-sm mb-3 line-clamp-3"
+                    className="text-sm mb-3"
                     style={{ color: 'var(--text-secondary)' }}
                 >
                     {renderContentWithLinks(item.content)}

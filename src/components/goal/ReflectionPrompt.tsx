@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { GoalReflection, CreateReflectionInput } from '../../pos/lib/types';
-import { X, CheckCircle, Sparkles, Book } from 'lucide-react';
+import { X, CheckCircle, Sparkles, Book, Trash2 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
+import { useConfirmDialog } from '../ConfirmDialog';
 
 interface ReflectionPromptProps {
     goalId: string;
@@ -196,6 +197,7 @@ interface ReflectionListProps {
 export function ReflectionList({ goalId }: ReflectionListProps) {
     const [reflections, setReflections] = useState<GoalReflection[]>([]);
     const [loading, setLoading] = useState(true);
+    const { confirm } = useConfirmDialog();
 
     const loadReflections = async () => {
         try {
@@ -205,6 +207,25 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
             console.error('Failed to load reflections:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (reflectionId: string) => {
+        const confirmed = await confirm({
+            title: 'Delete Reflection',
+            description: 'Delete this reflection? This cannot be undone.',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'destructive',
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await invoke('delete_goal_reflection', { reflectionId });
+            setReflections(reflections.filter(r => r.id !== reflectionId));
+        } catch (err) {
+            console.error('Failed to delete reflection:', err);
         }
     };
 
@@ -240,23 +261,38 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
                         border: '1px solid var(--border-primary)',
                     }}
                 >
-                    <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
-                        {reflection.learningText}
-                    </p>
-                    <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
-                        {reflection.kbItemId && (
-                            <span
-                                className="flex items-center gap-1 px-2 py-1 rounded"
-                                style={{
-                                    background: 'var(--surface-tertiary)',
-                                    color: 'var(--color-accent-primary)',
-                                }}
-                            >
-                                <Book className="w-3 h-3" />
-                                In KB
-                            </span>
-                        )}
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
+                                {reflection.learningText}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
+                                {reflection.kbItemId && (
+                                    <span
+                                        className="flex items-center gap-1 px-2 py-1 rounded"
+                                        style={{
+                                            background: 'var(--surface-tertiary)',
+                                            color: 'var(--color-accent-primary)',
+                                        }}
+                                    >
+                                        <Book className="w-3 h-3" />
+                                        In KB
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => handleDelete(reflection.id)}
+                            className="flex-shrink-0 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+                            style={{
+                                background: 'var(--surface-tertiary)',
+                                color: 'var(--color-error)',
+                            }}
+                            title="Delete reflection"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             ))}
