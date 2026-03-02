@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { GoalReflection, CreateReflectionInput } from '../../pos/lib/types';
-import { X, CheckCircle, Sparkles, Book, Trash2 } from 'lucide-react';
+import { X, CheckCircle, Sparkles, Book, Trash2, Plus, Pencil } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { useConfirmDialog } from '../ConfirmDialog';
+import { toast } from 'sonner';
 
 interface ReflectionPromptProps {
     goalId: string;
@@ -22,7 +23,6 @@ interface ReflectionPromptProps {
  */
 export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: ReflectionPromptProps) {
     const [learningText, setLearningText] = useState('');
-    const [createKbItem, setCreateKbItem] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
             const input: CreateReflectionInput = {
                 goalId,
                 learningText: learningText.trim(),
-                createKbItem,
+                createKbItem: true, // Always create KB item
             };
 
             await invoke<GoalReflection>('create_goal_reflection', { input });
@@ -115,30 +115,6 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
                     />
                 </div>
 
-                {/* KB Item Checkbox */}
-                <div className="mb-6">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                            type="checkbox"
-                            checked={createKbItem}
-                            onChange={(e) => setCreateKbItem(e.target.checked)}
-                            className="w-4 h-4 rounded cursor-pointer"
-                            style={{
-                                accentColor: 'var(--color-accent-primary)',
-                            }}
-                        />
-                        <div className="flex items-center gap-2">
-                            <Book className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
-                            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                                Save to Knowledge Base
-                            </span>
-                        </div>
-                    </label>
-                    <p className="ml-7 mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        Creates a knowledge item for future reference
-                    </p>
-                </div>
-
                 {/* Error */}
                 {error && (
                     <div 
@@ -197,6 +173,8 @@ interface ReflectionListProps {
 export function ReflectionList({ goalId }: ReflectionListProps) {
     const [reflections, setReflections] = useState<GoalReflection[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editingReflection, setEditingReflection] = useState<GoalReflection | null>(null);
+    const [showCreateForm, setShowCreateForm] = useState(false);
     const { confirm } = useConfirmDialog();
 
     const loadReflections = async () => {
@@ -224,14 +202,45 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
         try {
             await invoke('delete_goal_reflection', { reflectionId });
             setReflections(reflections.filter(r => r.id !== reflectionId));
+            toast.success('Reflection deleted');
         } catch (err) {
             console.error('Failed to delete reflection:', err);
+            toast.error('Failed to delete reflection');
         }
     };
 
-    useState(() => {
+    const handleSaveReflection = async (learningText: string, createKbItem: boolean, reflectionId?: string) => {
+        try {
+            if (reflectionId) {
+                // Update existing
+                await invoke('update_goal_reflection', {
+                    reflectionId,
+                    learningText: learningText.trim(),
+                });
+                toast.success('Reflection updated');
+            } else {
+                // Create new - always save to KB
+                const input: CreateReflectionInput = {
+                    goalId,
+                    learningText: learningText.trim(),
+                    createKbItem: true,
+                };
+                await invoke<GoalReflection>('create_goal_reflection', { input });
+                toast.success('Reflection created');
+            }
+            
+            setEditingReflection(null);
+            setShowCreateForm(false);
+            loadReflections();
+        } catch (err) {
+            console.error('Failed to save reflection:', err);
+            toast.error('Failed to save reflection');
+        }
+    };
+
+    useEffect(() => {
         loadReflections();
-    });
+    }, [goalId]);
 
     if (loading) {
         return (
@@ -241,61 +250,178 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
         );
     }
 
-    if (reflections.length === 0) {
+    if (reflections.length === 0 && !showCreateForm) {
         return (
             <div className="text-center py-6">
                 <Book className="w-8 h-8 mx-auto mb-2 opacity-30" style={{ color: 'var(--text-tertiary)' }} />
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No reflections yet</p>
+                <p className="text-sm mb-3" style={{ color: 'var(--text-tertiary)' }}>No reflections yet</p>
+                <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+                    style={{
+                        background: 'var(--btn-primary-bg)',
+                        color: 'var(--btn-primary-text)',
+                    }}
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Reflection
+                </button>
             </div>
         );
     }
 
     return (
         <div className="space-y-3">
-            {reflections.map((reflection) => (
-                <div
-                    key={reflection.id}
-                    className="rounded-lg p-4"
+            {/* Add Reflection Button */}
+            {!showCreateForm && !editingReflection && (
+                <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.01]"
                     style={{
                         background: 'var(--surface-secondary)',
-                        border: '1px solid var(--border-primary)',
+                        border: '1px dashed var(--border-primary)',
+                        color: 'var(--text-secondary)',
                     }}
                 >
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
-                                {reflection.learningText}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
-                                {reflection.kbItemId && (
-                                    <span
-                                        className="flex items-center gap-1 px-2 py-1 rounded"
-                                        style={{
-                                            background: 'var(--surface-tertiary)',
-                                            color: 'var(--color-accent-primary)',
-                                        }}
-                                    >
-                                        <Book className="w-3 h-3" />
-                                        In KB
-                                    </span>
-                                )}
+                    <Plus className="w-4 h-4" />
+                    Add Reflection
+                </button>
+            )}
+
+            {/* Create Form */}
+            {showCreateForm && (
+                <ReflectionForm
+                    onSave={(text, createKb) => handleSaveReflection(text, createKb)}
+                    onCancel={() => setShowCreateForm(false)}
+                />
+            )}
+
+            {/* Reflections List */}
+            {reflections.map((reflection) => (
+                editingReflection?.id === reflection.id ? (
+                    <ReflectionForm
+                        key={reflection.id}
+                        initialText={reflection.learningText}
+                        onSave={(text) => handleSaveReflection(text, false, reflection.id)}
+                        onCancel={() => setEditingReflection(null)}
+                    />
+                ) : (
+                    <div
+                        key={reflection.id}
+                        className="rounded-lg p-4"
+                        style={{
+                            background: 'var(--surface-secondary)',
+                            border: '1px solid var(--border-primary)',
+                        }}
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                                <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
+                                    {reflection.learningText}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                    <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
+                                    {reflection.kbItemId && (
+                                        <span
+                                            className="flex items-center gap-1 px-2 py-1 rounded"
+                                            style={{
+                                                background: 'var(--surface-tertiary)',
+                                                color: 'var(--color-accent-primary)',
+                                            }}
+                                        >
+                                            <Book className="w-3 h-3" />
+                                            In KB
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setEditingReflection(reflection)}
+                                    className="flex-shrink-0 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+                                    style={{
+                                        background: 'var(--surface-tertiary)',
+                                        color: 'var(--text-secondary)',
+                                    }}
+                                    title="Edit reflection"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(reflection.id)}
+                                    className="flex-shrink-0 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+                                    style={{
+                                        background: 'var(--surface-tertiary)',
+                                        color: 'var(--color-error)',
+                                    }}
+                                    title="Delete reflection"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
-                        <button
-                            onClick={() => handleDelete(reflection.id)}
-                            className="flex-shrink-0 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
-                            style={{
-                                background: 'var(--surface-tertiary)',
-                                color: 'var(--color-error)',
-                            }}
-                            title="Delete reflection"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
                     </div>
-                </div>
+                )
             ))}
+        </div>
+    );
+}
+
+interface ReflectionFormProps {
+    initialText?: string;
+    onSave: (text: string, createKbItem: boolean) => void;
+    onCancel: () => void;
+}
+
+function ReflectionForm({ initialText = '', onSave, onCancel }: ReflectionFormProps) {
+    const [text, setText] = useState(initialText);
+
+    return (
+        <div
+            className="rounded-lg p-4"
+            style={{
+                background: 'var(--surface-secondary)',
+                border: '1px solid var(--border-primary)',
+            }}
+        >
+            <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What did you learn from this goal?"
+                rows={4}
+                className="w-full rounded-lg px-3 py-2 text-sm mb-3 transition-all focus:outline-none focus:ring-2"
+                style={{
+                    background: 'var(--surface-tertiary)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-primary)',
+                    resize: 'vertical',
+                }}
+                autoFocus
+            />
+
+            <div className="flex justify-end gap-2">
+                <button
+                    onClick={onCancel}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                    style={{
+                        background: 'var(--surface-tertiary)',
+                        color: 'var(--text-secondary)',
+                    }}
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={() => onSave(text, true)}
+                    disabled={!text.trim()}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50"
+                    style={{
+                        background: 'var(--btn-primary-bg)',
+                        color: 'var(--btn-primary-text)',
+                    }}
+                >
+                    Save
+                </button>
+            </div>
         </div>
     );
 }

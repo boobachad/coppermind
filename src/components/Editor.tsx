@@ -121,7 +121,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
           setMenuPos({ x: event.clientX, y: event.clientY });
           return true;
         },
-        click: (view, event) => {
+        click: (_view, event) => {
           // Handle link clicks in read-only mode
           if (!editable) {
             const target = event.target as HTMLElement;

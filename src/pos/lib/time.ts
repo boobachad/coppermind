@@ -11,6 +11,12 @@ export function formatDateDDMMYYYY(date: Date): string {
     return `${day}/${month}/${year}`;
 }
 
+/** Format ISO date string (YYYY-MM-DD) to DD/MM/YYYY without timezone conversion */
+export function formatISODateDDMMYYYY(isoDate: string): string {
+    const [year, month, day] = isoDate.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
+}
+
 export function formatTime(date: Date): string {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
@@ -100,4 +106,40 @@ export function activityOverlapsSlot(
  */
 export function formatActivityTime(isoString: string): string {
     return formatTime(parseActivityTime(isoString));
+}
+
+/**
+ * Create UTC date boundaries for a given YYYY-MM-DD date string
+ * Returns start and end ISO strings for the full day in UTC
+ */
+export function getDayBoundariesUTC(dateStr: string): { start: string; end: string } {
+    return {
+        start: `${dateStr}T00:00:00Z`,
+        end: `${dateStr}T23:59:59Z`
+    };
+}
+
+/**
+ * Create Date objects for time slots in LOCAL timezone
+ * Input: YYYY-MM-DD date string and slot index (0-47)
+ * Output: { start: Date, end: Date } in local timezone
+ * 
+ * CRITICAL: Must match parseActivityTime behavior (local timezone)
+ * Activities are stored as timestamptz and converted to local by parseActivityTime
+ */
+export function getSlotBoundaries(dateStr: string, slotIndex: number): { start: Date; end: Date } {
+    const startMinutes = slotIndex * 30;
+    const endMinutes = startMinutes + 30;
+    
+    const startHours = Math.floor(startMinutes / 60);
+    const startMins = startMinutes % 60;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    
+    // Parse as local time by omitting 'Z' suffix
+    // This creates Date in local timezone matching parseActivityTime
+    return {
+        start: new Date(`${dateStr}T${String(startHours).padStart(2, '0')}:${String(startMins).padStart(2, '0')}:00`),
+        end: new Date(`${dateStr}T${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}:00`)
+    };
 }

@@ -53,13 +53,13 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
       // Filter by month if specified
       let filtered = result;
       if (month) {
-        // Get month boundaries
+        // Get month boundaries in YYYY-MM-DD format (no timezone conversion)
         const [year, monthNum] = month.split('-').map(Number);
-        const monthStart = new Date(year, monthNum - 1, 1);
-        const monthEnd = new Date(year, monthNum, 0); // Last day of month
+        const monthStartStr = `${year}-${String(monthNum).padStart(2, '0')}-01`;
         
-        const monthStartStr = monthStart.toISOString().split('T')[0];
-        const monthEndStr = monthEnd.toISOString().split('T')[0];
+        // Calculate last day of month
+        const lastDay = new Date(year, monthNum, 0).getDate(); // monthNum is next month, day 0 = last day of previous
+        const monthEndStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
         filtered = result.filter(goal => {
           const goalStart = goal.periodStart.split('T')[0];

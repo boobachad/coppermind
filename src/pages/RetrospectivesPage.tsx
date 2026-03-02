@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { Retrospective, RetrospectiveStats } from '../pos/lib/types';
 import { RetrospectiveForm } from '../components/retrospective/RetrospectiveForm';
 import { useConfirmDialog } from '../components/ConfirmDialog';
-import { formatDateDDMMYYYY } from '../pos/lib/time';
+import { formatISODateDDMMYYYY, getLocalDateString } from '../pos/lib/time';
 
 export function RetrospectivesPage() {
     const [retrospectives, setRetrospectives] = useState<Retrospective[]>([]);
@@ -26,11 +26,11 @@ export function RetrospectivesPage() {
 
             // Load stats for last 90 days
             if (data.length > 0) {
-                const now = new Date();
-                const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                const today = getLocalDateString();
+                const ninetyDaysAgo = new Date(new Date(`${today}T00:00:00Z`).getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
                 const statsData = await invoke<RetrospectiveStats>('get_retrospective_stats', {
-                    startDate: ninetyDaysAgo.toISOString(),
-                    endDate: now.toISOString(),
+                    startDate: `${ninetyDaysAgo}T00:00:00Z`,
+                    endDate: `${today}T23:59:59Z`,
                 });
                 setStats(statsData);
             }
@@ -220,7 +220,7 @@ export function RetrospectivesPage() {
                                             {retro.periodType}
                                         </div>
                                         <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                            {formatDateDDMMYYYY(new Date(retro.periodStart))} - {formatDateDDMMYYYY(new Date(retro.periodEnd))}
+                                            {formatISODateDDMMYYYY(retro.periodStart)} - {formatISODateDDMMYYYY(retro.periodEnd)}
                                         </div>
                                     </div>
                                     <button

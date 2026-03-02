@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -176,7 +176,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         }
     };
 
-    const selectedGoal = availableGoals.find(g => g.id === selectedGoalId);
+    // Compute selectedGoal reactively
+    const selectedGoal = useMemo(() => 
+        availableGoals.find(g => g.id === selectedGoalId),
+        [availableGoals, selectedGoalId]
+    );
 
     const handleTitleChange = (value: string) => {
         setTitle(value);
@@ -230,6 +234,13 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         goalId: selectedGoalId,
                         activityId: editingActivity.id,
                     });
+
+                    // Trigger reflection prompt - compute selectedGoal here to get current value
+                    const currentGoal = availableGoals.find(g => g.id === selectedGoalId);
+                    if (currentGoal) {
+                        setCompletedGoal(currentGoal);
+                        setShowReflectionPrompt(true);
+                    }
                 }
 
                 toast.success('Activity updated successfully');
@@ -308,9 +319,10 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                             }
                         }
 
-                        // Trigger reflection prompt for completed goal
-                        if (selectedGoal && !selectedGoal.completed) {
-                            setCompletedGoal(selectedGoal);
+                        // Trigger reflection prompt - compute selectedGoal here to get current value
+                        const currentGoal = availableGoals.find(g => g.id === selectedGoalId);
+                        if (currentGoal) {
+                            setCompletedGoal(currentGoal);
                             setShowReflectionPrompt(true);
                         }
                     }

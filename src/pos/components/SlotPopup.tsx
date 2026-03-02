@@ -6,7 +6,7 @@ import { Star, AlertCircle, BookOpen, ExternalLink, Lightbulb } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
-import { formatSlotTime, activityOverlapsSlot, formatActivityTime } from '../lib/time';
+import { formatSlotTime, activityOverlapsSlot, formatActivityTime, getSlotBoundaries } from '../lib/time';
 import type { Activity, UnifiedGoal, Book, KnowledgeItem } from '../lib/types';
 
 interface SlotPopupProps {
@@ -35,11 +35,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
             invoke<{ activities: Activity[] }>('get_activities', { date })
                 .then(response => {
                     const allActivities = response.activities;
-                    const [year, month, day] = date.split('-').map(Number);
-                    const slotStart = new Date(year, month - 1, day);
-                    slotStart.setMinutes(slotIndex * 30);
-                    const slotEnd = new Date(slotStart);
-                    slotEnd.setMinutes(slotEnd.getMinutes() + 30);
+                    const { start: slotStart, end: slotEnd } = getSlotBoundaries(date, slotIndex);
 
                     const overlapping = allActivities.filter((activity) =>
                         activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)

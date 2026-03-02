@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Settings, Plus, Share2, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar } from 'lucide-react';
+import { FileText, Settings, Plus, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';

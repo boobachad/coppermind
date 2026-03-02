@@ -1,17 +1,19 @@
 // ─── Milestone Progress Utilities ──────────────────────────────────
 // Minimal utilities for milestone progress calculation and status tracking.
 
+import { getLocalDateString } from './time';
+
 /**
  * Calculate remaining days in a period
  */
 export function calculateRemainingDays(periodEnd: string): number {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getLocalDateString();
+    const endDate = periodEnd.split('T')[0];
     
-    const endDate = new Date(periodEnd);
-    endDate.setHours(0, 0, 0, 0);
+    const todayTime = new Date(`${today}T00:00:00Z`).getTime();
+    const endTime = new Date(`${endDate}T00:00:00Z`).getTime();
     
-    const diffMs = endDate.getTime() - today.getTime();
+    const diffMs = endTime - todayTime;
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     
     return Math.max(0, diffDays + 1); // +1 to include today
@@ -21,13 +23,13 @@ export function calculateRemainingDays(periodEnd: string): number {
  * Calculate total days in a period
  */
 export function calculateTotalDays(periodStart: string, periodEnd: string): number {
-    const start = new Date(periodStart);
-    start.setHours(0, 0, 0, 0);
+    const startDate = periodStart.split('T')[0];
+    const endDate = periodEnd.split('T')[0];
     
-    const end = new Date(periodEnd);
-    end.setHours(0, 0, 0, 0);
+    const startTime = new Date(`${startDate}T00:00:00Z`).getTime();
+    const endTime = new Date(`${endDate}T00:00:00Z`).getTime();
     
-    const diffMs = end.getTime() - start.getTime();
+    const diffMs = endTime - startTime;
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1; // +1 to include start day
 }
 

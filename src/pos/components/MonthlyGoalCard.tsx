@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, Edit2, Trash2 } from 'lucide-react';
 import { Milestone } from '../lib/types';
 import { calculateProgress, calculateScheduleStatus } from '../lib/balancer-utils';
-import { formatDateDDMMYYYY } from '../lib/time';
+
 
 interface MonthlyGoalCardProps {
   goal: Milestone;
@@ -31,7 +31,10 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
   // Calculate remaining days and target
   const now = new Date();
   const periodEnd = new Date(goal.periodEnd);
-  const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  // Count full days remaining: from start of tomorrow to end date (inclusive)
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDay = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
+  const remainingDays = Math.max(0, Math.ceil((endDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
   const remainingTarget = Math.max(0, goal.targetValue - goal.currentValue);
 
   // Get status colors based on ahead/behind
@@ -67,7 +70,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
           <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <Calendar className="w-3.5 h-3.5" />
             <span>
-              {formatDateDDMMYYYY(new Date(goal.periodStart))} - {formatDateDDMMYYYY(new Date(goal.periodEnd))}
+              {goal.periodStart.split('T')[0].split('-').reverse().join('/')} - {goal.periodEnd.split('T')[0].split('-').reverse().join('/')}
             </span>
           </div>
         </div>

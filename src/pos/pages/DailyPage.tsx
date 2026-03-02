@@ -8,7 +8,7 @@ import { LogEntryModule } from '../components/LogEntryModule';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
-import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, formatLocalAsUTC } from '../lib/time';
+import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, UnifiedGoal, Book } from '../lib/types';
 import { ArrowLeft, BookOpen, Pencil, AlertCircle, ExternalLink } from 'lucide-react';
@@ -48,10 +48,10 @@ export function DailyPage() {
 
         setLoading(true);
         try {
-            const now = new Date();
-            const localDateStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            const localDateStr = getLocalDateString();
             setIsToday(date === localDateStr);
 
+            const now = new Date();
             const currentMinute = now.getHours() * 60 + now.getMinutes();
             setCurrentSlotIndex(Math.floor(currentMinute / 30));
 
@@ -148,12 +148,8 @@ export function DailyPage() {
                 goalDirectedMinutes: Math.round(goalDirected)
             });
 
-            const [year, month, day] = date.split('-').map(Number);
             const slots: GridSlot[] = Array.from({ length: 48 }, (_, i) => {
-                const slotStart = new Date(year, month - 1, day);
-                slotStart.setMinutes(i * 30);
-                const slotEnd = new Date(slotStart);
-                slotEnd.setMinutes(slotEnd.getMinutes() + 30);
+                const { start: slotStart, end: slotEnd } = getSlotBoundaries(date, i);
 
                 const overlapping = actData.filter((activity) =>
                     activityOverlapsSlot(activity.startTime, activity.endTime, slotStart, slotEnd)
@@ -199,13 +195,11 @@ export function DailyPage() {
             setDaySlots(slots);
 
             // ─── UNIFIED GOALS INTEGRATION ───
-            const [y, m, d] = date.split('-').map(Number);
-            const startOfDay = new Date(y, m - 1, d, 0, 0, 0);
-            const endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+            const { start: startOfDay, end: endOfDay } = getDayBoundariesUTC(date);
 
             const filters = {
-                date_range: [formatLocalAsUTC(startOfDay), formatLocalAsUTC(endOfDay)],
-                timezone_offset: -new Date().getTimezoneOffset()
+                date_range: [startOfDay, endOfDay],
+                timezone_offset: 0 // Using UTC, no offset needed
             };
 
             const goalData = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });

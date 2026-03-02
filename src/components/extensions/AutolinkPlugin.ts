@@ -11,7 +11,7 @@ export const AutolinkPlugin = Extension.create({
     return [
       new Plugin({
         key: new PluginKey('autolinkPlugin'),
-        appendTransaction: (transactions, oldState, newState) => {
+        appendTransaction: (transactions, _oldState, newState) => {
           const docChanged = transactions.some(tr => tr.docChanged);
           if (!docChanged) return null;
 
