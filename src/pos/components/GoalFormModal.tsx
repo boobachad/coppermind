@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import * as chrono from 'chrono-node';
 import { UnifiedGoal } from '../lib/types';
+import { parseGoalDate, formatGoalDate } from '../lib/time';
 import { DatePicker } from '../../components/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { X, Repeat } from 'lucide-react';
@@ -48,8 +48,8 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                 setFormUrgent(editingGoal.urgent);
 
                 if (editingGoal.dueDate) {
-                    const d = new Date(editingGoal.dueDate);
-                    setFormDate(d);
+                    // Use time utils to parse date-only string
+                    setFormDate(parseGoalDate(editingGoal.dueDate));
                 } else {
                     setFormDate(undefined);
                 }
@@ -85,11 +85,10 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
     const handleCreateOrUpdateGoal = async () => {
         if (!formText.trim()) return;
 
+        // Use time utils to format date-only string (YYYY-MM-DD)
         let dueDate = undefined;
         if (formDate) {
-            const dateStr = format(formDate, 'yyyy-MM-dd');
-            const d = new Date(`${dateStr}T00:00:00Z`);
-            dueDate = d.toISOString();
+            dueDate = formatGoalDate(formDate);
         }
 
         try {

@@ -50,6 +50,31 @@ export function getLocalDateString(): string {
     return localDate.toISOString().split('T')[0];
 }
 
+// ─── Goal Date Utilities (Date-Only, No Time) ──────────────────
+// Goals use date-only format (YYYY-MM-DD), never timestamps
+
+/**
+ * Parse goal due date string to Date object
+ * Input: "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS..." (backend may send either)
+ * Output: Date object in local timezone at midnight
+ */
+export function parseGoalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+/**
+ * Format Date object to goal date string (YYYY-MM-DD)
+ * Input: Date object
+ * Output: "YYYY-MM-DD" string for backend
+ */
+export function formatGoalDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // ─── Activity Time Utilities ────────────────────────────────────
 // CRITICAL: Backend stores UTC, frontend displays local time
 // Always use these functions for consistency across Grid/DailyPage

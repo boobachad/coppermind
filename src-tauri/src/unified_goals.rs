@@ -100,16 +100,18 @@ pub async fn create_unified_goal(
     let id = gen_id();
     let now = Utc::now();
 
-    let due_date_parsed = req.due_date.as_ref().and_then(|s| s.parse::<DateTime<Utc>>().ok());
     let metrics_json = req.metrics.as_ref().map(|m| sqlx::types::Json(m.clone()));
     let labels_json = req.labels.as_ref().map(|l| sqlx::types::Json(l.clone()));
 
-    // Calculate due_date_local: extract YYYY-MM-DD from due_date OR use created_at date
-    // This ensures goals always have a local date for Daily Briefing queries
-    let due_date_local = if let Some(dt) = due_date_parsed {
-        dt.format("%Y-%m-%d").to_string()
+    // DATE-ONLY LOGIC:
+    // Frontend sends YYYY-MM-DD string (no time component)
+    // due_date_local: Always set (either from req or today's date)
+    // due_date: Always NULL (we don't use timestamps for goals)
+    let due_date_local = if let Some(date_str) = &req.due_date {
+        // User provided a due date
+        date_str.clone()
     } else {
-        // Default: use created_at date as due_date_local
+        // No due date = due today
         now.format("%Y-%m-%d").to_string()
     };
 
@@ -119,13 +121,12 @@ pub async fn create_unified_goal(
             due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
             created_at, updated_at, original_date, is_debt
-        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, $6, NULL, $7, $8, $9, $10, NULL, $11, $12, $13, $13, NULL, false)
+        ) VALUES ($1, $2, $3, false, NULL, false, NULL, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
         RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(&id)
     .bind(&req.text)
     .bind(&req.description)
-    .bind(due_date_parsed)
     .bind(&due_date_local)
     .bind(&req.recurring_pattern)
     .bind(req.priority.unwrap_or_else(|| "medium".to_string()))
@@ -149,41 +150,35 @@ pub async fn get_unified_goals(
 ) -> PosResult<Vec<UnifiedGoalRow>> {
     let pool = &db.0;
 
-    let mut query = "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE 1=1".to_string();
+    // Exclude recurring templates from list view (they're internal generation blueprints)
+    // Only show: regular goals + recurring instances
+    let mut query = "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE 1=1 AND NOT (recurring_pattern IS NOT NULL AND recurring_template_id IS NULL)".to_string();
 
     // ─── LAZY DEBT LOGIC ───
     // Automatically move overdue goals to Debt. 
     // We do this before fetching so the UI always sees the latest state.
     // Definition of Debt: Past Due AND Not Completed AND Not Already Debt.
 
-    // Calculate "Today start" in UTC, based on user's timezone offset
-    // If no filter/offset provided, default to UTC (offset=0).
-    let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
+    // DATE-ONLY COMPARISON:
+    // Goals are date-only (no time component)
+    // Compare due_date_local (TEXT YYYY-MM-DD) with today's date
     
-    // 1. Get current time in User's Local Timezone
+    // Calculate "Today" in user's local timezone
+    let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
     let now_utc = Utc::now();
     let now_local = now_utc + chrono::Duration::minutes(offset_minutes as i64);
-    
-    // 2. Get "Start of Today" in Local Time (e.g. 2026-02-17 00:00:00)
-    let today_local = now_local.date_naive();
-    
-    // 3. Convert back to UTC to get the comparison threshold
-    // threshold = (Today 00:00 Local) - Offset
-    #[allow(deprecated)] // Date::and_hms is deprecated in favor of and_hms_opt, but we know 0,0,0 is valid
-    let today_start_local = today_local.and_hms_opt(0, 0, 0).unwrap();
-    let today_start_utc = DateTime::<Utc>::from_naive_utc_and_offset(today_start_local, Utc) - chrono::Duration::minutes(offset_minutes as i64);
+    let today_local = now_local.format("%Y-%m-%d").to_string();
 
-    // We execute an UPDATE.
-    // "due_date < today_start_utc": checks if due_date is strictly before today's start.
+    // Mark goals as debt if due_date_local < today_local
     sqlx::query(
         r#"UPDATE unified_goals 
            SET is_debt = TRUE 
            WHERE completed = FALSE 
            AND is_debt = FALSE 
-           AND due_date IS NOT NULL 
-           AND due_date < $1"#
+           AND due_date_local IS NOT NULL 
+           AND due_date_local < $1"#
     )
-    .bind(today_start_utc)
+    .bind(&today_local)
     .execute(pool)
     .await
     .map_err(|e| db_context("update debt status", e))?;
@@ -192,12 +187,14 @@ pub async fn get_unified_goals(
     // If a date range is requested, check for active recurring templates and generate instances.
     // ─── LAZY GENERATION LOGIC ───
     // Check for active recurring templates and generate instances.
-    // Default to "Today" if no range is requested (ensures List View has today's goals).
+    // ONLY create instances on days that match the recurring pattern.
+    // Each instance is due on that specific day only (date-only, no time).
     
     let (gen_start, gen_end) = if let Some(Some((start, end))) = filters.as_ref().map(|f| f.date_range) {
         (start, end)
     } else {
-         (now_utc, now_utc)
+        // Default to today only
+        (now_utc, now_utc)
     };
 
     // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)
@@ -211,7 +208,7 @@ pub async fn get_unified_goals(
     // 2. Iterate through each day in the range
     let mut curr = gen_start;
     
-    // Safety clamp to avoid infinite loops if invalid date range provided
+    // Safety clamp to avoid infinite loops
     let max_days = 366; 
     let mut days_processed = 0;
 
@@ -221,15 +218,14 @@ pub async fn get_unified_goals(
         let local_curr = curr + chrono::Duration::minutes(offset_minutes as i64);
         
         let date_str = local_curr.format("%Y-%m-%d").to_string();
-        let day_name = local_curr.format("%a").to_string(); // Mon, Tue...
-
-        // log::info!("[Unified] Checking generation for date: {} (Day: {})", date_str, day_name);
+        let day_name = local_curr.format("%a").to_string(); // Mon, Tue, Wed...
 
         for tmpl in &templates {
             if let Some(ref pattern) = tmpl.recurring_pattern {
                 // Check if today matches the pattern (e.g. "Mon,Wed" contains "Mon")
                 if pattern.contains(&day_name) || pattern == "Daily" {
-                    // Check if an instance already exists for this template on this date
+                    // Create instance for this date
+                    // DATE-ONLY: due_date_local = date_str, due_date = NULL
                     let new_id = gen_id();
                     let now = Utc::now();
 
@@ -241,14 +237,13 @@ pub async fn get_unified_goals(
                             due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
                             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
                             created_at, updated_at, original_date, is_debt
-                        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, $10, NULL, $11, NULL, $12, $12, NULL, false)
+                        ) VALUES ($1, $2, $3, false, NULL, false, NULL, $4, NULL, $5, $6, $7, $8, $9, NULL, $10, NULL, $11, $11, NULL, false)
                         ON CONFLICT (recurring_template_id, due_date_local) DO NOTHING"#
                     )
                     .bind(&new_id)
                     .bind(&tmpl.text)
                     .bind(&tmpl.description)
-                    .bind(local_curr)       // due_date (TIMESTAMPTZ, UTC)
-                    .bind(&date_str)        // due_date_local (TEXT, e.g. "2026-02-18")
+                    .bind(&date_str)        // due_date_local (TEXT, e.g. "2026-03-03")
                     .bind(&tmpl.id)         // recurring_template_id
                     .bind(&tmpl.priority)
                     .bind(tmpl.urgent)
@@ -298,13 +293,14 @@ pub async fn get_unified_goals(
             }
         }
         if let Some((start, end)) = f.date_range {
-            // For daily view: Match goals that are due within range OR created within range (if no due date)
-            // But realistically for a "Plan", we mostly care about Due Date.
-            // Let's filter by due_date falling in the range.
+            // DATE-ONLY COMPARISON:
+            // Filter by due_date_local (TEXT YYYY-MM-DD) falling in the range
+            let start_date = start.format("%Y-%m-%d").to_string();
+            let end_date = end.format("%Y-%m-%d").to_string();
             query.push_str(&format!(
-                " AND (due_date >= '{}' AND due_date <= '{}')",
-                start.to_rfc3339(),
-                end.to_rfc3339()
+                " AND (due_date_local >= '{}' AND due_date_local <= '{}')",
+                start_date,
+                end_date
             ));
         }
     }
@@ -352,19 +348,15 @@ pub async fn update_unified_goal(
         bind_idx += 1;
     }
     
-    // Logic for updating due_date and recurring_pattern
-    // If user provided a due_date OR we need to auto-set it because recurring is cleared
-    let final_due_date = req.due_date.clone();
-    let pattern_update = req.recurring_pattern.clone();
-    
-    // Add due_date if it exists (either from req or auto-set)
-    if final_due_date.is_some() {
-        updates.push(format!("due_date = ${}", bind_idx));
+    // DATE-ONLY LOGIC:
+    // Frontend sends YYYY-MM-DD string (no time component)
+    // Update due_date_local, keep due_date as NULL
+    if let Some(ref date_str) = req.due_date {
+        updates.push(format!("due_date_local = ${}", bind_idx));
         bind_idx += 1;
     }
 
-    // Add recurring_pattern if it exists in request
-    if let Some(ref p) = pattern_update {
+    if let Some(ref p) = req.recurring_pattern {
         updates.push(format!("recurring_pattern = ${}", bind_idx));
         bind_idx += 1;
     }
@@ -406,12 +398,11 @@ pub async fn update_unified_goal(
     }
     if let Some(verified) = req.verified { query = query.bind(verified); }
     
-    if let Some(dd) = final_due_date {
-        let parsed = dd.parse::<DateTime<Utc>>().ok();
-        query = query.bind(parsed);
+    if let Some(date_str) = req.due_date {
+        query = query.bind(date_str);
     }
 
-    if let Some(p) = pattern_update {
+    if let Some(p) = req.recurring_pattern {
         // If empty string, bind NULL. Else bind the string.
         if p.is_empty() {
              query = query.bind(Option::<String>::None);

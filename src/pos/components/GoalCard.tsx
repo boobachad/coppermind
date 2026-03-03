@@ -1,4 +1,5 @@
 import { UnifiedGoal } from '../lib/types';
+import { parseGoalDate } from '../lib/time';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import { CheckCircle2, Repeat, Flame, AlertTriangle, Calendar, Pencil, Trash2 } from 'lucide-react';
@@ -87,7 +88,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                         {goal.dueDate && (
                             <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10" style={{ color: 'var(--text-secondary)' }}>
                                 <Calendar className="w-3.5 h-3.5" />
-                                {format(new Date(goal.dueDate), 'MMM d, HH:mm')}
+                                {format(parseGoalDate(goal.dueDate), 'MMM d')}
                             </span>
                         )}
                     </div>
