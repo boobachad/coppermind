@@ -269,7 +269,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                     {/* Tags Input (Comma-separated) */}
                     <div>
                         <label

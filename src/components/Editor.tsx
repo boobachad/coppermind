@@ -268,7 +268,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
       </div>
       <DragHandle editor={editor} />
       <TableControls editor={editor} />
-      <ContextMenu editor={editor} position={menuPos} onClose={() => setMenuPos(null)} />
+      {editable && <ContextMenu editor={editor} position={menuPos} onClose={() => setMenuPos(null)} />}
     </>
   );
 });

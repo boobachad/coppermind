@@ -545,6 +545,28 @@ export function NotePage() {
     saveMessages(updated);
   }).current;
 
+  const handleMessageMoveUp = useRef((id: string) => {
+    const currentMessages = messagesRef.current;
+    const index = currentMessages.findIndex(m => m.id === id);
+    if (index <= 0) return; // Already at top or not found
+    
+    const updated = [...currentMessages];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setMessages(updated);
+    saveMessages(updated);
+  }).current;
+
+  const handleMessageMoveDown = useRef((id: string) => {
+    const currentMessages = messagesRef.current;
+    const index = currentMessages.findIndex(m => m.id === id);
+    if (index === -1 || index >= currentMessages.length - 1) return; // Not found or already at bottom
+    
+    const updated = [...currentMessages];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setMessages(updated);
+    saveMessages(updated);
+  }).current;
+
 
   if (loading) {
     return <div className="flex items-center justify-center h-full"><Loader /></div>;
@@ -580,12 +602,16 @@ export function NotePage() {
 
           {/* Chat Messages */}
           <div className="space-y-6">
-            {messages.map((msg) => (
+            {messages.map((msg, index) => (
               <MessageBubble
                 key={msg.id}
                 message={msg}
                 onUpdate={handleMessageUpdate}
                 onDelete={handleMessageDelete}
+                onMoveUp={handleMessageMoveUp}
+                onMoveDown={handleMessageMoveDown}
+                canMoveUp={index > 0}
+                canMoveDown={index < messages.length - 1}
               />
             ))}
             {/* Fallback for empty new notes */}

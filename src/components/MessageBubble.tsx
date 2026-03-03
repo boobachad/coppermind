@@ -9,9 +9,13 @@ interface MessageBubbleProps {
     message: Message;
     onUpdate: (id: string, content: string) => void;
     onDelete: (id: string) => void;
+    onMoveUp?: (id: string) => void;
+    onMoveDown?: (id: string) => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, onUpdate, onDelete }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, onUpdate, onDelete, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: MessageBubbleProps) {
     const isQuestion = message.role === 'question';
     const [isFocused, setIsFocused] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
@@ -44,10 +48,34 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
         <>
             <div
                 className={clsx(
-                    "flex w-full mb-6",
+                    "flex w-full mb-6 group",
                     isQuestion ? "justify-end" : "justify-start"
                 )}
             >
+                {/* Move buttons for Answer (left side) */}
+                {!isQuestion && (
+                    <div className="flex flex-col items-center gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={() => onMoveUp?.(message.id)}
+                            disabled={!canMoveUp}
+                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={{ color: 'var(--text-secondary)' }}
+                            title="Move up"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button
+                            onClick={() => onMoveDown?.(message.id)}
+                            disabled={!canMoveDown}
+                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={{ color: 'var(--text-secondary)' }}
+                            title="Move down"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                    </div>
+                )}
+
                 {/* Bubble */}
                 <div
                     onContextMenu={handleContextMenu}
@@ -64,23 +92,41 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                     }}>
                     <Editor
                         content={message.content}
-                        editable={false} // Read-only by default
+                        editable={false}
                         className={clsx(
                             "prose-sm w-full !max-w-none focus:outline-none",
-                            // Only apply prose-invert (white text) for Answer/Assistant bubbles
                             "dark:prose-invert",
-                            // Ensure Question text remains dark even in dark mode (on white bg)
-                            // We use !important and deep selectors to override global .ProseMirror styles
-                            isQuestion
-                                ? ""
-                                : "",
+                            isQuestion ? "" : "",
                             "[&_p]:m-0 [&_p]:leading-normal"
                         )}
                     />
                 </div>
+
+                {/* Move buttons for Question (right side) */}
+                {isQuestion && (
+                    <div className="flex flex-col items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={() => onMoveUp?.(message.id)}
+                            disabled={!canMoveUp}
+                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={{ color: 'var(--text-secondary)' }}
+                            title="Move up"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button
+                            onClick={() => onMoveDown?.(message.id)}
+                            disabled={!canMoveDown}
+                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={{ color: 'var(--text-secondary)' }}
+                            title="Move down"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Context Menu */}
             {/* Context Menu */}
             {showContextMenu && createPortal(
                 <>
@@ -93,6 +139,30 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         className="fixed z-[9999] material-glass shadow-xl rounded-xl py-1 min-w-[120px]"
                         style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
                     >
+                        {canMoveUp && onMoveUp && (
+                            <button
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                                style={{ color: 'var(--text-primary)' }}
+                                onClick={() => {
+                                    setShowContextMenu(false);
+                                    onMoveUp(message.id);
+                                }}
+                            >
+                                Move Up
+                            </button>
+                        )}
+                        {canMoveDown && onMoveDown && (
+                            <button
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                                style={{ color: 'var(--text-primary)' }}
+                                onClick={() => {
+                                    setShowContextMenu(false);
+                                    onMoveDown(message.id);
+                                }}
+                            >
+                                Move Down
+                            </button>
+                        )}
                         <button
                             className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
                             style={{ color: 'var(--text-primary)' }}
