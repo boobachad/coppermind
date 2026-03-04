@@ -12,9 +12,10 @@ export interface Activity {
     description: string;
     isProductive: boolean;
     isShadow: boolean;
-    goalId: string | null;
-    bookId: string | null;     // NEW: Link to books table
-    pagesRead: number | null;  // NEW: Pages read in this activity
+    goalIds: string[] | null;  // Multiple goals (mutually exclusive with milestoneId)
+    milestoneId: string | null; // Single milestone (mutually exclusive with goalIds)
+    bookId: string | null;     // Link to books table
+    pagesRead: number | null;  // Pages read in this activity
     createdAt: string;
 }
 

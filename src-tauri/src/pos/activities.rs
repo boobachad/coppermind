@@ -22,7 +22,8 @@ pub struct ActivityRow {
     pub description: String,
     pub is_productive: bool,
     pub is_shadow: bool,
-    pub goal_id: Option<String>,
+    pub goal_ids: Option<Vec<String>>,
+    pub milestone_id: Option<String>,
     pub book_id: Option<String>,
     pub pages_read: Option<i32>,
     pub created_at: DateTime<Utc>,
@@ -39,7 +40,8 @@ pub struct CreateActivityRequest {
     pub title: String,
     pub description: String,
     pub is_productive: Option<bool>,
-    pub goal_id: Option<String>,
+    pub goal_ids: Option<Vec<String>>,  // Multiple goals
+    pub milestone_id: Option<String>,   // Single milestone (mutually exclusive with goal_ids)
     pub book_id: Option<String>,
     pub pages_read: Option<i32>,
     pub updates: Option<Vec<MetricUpdate>>,
@@ -83,7 +85,7 @@ pub async fn get_activities(
 
     let rows = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
+                  is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read, created_at
            FROM pos_activities
            WHERE date = $1
            ORDER BY start_time ASC"#,
@@ -104,7 +106,7 @@ pub async fn get_activities(
         if a.is_productive {
             productive_minutes += dur;
         }
-        if a.goal_id.is_some() {
+        if a.goal_ids.is_some() || a.milestone_id.is_some() {
             goal_directed_minutes += dur;
         }
     }
@@ -147,11 +149,16 @@ pub async fn create_activity(
 
     let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
+    // Validate: goal_ids and milestone_id are mutually exclusive
+    if req.goal_ids.is_some() && req.milestone_id.is_some() {
+        return Err(PosError::InvalidInput("Cannot link to both goals and milestone".into()));
+    }
+
     // 1. Insert activity — sqlx+chrono handles DateTime<Utc> → TIMESTAMPTZ natively
     sqlx::query(
         r#"INSERT INTO pos_activities
-           (id, date, start_time, end_time, category, title, description, is_productive, is_shadow, goal_id, book_id, pages_read)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, $10, $11)"#,
+           (id, date, start_time, end_time, category, title, description, is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, $10, $11, $12)"#,
     )
     .bind(&activity_id)
     .bind(&date)
@@ -161,7 +168,8 @@ pub async fn create_activity(
     .bind(&req.title)
     .bind(&req.description)
     .bind(is_productive)
-    .bind(&req.goal_id)
+    .bind(&req.goal_ids)
+    .bind(&req.milestone_id)
     .bind(&req.book_id)
     .bind(req.pages_read)
     .execute(&mut *tx)
@@ -197,20 +205,30 @@ pub async fn create_activity(
         }
     }
 
-    // 3. If linked to a goal, mark as verified + auto-resolve debt
-    if let Some(ref gid) = req.goal_id {
-        sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
-            .bind(gid)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| db_context("verify goal", e))?;
+    // 3. If linked to goal(s), mark as verified + auto-resolve debt
+    if let Some(ref goal_ids) = req.goal_ids {
+        for gid in goal_ids {
+            sqlx::query("UPDATE unified_goals SET verified = TRUE WHERE id = $1")
+                .bind(gid)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| db_context("verify goal", e))?;
+        }
+    }
 
-        // Auto-resolve debt: delete debt row if exists (CASCADE safe, goal remains)
-        sqlx::query("DELETE FROM pos_debt_goals WHERE goal_id = $1")
-            .bind(gid)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| db_context("auto-resolve debt", e))?;
+    // 4. If linked to milestone, increment progress
+    if let Some(ref milestone_id) = req.milestone_id {
+        if let Some(updates) = &req.updates {
+            let total_increment = updates.iter().map(|u| u.value).sum::<i32>();
+            if total_increment > 0 {
+                sqlx::query("UPDATE goal_periods SET current_value = current_value + $1 WHERE id = $2")
+                    .bind(total_increment)
+                    .bind(milestone_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| db_context("increment milestone", e))?;
+            }
+        }
     }
 
     tx.commit().await.map_err(|e| db_context("TX commit", e))?;
@@ -218,7 +236,7 @@ pub async fn create_activity(
     // Fetch the created activity
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
+                  is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&activity_id)
@@ -227,9 +245,10 @@ pub async fn create_activity(
     .map_err(|e| db_context("fetch created activity", e))?;
 
     log::info!(
-        "[POS] Created activity {} (goal: {:?}, metrics: {})",
+        "[POS] Created activity {} (goals: {:?}, milestone: {:?}, metrics: {})",
         activity.id,
-        req.goal_id,
+        req.goal_ids,
+        req.milestone_id,
         req.updates.as_ref().map_or(0, |u| u.len())
     );
 
@@ -261,12 +280,17 @@ pub async fn update_activity(
     let date = req.date.unwrap_or_else(|| start.format("%Y-%m-%d").to_string());
     let is_productive = req.is_productive.unwrap_or(true);
 
+    // Validate: goal_ids and milestone_id are mutually exclusive
+    if req.goal_ids.is_some() && req.milestone_id.is_some() {
+        return Err(PosError::InvalidInput("Cannot link to both goals and milestone".into()));
+    }
+
     sqlx::query(
         r#"UPDATE pos_activities SET
            date = $1, start_time = $2, end_time = $3, category = $4,
-           title = $5, description = $6, is_productive = $7, goal_id = $8,
-           book_id = $9, pages_read = $10
-           WHERE id = $11"#,
+           title = $5, description = $6, is_productive = $7, goal_ids = $8,
+           milestone_id = $9, book_id = $10, pages_read = $11
+           WHERE id = $12"#,
     )
     .bind(&date)
     .bind(start)
@@ -275,7 +299,8 @@ pub async fn update_activity(
     .bind(&req.title)
     .bind(&req.description)
     .bind(is_productive)
-    .bind(&req.goal_id)
+    .bind(&req.goal_ids)
+    .bind(&req.milestone_id)
     .bind(&req.book_id)
     .bind(&req.pages_read)
     .bind(&id)
@@ -285,7 +310,7 @@ pub async fn update_activity(
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
+                  is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&id)
@@ -299,6 +324,7 @@ pub async fn update_activity(
 
 /// PATCH: Link an activity to a goal + mark goal verified.
 /// Transactional: both writes succeed or both roll back.
+/// DEPRECATED: Use update_activity with goal_ids instead
 #[tauri::command]
 pub async fn patch_activity(
     db: State<'_, PosDb>,
@@ -308,14 +334,15 @@ pub async fn patch_activity(
     let pool = &db.0;
     let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
 
-    sqlx::query("UPDATE pos_activities SET goal_id = $1 WHERE id = $2")
+    // Convert single goal to array
+    sqlx::query("UPDATE pos_activities SET goal_ids = ARRAY[$1::TEXT] WHERE id = $2")
         .bind(&goal_id)
         .bind(&id)
         .execute(&mut *tx)
         .await
         .map_err(|e| db_context("patch activity", e))?;
 
-    sqlx::query("UPDATE pos_goals SET is_verified = TRUE WHERE id = $1")
+    sqlx::query("UPDATE unified_goals SET verified = TRUE WHERE id = $1")
         .bind(&goal_id)
         .execute(&mut *tx)
         .await
@@ -325,7 +352,7 @@ pub async fn patch_activity(
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
+                  is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read, created_at
            FROM pos_activities WHERE id = $1"#,
     )
     .bind(&id)
@@ -376,7 +403,7 @@ pub async fn get_activities_batch(
     // Fetch all activities for all dates in one query
     let rows = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
-                  is_productive, is_shadow, goal_id, book_id, pages_read, created_at
+                  is_productive, is_shadow, goal_ids, milestone_id, book_id, pages_read, created_at
            FROM pos_activities
            WHERE date = ANY($1)
            ORDER BY date ASC, start_time ASC"#,
@@ -411,7 +438,7 @@ pub async fn get_activities_batch(
             if a.is_productive {
                 productive_minutes += dur;
             }
-            if a.goal_id.is_some() {
+            if a.goal_ids.is_some() || a.milestone_id.is_some() {
                 goal_directed_minutes += dur;
             }
         }

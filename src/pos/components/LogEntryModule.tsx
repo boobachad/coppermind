@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TimePickerInput } from '@/components/ui/time-picker-input';
-import { Flame, AlertCircle, BarChart3 } from 'lucide-react';
+import { Flame, AlertCircle, BarChart3, Check } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal, Activity, Book, Milestone } from '../lib/types';
 import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
@@ -45,7 +45,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
     const [availableMilestones, setAvailableMilestones] = useState<Milestone[]>([]);
-    const [selectedGoalId, setSelectedGoalId] = useState<string>(editingActivity?.goalId || 'none');
+    const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
+    const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
     const [metricValues, setMetricValues] = useState<Record<string, string>>({});
 
     // NEW: Book Tracking State
@@ -68,7 +69,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setTitle(editingActivity.title);
             setDescription(editingActivity.description);
             setIsProductive(editingActivity.isProductive);
-            setSelectedGoalId(editingActivity.goalId || 'none');
+            setSelectedGoalIds(editingActivity.goalIds || []);
+            setSelectedMilestoneId(editingActivity.milestoneId || null);
             setSelectedBookId(editingActivity.bookId || null);
             setPagesRead(editingActivity.pagesRead?.toString() || '');
             setShowBookSelector(editingActivity.category === 'book');
@@ -82,7 +84,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setTitle('');
             setDescription('');
             setIsProductive(false);
-            setSelectedGoalId('none');
+            setSelectedGoalIds([]);
+            setSelectedMilestoneId(null);
             setMetricValues({});
             setSelectedBookId(null);
             setPagesRead('');
@@ -114,27 +117,41 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         fetchGoalsAndMilestones();
     }, [date]);
 
-    // Existing handlers (PRESERVED)
-    const handleGoalChange = (value: string) => {
-        setSelectedGoalId(value);
-        setMetricValues({});
-
-        if (value !== 'none') {
-            // Check if it's a milestone
-            if (value.startsWith('milestone-')) {
-                const milestoneId = value.replace('milestone-', '');
-                const milestone = availableMilestones.find(m => m.id === milestoneId);
-                if (milestone) {
-                    setTitle(prev => prev || `Worked on: ${milestone.targetMetric}`);
-                }
-            } else {
-                // Regular goal
-                const goal = availableGoals.find(g => g.id === value);
-                if (goal) {
-                    setTitle(prev => prev || `Worked on: ${goal.text}`);
-                }
+    // Handle goal/milestone selection with mutual exclusivity
+    const handleGoalToggle = (goalId: string) => {
+        if (selectedGoalIds.includes(goalId)) {
+            // Deselect goal
+            setSelectedGoalIds(prev => prev.filter(id => id !== goalId));
+        } else {
+            // Select goal - clear milestone if any
+            setSelectedMilestoneId(null);
+            setSelectedGoalIds(prev => [...prev, goalId]);
+            
+            // Auto-fill title if empty
+            const goal = availableGoals.find(g => g.id === goalId);
+            if (goal && !title) {
+                setTitle(`Worked on: ${goal.text}`);
             }
         }
+        setMetricValues({});
+    };
+
+    const handleMilestoneSelect = (milestoneId: string) => {
+        if (selectedMilestoneId === milestoneId) {
+            // Deselect milestone
+            setSelectedMilestoneId(null);
+        } else {
+            // Select milestone - clear all goals
+            setSelectedGoalIds([]);
+            setSelectedMilestoneId(milestoneId);
+            
+            // Auto-fill title if empty
+            const milestone = availableMilestones.find(m => m.id === milestoneId);
+            if (milestone && !title) {
+                setTitle(`Worked on: ${milestone.targetMetric}`);
+            }
+        }
+        setMetricValues({});
     };
 
     // NEW: Category change handler - show book selector for book category
@@ -194,11 +211,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         }
     };
 
-    // Compute selectedGoal reactively
-    const selectedGoal = useMemo(() => 
-        availableGoals.find(g => g.id === selectedGoalId),
-        [availableGoals, selectedGoalId]
-    );
+    // Compute selected goals/milestone for metric display
+    const selectedGoals = availableGoals.filter(g => selectedGoalIds.includes(g.id));
+    const selectedMilestone = selectedMilestoneId 
+        ? availableMilestones.find(m => m.id === selectedMilestoneId) 
+        : null;
 
     const handleTitleChange = (value: string) => {
         setTitle(value);
@@ -229,7 +246,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             let activityId: string;
             
             if (editingActivity) {
-                // Update activity with goal and book linking
+                // Update activity with multiple goals or milestone
                 await invoke('update_activity', {
                     id: editingActivity.id,
                     req: {
@@ -240,23 +257,26 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         description,
                         isProductive,
                         date,
-                        goalId: selectedGoalId !== 'none' && !selectedGoalId.startsWith('milestone-') ? selectedGoalId : null,
+                        goalIds: selectedGoalIds.length > 0 ? selectedGoalIds : null,
+                        milestoneId: selectedMilestoneId,
                         bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
                     }
                 });
 
-                // If goal was linked, mark it as completed/verified
-                if (selectedGoalId !== 'none' && !selectedGoalId.startsWith('milestone-')) {
-                    await invoke('link_activity_to_unified_goal', {
-                        goalId: selectedGoalId,
-                        activityId: editingActivity.id,
-                    });
+                // If goals were linked, mark them as verified
+                if (selectedGoalIds.length > 0) {
+                    for (const goalId of selectedGoalIds) {
+                        await invoke('link_activity_to_unified_goal', {
+                            goalId,
+                            activityId: editingActivity.id,
+                        });
+                    }
 
-                    // Trigger reflection prompt - compute selectedGoal here to get current value
-                    const currentGoal = availableGoals.find(g => g.id === selectedGoalId);
-                    if (currentGoal) {
-                        setCompletedGoal(currentGoal);
+                    // Trigger reflection prompt for first goal
+                    const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);
+                    if (firstGoal) {
+                        setCompletedGoal(firstGoal);
                         setShowReflectionPrompt(true);
                     }
                 }
@@ -265,7 +285,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 activityId = editingActivity.id;
                 onCancelEdit?.();
             } else {
-                // Create activity (ENHANCED WITH BOOK TRACKING)
+                // Create activity with multiple goals or milestone
                 const activityResult = await invoke<{ id: string }>('create_activity', {
                     req: {
                         startTime: startTimeISO,
@@ -274,7 +294,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         title,
                         description,
                         isProductive,
-                        goalId: null,
+                        goalIds: selectedGoalIds.length > 0 ? selectedGoalIds : null,
+                        milestoneId: selectedMilestoneId,
                         bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
                         date,
@@ -283,34 +304,18 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 
                 activityId = activityResult.id;
 
-                // Link to goal/milestone if selected
-                if (selectedGoalId !== 'none') {
-                    // Check if it's a milestone (prefixed with "milestone-")
-                    if (selectedGoalId.startsWith('milestone-')) {
-                        const milestoneId = selectedGoalId.replace('milestone-', '');
-                        
-                        // Increment milestone progress with metric values
-                        if (Object.keys(metricValues).length > 0) {
-                            const totalIncrement = Object.values(metricValues).reduce((sum, val) => sum + parseInt(val || '0'), 0);
-                            try {
-                                await invoke('increment_milestone_progress', {
-                                    milestoneId,
-                                    amount: totalIncrement
-                                });
-                            } catch (err) {
-                                console.error('Failed to update milestone progress:', err);
-                                toast.error('Failed to update milestone progress');
-                            }
-                        }
-                    } else {
-                        // Regular goal linking
+                // Link to goals if selected
+                if (selectedGoalIds.length > 0) {
+                    for (const goalId of selectedGoalIds) {
                         await invoke('link_activity_to_unified_goal', {
-                            goalId: selectedGoalId,
+                            goalId,
                             activityId,
                         });
 
-                        if (selectedGoal && selectedGoal.metrics && Object.keys(metricValues).length > 0) {
-                            const updatedMetrics = selectedGoal.metrics.map(m => {
+                        // Handle goal metrics
+                        const goal = availableGoals.find(g => g.id === goalId);
+                        if (goal && goal.metrics && Object.keys(metricValues).length > 0) {
+                            const updatedMetrics = goal.metrics.map(m => {
                                 const increment = parseInt(metricValues[m.id] || '0');
                                 return {
                                     ...m,
@@ -319,16 +324,16 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                             });
 
                             await invoke('update_unified_goal', {
-                                id: selectedGoalId,
+                                id: goalId,
                                 req: { metrics: updatedMetrics }
                             });
 
                             // Auto-increment parent milestone if goal is linked to one
-                            if (selectedGoal.parentGoalId) {
+                            if (goal.parentGoalId) {
                                 try {
                                     const totalIncrement = Object.values(metricValues).reduce((sum, val) => sum + parseInt(val || '0'), 0);
                                     await invoke('increment_milestone_progress', {
-                                        milestoneId: selectedGoal.parentGoalId,
+                                        milestoneId: goal.parentGoalId,
                                         amount: totalIncrement
                                     });
                                 } catch (err) {
@@ -336,13 +341,27 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                                 }
                             }
                         }
+                    }
 
-                        // Trigger reflection prompt - compute selectedGoal here to get current value
-                        const currentGoal = availableGoals.find(g => g.id === selectedGoalId);
-                        if (currentGoal) {
-                            setCompletedGoal(currentGoal);
-                            setShowReflectionPrompt(true);
-                        }
+                    // Trigger reflection prompt for first goal
+                    const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);
+                    if (firstGoal) {
+                        setCompletedGoal(firstGoal);
+                        setShowReflectionPrompt(true);
+                    }
+                }
+
+                // Handle milestone if selected
+                if (selectedMilestoneId && Object.keys(metricValues).length > 0) {
+                    const totalIncrement = Object.values(metricValues).reduce((sum, val) => sum + parseInt(val || '0'), 0);
+                    try {
+                        await invoke('increment_milestone_progress', {
+                            milestoneId: selectedMilestoneId,
+                            amount: totalIncrement
+                        });
+                    } catch (err) {
+                        console.error('Failed to update milestone progress:', err);
+                        toast.error('Failed to update milestone progress');
                     }
                 }
 
@@ -381,7 +400,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
             setTitle('');
             setDescription('');
-            setSelectedGoalId('none');
+            setSelectedGoalIds([]);
+            setSelectedMilestoneId(null);
             setMetricValues({});
             setSelectedBookId(null);
             setPagesRead('');
@@ -445,49 +465,113 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>Link to Goal/Milestone (Optional)</label>
-                    <Select value={selectedGoalId} onValueChange={handleGoalChange}>
-                        <SelectTrigger className="material-glass-subtle border-none w-full">
-                            <SelectValue placeholder="Select a goal or milestone" />
+                    <label className="block text-sm font-medium" style={{ color: 'var(--pos-goal-link-text)' }}>
+                        Link to Goals/Milestone (Optional)
+                    </label>
+                    <Select 
+                        value={
+                            selectedGoalIds.length > 0 
+                                ? `goals-${selectedGoalIds.length}` 
+                                : selectedMilestoneId 
+                                ? `milestone-${selectedMilestoneId}` 
+                                : ''
+                        } 
+                        onValueChange={() => {}}
+                    >
+                        <SelectTrigger className="material-glass-subtle border-none">
+                            <SelectValue placeholder="Select Goal(s) or Milestone" />
                         </SelectTrigger>
-                        <SelectContent className="material-glass max-h-60 overflow-y-auto">
-                            <SelectItem value="none">-- No Goal --</SelectItem>
+                        <SelectContent className="material-glass max-h-80 overflow-y-auto">
+                            {/* Hidden items for value display */}
+                            {selectedGoalIds.length > 0 && (
+                                <SelectItem value={`goals-${selectedGoalIds.length}`} className="hidden">
+                                    {selectedGoalIds.length} Goal{selectedGoalIds.length > 1 ? 's' : ''} Selected
+                                </SelectItem>
+                            )}
+                            {selectedMilestoneId && (
+                                <SelectItem value={`milestone-${selectedMilestoneId}`} className="hidden">
+                                    1 Milestone Selected
+                                </SelectItem>
+                            )}
                             
                             {/* Regular Goals Section */}
                             {availableGoals.length > 0 && (
                                 <>
-                                    <div className="px-2 py-1.5 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
+                                    <div className="px-2 py-1 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
                                         GOALS
                                     </div>
-                                    {availableGoals.map(goal => (
-                                        <SelectItem key={goal.id} value={goal.id}>
-                                            <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                                {goal.dueDate ? <span className="text-xs text-muted-foreground mr-1 font-mono">[{formatDateDDMMYYYY(new Date(goal.dueDate))}]</span> : null}
-                                                <span className="truncate">{goal.text}</span>
-                                                {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
-                                                {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
+                                    {availableGoals.map(goal => {
+                                        const isSelected = selectedGoalIds.includes(goal.id);
+                                        const isDisabled = selectedMilestoneId !== null;
+                                        
+                                        return (
+                                            <div
+                                                key={goal.id}
+                                                onClick={() => !isDisabled && handleGoalToggle(goal.id)}
+                                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-secondary/50'
+                                                } ${isSelected ? 'bg-secondary' : ''}`}
+                                            >
+                                                <div className="flex items-center justify-center w-4 h-4 rounded border border-input">
+                                                    {isSelected && <Check className="w-3 h-3" />}
+                                                </div>
+                                                <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
+                                                    {goal.dueDate && (
+                                                        <span className="text-xs text-muted-foreground font-mono shrink-0">
+                                                            [{formatDateDDMMYYYY(new Date(goal.dueDate))}]
+                                                        </span>
+                                                    )}
+                                                    <span className="truncate">{goal.text}</span>
+                                                    {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
+                                                    {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </>
+                            )}
+                            
+                            {/* Separator between Goals and Milestones */}
+                            {availableGoals.length > 0 && availableMilestones.length > 0 && (
+                                <div className="border-t my-2" style={{ borderColor: 'var(--border-primary)' }} />
                             )}
                             
                             {/* Milestones Section */}
                             {availableMilestones.length > 0 && (
                                 <>
-                                    <div className="px-2 py-1.5 text-xs font-semibold mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                                    <div className="px-2 py-1 text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>
                                         MILESTONES
                                     </div>
-                                    {availableMilestones.map(milestone => (
-                                        <SelectItem key={`milestone-${milestone.id}`} value={`milestone-${milestone.id}`}>
-                                            <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                                <BarChart3 className="w-3 h-3 text-muted-foreground mr-1" />
-                                                <span className="truncate">{milestone.targetMetric}</span>
-                                                <span className="text-xs text-muted-foreground">({milestone.currentValue}/{milestone.targetValue})</span>
-                                            </span>
-                                        </SelectItem>
-                                    ))}
+                                    {availableMilestones.map(milestone => {
+                                        const isSelected = selectedMilestoneId === milestone.id;
+                                        const isDisabled = selectedGoalIds.length > 0 || (selectedMilestoneId !== null && selectedMilestoneId !== milestone.id);
+                                        
+                                        return (
+                                            <div
+                                                key={milestone.id}
+                                                onClick={() => !isDisabled && handleMilestoneSelect(milestone.id)}
+                                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-secondary/50'
+                                                } ${isSelected ? 'bg-secondary' : ''}`}
+                                            >
+                                                <div className="flex items-center justify-center w-4 h-4 rounded border border-input">
+                                                    {isSelected && <Check className="w-3 h-3" />}
+                                                </div>
+                                                <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
+                                                    <BarChart3 className="w-3 h-3 text-muted-foreground shrink-0" />
+                                                    <span className="truncate">{milestone.targetMetric}</span>
+                                                    <span className="text-xs text-muted-foreground shrink-0">
+                                                        ({milestone.currentValue}/{milestone.targetValue})
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </>
+                            )}
+                            
+                            {availableGoals.length === 0 && availableMilestones.length === 0 && (
+                                <div className="px-2 py-1 text-xs text-muted-foreground">No goals or milestones available</div>
                             )}
                         </SelectContent>
                     </Select>
@@ -582,51 +666,56 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             )}
 
 
-            {selectedGoal && selectedGoal.metrics && selectedGoal.metrics.length > 0 && (
+            {/* Metrics for selected goals */}
+            {selectedGoals.length > 0 && selectedGoals.some(g => g.metrics && g.metrics.length > 0) && (
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium">Progress on Metrics</label>
-                    {selectedGoal.metrics.map(metric => (
-                        <div key={metric.id} className="flex items-center gap-2">
-                            <span className="text-sm flex-1">{metric.label}</span>
-                            <Input
-                                type="number"
-                                min="0"
-                                value={metricValues[metric.id] || ''}
-                                onChange={(e) => setMetricValues(prev => ({ ...prev, [metric.id]: e.target.value }))}
-                                placeholder="0"
-                                className="w-24"
-                            />
-                            <span className="text-sm text-muted-foreground">
-                                ({metric.current}/{metric.target})
-                            </span>
-                        </div>
-                    ))}
+                    <label className="block text-sm font-medium">Progress on Goal Metrics</label>
+                    {selectedGoals.map(goal => 
+                        goal.metrics && goal.metrics.length > 0 ? (
+                            <div key={goal.id} className="space-y-2 p-3 rounded border" style={{ borderColor: 'var(--border-color)' }}>
+                                <div className="text-xs font-medium text-muted-foreground">{goal.text}</div>
+                                {goal.metrics.map(metric => (
+                                    <div key={metric.id} className="flex items-center gap-2">
+                                        <span className="text-sm flex-1">{metric.label}</span>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            value={metricValues[metric.id] || ''}
+                                            onChange={(e) => setMetricValues(prev => ({ ...prev, [metric.id]: e.target.value }))}
+                                            placeholder="0"
+                                            className="w-24"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            ({metric.current}/{metric.target})
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null
+                    )}
                 </div>
             )}
             
-            {selectedGoalId.startsWith('milestone-') && (() => {
-                const milestoneId = selectedGoalId.replace('milestone-', '');
-                const milestone = availableMilestones.find(m => m.id === milestoneId);
-                return milestone && (
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium">Progress on Milestone</label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm flex-1">{milestone.targetMetric}</span>
-                            <Input
-                                type="number"
-                                min="0"
-                                value={metricValues['milestone'] || ''}
-                                onChange={(e) => setMetricValues({ milestone: e.target.value })}
-                                placeholder="0"
-                                className="w-24"
-                            />
-                            <span className="text-sm text-muted-foreground">
-                                ({milestone.currentValue}/{milestone.targetValue} {milestone.unit || ''})
-                            </span>
-                        </div>
+            {/* Metrics for selected milestone */}
+            {selectedMilestone && (
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium">Progress on Milestone</label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm flex-1">{selectedMilestone.targetMetric}</span>
+                        <Input
+                            type="number"
+                            min="0"
+                            value={metricValues['milestone'] || ''}
+                            onChange={(e) => setMetricValues({ milestone: e.target.value })}
+                            placeholder="0"
+                            className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                            ({selectedMilestone.currentValue}/{selectedMilestone.targetValue} {selectedMilestone.unit || ''})
+                        </span>
                     </div>
-                );
-            })()}
+                </div>
+            )}
 
             <div className="flex gap-2">
                 {editingActivity && (

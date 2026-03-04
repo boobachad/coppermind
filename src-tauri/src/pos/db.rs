@@ -43,15 +43,22 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         description   TEXT NOT NULL,
         is_productive BOOLEAN NOT NULL DEFAULT TRUE,
         is_shadow     BOOLEAN NOT NULL DEFAULT FALSE,
-        goal_id       TEXT,
+        goal_ids      TEXT[],
+        milestone_id  TEXT REFERENCES goal_periods(id) ON DELETE SET NULL,
         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         title         TEXT NOT NULL,
         book_id       TEXT,
-        pages_read    INTEGER
+        pages_read    INTEGER,
+        CONSTRAINT check_goal_or_milestone CHECK (
+            (goal_ids IS NOT NULL AND milestone_id IS NULL) OR
+            (goal_ids IS NULL AND milestone_id IS NOT NULL) OR
+            (goal_ids IS NULL AND milestone_id IS NULL)
+        )
     )",
     "CREATE INDEX IF NOT EXISTS idx_pos_activities_date       ON pos_activities (date)",
     "CREATE INDEX IF NOT EXISTS idx_pos_activities_start_time ON pos_activities (start_time)",
-    "CREATE INDEX IF NOT EXISTS idx_pos_activities_goal_id    ON pos_activities (goal_id)",
+    "CREATE INDEX IF NOT EXISTS idx_activities_goal_ids       ON pos_activities USING GIN(goal_ids)",
+    "CREATE INDEX IF NOT EXISTS idx_activities_milestone_id   ON pos_activities (milestone_id) WHERE milestone_id IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_activities_book_id        ON pos_activities (book_id)",
 
     // ─── Activity Metrics ───────────────────────────────────────────

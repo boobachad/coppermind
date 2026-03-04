@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, AlertCircle, BookOpen, ExternalLink, Lightbulb } from 'lucide-react';
+import { Star, BookOpen, ExternalLink, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
 import { ACTIVITY_COLORS } from '../lib/config';
 import { formatSlotTime, activityOverlapsSlot, formatActivityTime, getSlotBoundaries } from '../lib/time';
-import type { Activity, UnifiedGoal, Book, KnowledgeItem } from '../lib/types';
+import type { Activity, Book, KnowledgeItem } from '../lib/types';
 
 interface SlotPopupProps {
     open: boolean;
@@ -146,9 +146,14 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                                     Shadow
                                                 </span>
                                             )}
-                                            {activity.goalId && (
+                                            {activity.goalIds && activity.goalIds.length > 0 && (
                                                 <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                                    Goal <Star className="w-3 h-3" />
+                                                    {activity.goalIds.length} Goal{activity.goalIds.length > 1 ? 's' : ''} <Star className="w-3 h-3" />
+                                                </span>
+                                            )}
+                                            {activity.milestoneId && (
+                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                                    Milestone <Star className="w-3 h-3" />
                                                 </span>
                                             )}
                                         </div>

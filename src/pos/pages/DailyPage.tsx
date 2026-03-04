@@ -136,7 +136,7 @@ export function DailyPage() {
                 if (uniqueDuration > 0) {
                     total += uniqueDuration;
                     if (act.isProductive) productive += uniqueDuration;
-                    if (act.goalId) goalDirected += uniqueDuration;
+                    if (act.goalIds || act.milestoneId) goalDirected += uniqueDuration;
                 }
 
                 // Add this activity to processed intervals
@@ -413,7 +413,7 @@ export function DailyPage() {
                                                         className="w-2.5 h-2.5 rounded shrink-0"
                                                         style={{
                                                             backgroundColor: getActivityColor(activity.category),
-                                                            border: activity.goalId ? '2px solid var(--pos-goal-accent)' : 'none',
+                                                            border: (activity.goalIds && activity.goalIds.length > 0) || activity.milestoneId ? '2px solid var(--pos-goal-accent)' : 'none',
                                                         }}
                                                     />
                                                     <div className="flex-1 min-w-0">
@@ -477,9 +477,8 @@ export function DailyPage() {
                                         {goals.map((goal) => {
                                             // Determine status: verified / pending / debt
                                             const today = getLocalDateString();
-                                            const dueDate = goal.dueDateLocal?.split('T')[0];
+                                            const dueDate = goal.dueDate?.split('T')[0];
                                             const isDebt = goal.isDebt || (dueDate && dueDate < today && !goal.completed);
-                                            const isPending = !goal.verified && !isDebt;
                                             
                                             let statusLabel = 'Pending';
                                             let statusBg = 'var(--muted)';
