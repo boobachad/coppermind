@@ -47,7 +47,7 @@ export function FriendsLadder() {
       await invoke('create_unified_goal', {
         req: {
           text: `Solve ${problem.problemName} (${problem.problemId})`,
-          dueDate: `${getLocalDateString()}T00:00:00Z`,
+          date: getLocalDateString(), // Local date YYYY-MM-DD
           priority: 'medium',
           problemId: problem.problemUrl,
         },

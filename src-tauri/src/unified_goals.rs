@@ -9,7 +9,7 @@ use crate::pos::utils::gen_id;
 /// Reusable explicit column list for `unified_goals` table.
 /// Kept here (next to UnifiedGoalRow) so schema changes only need one update.
 pub const UNIFIED_GOAL_COLS: &str = "id, text, description, completed, completed_at, verified, \
-    due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, \
+    date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, \
     linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt";
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
@@ -31,7 +31,7 @@ pub struct UnifiedGoalRow {
     pub completed: bool,
     pub completed_at: Option<DateTime<Utc>>,
     pub verified: bool,
-    pub due_date: Option<DateTime<Utc>>,
+    pub date: Option<String>, // Local date YYYY-MM-DD (when goal is due)
     pub recurring_pattern: Option<String>,
     pub recurring_template_id: Option<String>,
     pub priority: String,
@@ -52,7 +52,7 @@ pub struct UnifiedGoalRow {
 pub struct CreateGoalRequest {
     pub text: String,
     pub description: Option<String>,
-    pub due_date: Option<String>,
+    pub date: Option<String>, // Local date YYYY-MM-DD
     pub recurring_pattern: Option<String>,
     pub priority: Option<String>,
     pub urgent: Option<bool>,
@@ -69,7 +69,7 @@ pub struct UpdateGoalRequest {
     pub description: Option<String>,
     pub completed: Option<bool>,
     pub verified: Option<bool>,
-    pub due_date: Option<String>,
+    pub date: Option<String>, // Local date YYYY-MM-DD
     pub recurring_pattern: Option<String>,
     pub priority: Option<String>,
     pub urgent: Option<bool>,
@@ -88,7 +88,7 @@ pub struct GoalFilters {
     pub has_recurring: Option<bool>,
     pub search: Option<String>,
     pub date_range: Option<(DateTime<Utc>, DateTime<Utc>)>, // Start, End
-    pub timezone_offset: Option<i32>, // Minutes from UTC (e.g. -330 for IST)
+    pub today_local: Option<String>, // YYYY-MM-DD in local timezone (for debt marking)
 }
 
 #[tauri::command]
@@ -103,11 +103,10 @@ pub async fn create_unified_goal(
     let metrics_json = req.metrics.as_ref().map(|m| sqlx::types::Json(m.clone()));
     let labels_json = req.labels.as_ref().map(|l| sqlx::types::Json(l.clone()));
 
-    // DATE-ONLY LOGIC:
+    // DATE-ONLY LOGIC (matches activities.rs pattern):
     // Frontend sends YYYY-MM-DD string (no time component)
-    // due_date_local: Always set (either from req or today's date)
-    // due_date: Always NULL (we don't use timestamps for goals)
-    let due_date_local = if let Some(date_str) = &req.due_date {
+    // date: Always set (either from req or today's date)
+    let date = if let Some(date_str) = &req.date {
         // User provided a due date
         date_str.clone()
     } else {
@@ -118,16 +117,16 @@ pub async fn create_unified_goal(
     let row = sqlx::query_as::<_, UnifiedGoalRow>(
         r#"INSERT INTO unified_goals (
             id, text, description, completed, completed_at, verified,
-            due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
+            date, recurring_pattern, recurring_template_id, priority, urgent,
             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
             created_at, updated_at, original_date, is_debt
-        ) VALUES ($1, $2, $3, false, NULL, false, NULL, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
-        RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
+        ) VALUES ($1, $2, $3, false, NULL, false, $4, $5, NULL, $6, $7, $8, $9, NULL, $10, $11, $12, $12, NULL, false)
+        RETURNING id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(&id)
     .bind(&req.text)
     .bind(&req.description)
-    .bind(&due_date_local)
+    .bind(&date)
     .bind(&req.recurring_pattern)
     .bind(req.priority.unwrap_or_else(|| "medium".to_string()))
     .bind(req.urgent.unwrap_or(false))
@@ -152,41 +151,47 @@ pub async fn get_unified_goals(
 
     // Exclude recurring templates from list view (they're internal generation blueprints)
     // Only show: regular goals + recurring instances
-    let mut query = "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE 1=1 AND NOT (recurring_pattern IS NOT NULL AND recurring_template_id IS NULL)".to_string();
+    let mut query = "SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE 1=1 AND NOT (recurring_pattern IS NOT NULL AND recurring_template_id IS NULL)".to_string();
 
     // ─── LAZY DEBT LOGIC ───
     // Automatically move overdue goals to Debt. 
     // We do this before fetching so the UI always sees the latest state.
     // Definition of Debt: Past Due AND Not Completed AND Not Already Debt.
 
-    // DATE-ONLY COMPARISON:
+    // DATE-ONLY COMPARISON (matches activities.rs pattern):
     // Goals are date-only (no time component)
-    // Compare due_date_local (TEXT YYYY-MM-DD) with today's date
+    // Compare date (TEXT YYYY-MM-DD) with today's date
     
-    // Calculate "Today" in user's local timezone
-    let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
-    let now_utc = Utc::now();
-    let now_local = now_utc + chrono::Duration::minutes(offset_minutes as i64);
-    let today_local = now_local.format("%Y-%m-%d").to_string();
+    // Get today's local date from frontend (already calculated using time utils)
+    let today_local_from_frontend = filters.as_ref().and_then(|f| f.today_local.clone());
+    let today_local = today_local_from_frontend
+        .clone()
+        .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string());
 
-    // Mark goals as debt if due_date_local < today_local
-    // Set original_date = due_date_local when transitioning to debt
-    sqlx::query(
+    log::info!(
+        "[UnifiedGoals] Debt marking: frontend_sent={:?}, using={}",
+        today_local_from_frontend,
+        today_local
+    );
+
+    // Mark goals as debt if date < today_local
+    // Set original_date = date when transitioning to debt
+    let debt_result = sqlx::query(
         r#"UPDATE unified_goals 
            SET is_debt = TRUE,
-               original_date = due_date_local
+               original_date = date
            WHERE completed = FALSE 
            AND is_debt = FALSE 
-           AND due_date_local IS NOT NULL 
-           AND due_date_local < $1"#
+           AND date IS NOT NULL 
+           AND date < $1"#
     )
     .bind(&today_local)
     .execute(pool)
     .await
     .map_err(|e| db_context("update debt status", e))?;
 
-    // ─── LAZY GENERATION LOGIC ───
-    // If a date range is requested, check for active recurring templates and generate instances.
+    log::info!("[UnifiedGoals] Debt marking result: {} rows affected", debt_result.rows_affected());
+
     // ─── LAZY GENERATION LOGIC ───
     // Check for active recurring templates and generate instances.
     // ONLY create instances on days that match the recurring pattern.
@@ -196,56 +201,54 @@ pub async fn get_unified_goals(
         (start, end)
     } else {
         // Default to today only
-        (now_utc, now_utc)
+        let now = Utc::now();
+        (now, now)
     };
 
     // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)
     let templates = sqlx::query_as::<_, UnifiedGoalRow>(
-        "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
+        "SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE recurring_pattern IS NOT NULL AND recurring_template_id IS NULL AND completed = FALSE"
     )
     .fetch_all(pool)
     .await
     .map_err(|e| db_context("fetch recurring templates", e))?;
 
     // 2. Iterate through each day in the range
-    let mut curr = gen_start;
+    let mut curr: DateTime<Utc> = gen_start;
     
     // Safety clamp to avoid infinite loops
     let max_days = 366; 
     let mut days_processed = 0;
 
     while curr <= gen_end && days_processed < max_days {
-        // Apply timezone offset to determine the "Local Day Name"
-        let offset_minutes = filters.as_ref().and_then(|f| f.timezone_offset).unwrap_or(0);
-        let local_curr = curr + chrono::Duration::minutes(offset_minutes as i64);
-        
-        let date_str = local_curr.format("%Y-%m-%d").to_string();
-        let day_name = local_curr.format("%a").to_string(); // Mon, Tue, Wed...
+        // Generate date string for this day
+        let date_str = curr.format("%Y-%m-%d").to_string();
+        let day_name = curr.format("%a").to_string(); // Mon, Tue, Wed...
 
         for tmpl in &templates {
             if let Some(ref pattern) = tmpl.recurring_pattern {
                 // Check if today matches the pattern (e.g. "Mon,Wed" contains "Mon")
                 if pattern.contains(&day_name) || pattern == "Daily" {
                     // Create instance for this date
-                    // DATE-ONLY: due_date_local = date_str, due_date = NULL
+                    // DATE-ONLY: date = date_str (matches activities.rs pattern)
                     let new_id = gen_id();
                     let now = Utc::now();
 
-                    // ON CONFLICT (recurring_template_id, due_date_local): unique index enforces
+                    // ON CONFLICT (recurring_template_id, date): unique index enforces
                     // idempotency at the DB level — safe against concurrent requests.
                     let insert_result = sqlx::query(
                         r#"INSERT INTO unified_goals (
                             id, text, description, completed, completed_at, verified,
-                            due_date, due_date_local, recurring_pattern, recurring_template_id, priority, urgent,
+                            date, recurring_pattern, recurring_template_id, priority, urgent,
                             metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
                             created_at, updated_at, original_date, is_debt
-                        ) VALUES ($1, $2, $3, false, NULL, false, NULL, $4, NULL, $5, $6, $7, $8, $9, NULL, $10, NULL, $11, $11, NULL, false)
-                        ON CONFLICT (recurring_template_id, due_date_local) DO NOTHING"#
+                        ) VALUES ($1, $2, $3, false, NULL, false, $4, NULL, $5, $6, $7, $8, $9, NULL, $10, NULL, $11, $11, NULL, false)
+                        ON CONFLICT (recurring_template_id, date) DO NOTHING"#
                     )
                     .bind(&new_id)
                     .bind(&tmpl.text)
                     .bind(&tmpl.description)
-                    .bind(&date_str)        // due_date_local (TEXT, e.g. "2026-03-03")
+                    .bind(&date_str)        // date (TEXT, e.g. "2026-03-03")
                     .bind(&tmpl.id)         // recurring_template_id
                     .bind(&tmpl.priority)
                     .bind(tmpl.urgent)
@@ -295,12 +298,12 @@ pub async fn get_unified_goals(
             }
         }
         if let Some((start, end)) = f.date_range {
-            // DATE-ONLY COMPARISON:
-            // Filter by due_date_local (TEXT YYYY-MM-DD) falling in the range
+            // DATE-ONLY COMPARISON (matches activities.rs pattern):
+            // Filter by date (TEXT YYYY-MM-DD) falling in the range
             let start_date = start.format("%Y-%m-%d").to_string();
             let end_date = end.format("%Y-%m-%d").to_string();
             query.push_str(&format!(
-                " AND (due_date_local >= '{}' AND due_date_local <= '{}')",
+                " AND (date >= '{}' AND date <= '{}')",
                 start_date,
                 end_date
             ));
@@ -350,11 +353,11 @@ pub async fn update_unified_goal(
         bind_idx += 1;
     }
     
-    // DATE-ONLY LOGIC:
+    // DATE-ONLY LOGIC (matches activities.rs pattern):
     // Frontend sends YYYY-MM-DD string (no time component)
-    // Update due_date_local, keep due_date as NULL
-    if let Some(ref date_str) = req.due_date {
-        updates.push(format!("due_date_local = ${}", bind_idx));
+    // Update date field directly
+    if let Some(ref date_str) = req.date {
+        updates.push(format!("date = ${}", bind_idx));
         bind_idx += 1;
     }
 
@@ -385,7 +388,7 @@ pub async fn update_unified_goal(
     }
 
     let query_str = format!(
-        "UPDATE unified_goals SET {} WHERE id = ${} RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt",
+        "UPDATE unified_goals SET {} WHERE id = ${} RETURNING id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt",
         updates.join(", "),
         bind_idx
     );
@@ -400,7 +403,10 @@ pub async fn update_unified_goal(
     }
     if let Some(verified) = req.verified { query = query.bind(verified); }
     
-    if let Some(date_str) = req.due_date {
+    // DATE-ONLY LOGIC (matches activities.rs pattern):
+    // Frontend sends YYYY-MM-DD string (no time component)
+    // Update date field directly
+    if let Some(date_str) = req.date {
         query = query.bind(date_str);
     }
 
@@ -459,7 +465,7 @@ pub async fn link_activity_to_unified_goal(
     let now = Utc::now();
 
     // First check if the goal has metrics
-    let goal = sqlx::query_as::<_, UnifiedGoalRow>("SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE id = $1")
+    let goal = sqlx::query_as::<_, UnifiedGoalRow>("SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE id = $1")
         .bind(&goal_id)
         .fetch_one(pool)
         .await
@@ -481,7 +487,7 @@ pub async fn link_activity_to_unified_goal(
                completed_at = CASE WHEN $1 THEN $2 ELSE completed_at END,
                updated_at = $2
            WHERE id = $3
-           RETURNING id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
+           RETURNING id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt"#,
     )
     .bind(should_complete)
     .bind(now)

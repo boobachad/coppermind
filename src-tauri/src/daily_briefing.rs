@@ -47,9 +47,9 @@ pub async fn get_daily_briefing(
         .parse::<DateTime<Utc>>()
         .map_err(|e| PosError::InvalidInput(format!("Invalid date format: {}", e)))?;
 
-    // 1. Query today's goals (due_date_local = local_date AND completed = FALSE)
+    // 1. Query today's goals (date = local_date AND completed = FALSE)
     let goals = sqlx::query_as::<_, UnifiedGoalRow>(
-        "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE due_date_local = $1 AND completed = FALSE ORDER BY priority DESC, created_at ASC"
+        "SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE date = $1 AND completed = FALSE ORDER BY priority DESC, created_at ASC"
     )
     .bind(&local_date)
     .fetch_all(pool)
@@ -67,7 +67,7 @@ pub async fn get_daily_briefing(
 
     // 2. Query debt goals (is_debt = TRUE AND completed = FALSE)
     let debt_goals = sqlx::query_as::<_, UnifiedGoalRow>(
-        "SELECT id, text, description, completed, completed_at, verified, due_date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE is_debt = TRUE AND completed = FALSE ORDER BY due_date ASC"
+        "SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE is_debt = TRUE AND completed = FALSE ORDER BY date ASC"
     )
     .fetch_all(pool)
     .await

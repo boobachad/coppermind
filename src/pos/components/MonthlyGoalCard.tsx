@@ -1,6 +1,7 @@
 import { Calendar, TrendingUp, TrendingDown, Minus, Edit2, Trash2 } from 'lucide-react';
 import { Milestone } from '../lib/types';
 import { calculateProgress, calculateScheduleStatus, calculateTodayRequired } from '../lib/balancer-utils';
+import { parseGoalDate } from '../lib/time';
 
 
 interface MonthlyGoalCardProps {
@@ -31,13 +32,14 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
     goal.periodEnd
   );
   
-  // Calculate remaining days and target
-  const now = new Date();
-  const periodEnd = new Date(goal.periodEnd);
-  // Count full days remaining: from start of tomorrow to end date (inclusive)
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endDay = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
-  const remainingDays = Math.max(0, Math.ceil((endDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  // Calculate remaining days and target using time utils
+  // periodEnd is ISO string like "2026-03-31T23:59:59Z"
+  const periodEndDate = parseGoalDate(goal.periodEnd); // Parse to Date in local timezone
+  const todayDate = parseGoalDate(new Date().toISOString().split('T')[0]); // Today as YYYY-MM-DD
+  
+  // Calculate days remaining (inclusive of today)
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const remainingDays = Math.max(0, Math.ceil((periodEndDate.getTime() - todayDate.getTime()) / msPerDay) + 1);
   const remainingTarget = Math.max(0, goal.targetValue - goal.currentValue);
 
   // Get status colors based on ahead/behind

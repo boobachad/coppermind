@@ -143,7 +143,7 @@ export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyRe
             kind: 'activity' as NodeKind, sourceId: a.id,
         })),
         ...data.goals.map(g => ({
-            id: g.id, date: toLocalDate(g.dueDate), label: goalLabel(g),
+            id: g.id, date: g.date || g.dueDate, label: goalLabel(g),
             kind: 'goal' as NodeKind, sourceId: g.id,
         })),
         ...data.submissions.map(s => ({

@@ -521,7 +521,7 @@ export function DailyPage() {
                                         {goals.map((goal) => {
                                             // Determine status: verified / pending / debt
                                             const today = getLocalDateString();
-                                            const dueDate = goal.dueDate?.split('T')[0];
+                                            const dueDate = goal.date;
                                             const isDebt = goal.isDebt || (dueDate && dueDate < today && !goal.completed);
                                             
                                             let statusLabel = 'Pending';

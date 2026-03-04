@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import * as chrono from 'chrono-node';
 import { UnifiedGoal } from '../lib/types';
-import { parseGoalDate, formatGoalDate } from '../lib/time';
+import { parseGoalDate, formatGoalDate, getLocalDateString } from '../lib/time';
 import { DatePicker } from '../../components/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { X, Repeat } from 'lucide-react';
@@ -47,9 +47,9 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                 setFormPriority(editingGoal.priority as 'low' | 'medium' | 'high');
                 setFormUrgent(editingGoal.urgent);
 
-                if (editingGoal.dueDate) {
+                if (editingGoal.date) {
                     // Use time utils to parse date-only string
-                    setFormDate(parseGoalDate(editingGoal.dueDate));
+                    setFormDate(parseGoalDate(editingGoal.date));
                 } else {
                     setFormDate(undefined);
                 }
@@ -60,12 +60,12 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                     setSelectedDays([]);
                 }
             } else {
-                // Reset form for new goal
+                // Reset form for new goal - default due date to today
                 setFormText('');
                 setFormDescription('');
                 setFormPriority('medium');
                 setFormUrgent(false);
-                setFormDate(undefined);
+                setFormDate(parseGoalDate(getLocalDateString())); // Default to today
                 setSelectedDays([]);
             }
         }

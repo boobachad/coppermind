@@ -72,7 +72,7 @@ export function DailyProblemsPicker() {
       await invoke('create_unified_goal', {
         req: {
           text: `Solve ${rec.onlineJudge}: ${rec.problemName}`,
-          dueDate: `${getLocalDateString()}T00:00:00Z`,
+          date: getLocalDateString(), // Local date YYYY-MM-DD
           priority: 'medium',
           problemId: rec.problemUrl,
         },

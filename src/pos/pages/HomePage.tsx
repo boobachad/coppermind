@@ -6,6 +6,7 @@ import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '../../components/Loader';
 import { TrendingUp, TrendingDown, Activity as ActivityIcon, Target, Code2, Zap } from 'lucide-react';
 import type { Activity, Submission, Milestone } from '../lib/types';
+import { getLocalDateString } from '../lib/time';
 
 interface WeeklyTrend {
   week: string;
@@ -30,9 +31,9 @@ export function HomePage() {
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [totalStats, setTotalStats] = useState({ totalTime: 0, productiveTime: 0, activitiesCount: 0 });
   
-  // Month selector state
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  // Month selector state using time utils
+  const todayStr = getLocalDateString();
+  const currentMonth = todayStr.substring(0, 7); // YYYY-MM
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
   const isArchived = selectedMonth < currentMonth;
 
@@ -58,11 +59,11 @@ export function HomePage() {
       // Fetch milestones and filter by selected month
       const allMilestones = await invoke<Milestone[]>('get_milestones', { activeOnly: false }).catch(() => []);
       
-      // Filter milestones that overlap with selected month (date-only comparison, no timezone issues)
+      // Filter milestones that overlap with selected month (date-only comparison)
       const [year, monthNum] = selectedMonth.split('-').map(Number);
       const monthStartStr = `${year}-${String(monthNum).padStart(2, '0')}-01`;
-      // Calculate last day of month without timezone conversion
-      const lastDay = new Date(year, monthNum, 0).getDate(); // monthNum is next month, day 0 = last day of previous month
+      // Calculate last day of month
+      const lastDay = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
       const monthEndStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       
       const filteredMilestones = allMilestones.filter(milestone => {
@@ -89,23 +90,19 @@ export function HomePage() {
     const dates: string[] = [];
     const [year, month] = monthStr.split('-').map(Number);
     
-    // Get first day of selected month
-    const firstDay = new Date(year, month - 1, 1);
-    // Get last day of selected month
-    const lastDay = new Date(year, month, 0);
+    // Calculate first and last day of month
+    const firstDay = 1;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     
     // For current month, only go up to today
-    const now = new Date();
-    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    const endDate = isCurrentMonth ? now : lastDay;
+    const todayStr = getLocalDateString();
+    const isCurrentMonth = monthStr === todayStr.substring(0, 7);
+    const endDay = isCurrentMonth ? parseInt(todayStr.split('-')[2]) : lastDay;
     
-    // Generate all dates from first day to end date using time utils
-    const current = new Date(firstDay);
-    while (current <= endDate) {
-      const offset = current.getTimezoneOffset() * 60000;
-      const localDate = new Date(current.getTime() - offset);
-      dates.push(localDate.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
+    // Generate all dates from first day to end day
+    for (let day = firstDay; day <= endDay; day++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      dates.push(dateStr);
     }
     
     return dates;
@@ -129,7 +126,10 @@ export function HomePage() {
         const activities = batchData[date]?.activities || [];
         activitiesCount += activities.length;
         activities.forEach(act => {
-          const duration = (new Date(act.endTime).getTime() - new Date(act.startTime).getTime()) / 60000;
+          // String comparison on ISO timestamps for duration
+          const duration = (act.endTime.localeCompare(act.startTime) > 0) 
+            ? (new Date(act.endTime).getTime() - new Date(act.startTime).getTime()) / 60000 
+            : 0;
           totalMinutes += duration;
           if (act.isProductive) productiveMinutes += duration;
         });

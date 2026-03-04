@@ -158,7 +158,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         completed              BOOLEAN DEFAULT FALSE,
         completed_at           TIMESTAMPTZ,
         verified               BOOLEAN DEFAULT FALSE,
-        due_date               TIMESTAMPTZ,
+        date                   TEXT,
         recurring_pattern      TEXT,
         recurring_template_id  TEXT,
         priority               TEXT DEFAULT 'medium',
@@ -172,18 +172,16 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         original_date          TEXT,
         is_debt                BOOLEAN DEFAULT FALSE,
         parent_goal_id         TEXT,
-        due_date_local         TEXT,
         CONSTRAINT unified_goals_priority_check CHECK (priority IN ('low', 'medium', 'high'))
     )",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_completed ON unified_goals(completed)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_urgent ON unified_goals(urgent)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_is_debt ON unified_goals(is_debt)",
-    "CREATE INDEX IF NOT EXISTS idx_unified_goals_due_date ON unified_goals(due_date)",
+    "CREATE INDEX IF NOT EXISTS idx_unified_goals_date ON unified_goals(date)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_recurring_pattern ON unified_goals(recurring_pattern) WHERE recurring_pattern IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_created_at ON unified_goals(created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_unified_goals_parent ON unified_goals(parent_goal_id) WHERE parent_goal_id IS NOT NULL",
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_unified_goals_recurring_instance ON unified_goals(recurring_template_id, due_date_local) WHERE recurring_template_id IS NOT NULL",
-    "CREATE UNIQUE INDEX IF NOT EXISTS uq_recurring_instance ON unified_goals(recurring_template_id, due_date_local)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_unified_goals_recurring_instance ON unified_goals(recurring_template_id, date) WHERE recurring_template_id IS NOT NULL",
 
     // ─── GitHub Repositories ────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS github_repositories (

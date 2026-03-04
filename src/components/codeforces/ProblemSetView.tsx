@@ -83,7 +83,7 @@ export function ProblemSetView({
       await invoke('create_unified_goal', {
         req: {
           text: `Solve ${problem.onlineJudge}: ${problem.problemName}`,
-          dueDate: `${getLocalDateString()}T00:00:00Z`,
+          date: getLocalDateString(), // Local date YYYY-MM-DD
           priority: 'medium',
           problemId: problem.problemUrl,
         },

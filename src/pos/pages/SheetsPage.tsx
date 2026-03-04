@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '../components/Navbar';
-import { formatDateDDMMYYYY, formatTime } from '../lib/time';
 import type { Submission, LeetCodeUserStats, CodeforcesUserStats } from '../lib/types';
 import { Loader } from '@/components/Loader';
 import { Loader2, TrendingUp, Trophy } from 'lucide-react';
@@ -90,7 +89,8 @@ export function SheetsPage() {
                 } else {
                     existing.allTimestamps.push(sub.submittedTime);
 
-                    if (new Date(sub.submittedTime).getTime() > new Date(existing.submittedTime).getTime()) {
+                    // String comparison on ISO timestamps (lexicographic = chronological)
+                    if (sub.submittedTime > existing.submittedTime) {
                         existing.submittedTime = sub.submittedTime;
                         existing.verdict = sub.verdict;
                         existing.language = sub.language;
@@ -103,12 +103,10 @@ export function SheetsPage() {
 
             const groupedSubmissions = Array.from(groupedMap.values()).map(sub => ({
                 ...sub,
-                allTimestamps: sub.allTimestamps.sort((a: string, b: string) =>
-                    new Date(b).getTime() - new Date(a).getTime()
-                )
+                allTimestamps: sub.allTimestamps.sort((a: string, b: string) => b.localeCompare(a))
             }));
 
-            groupedSubmissions.sort((a, b) => new Date(b.submittedTime).getTime() - new Date(a.submittedTime).getTime());
+            groupedSubmissions.sort((a, b) => b.submittedTime.localeCompare(a.submittedTime));
 
             console.log('[SHEETS] Grouped submissions:', groupedSubmissions.length);
             console.log('[SHEETS] Grouped CF submissions:', groupedSubmissions.filter(s => s.platform === 'codeforces').length);
@@ -445,7 +443,12 @@ export function SheetsPage() {
                                                                 opacity: i === 0 ? 1 : 0.75
                                                             }}
                                                         >
-                                                            {formatDateDDMMYYYY(new Date(t))} {formatTime(new Date(t))}
+                                                            {(() => {
+                                                                const [datePart, timePart] = t.split('T');
+                                                                const [year, month, day] = datePart.split('-');
+                                                                const time = timePart.split('.')[0].substring(0, 5);
+                                                                return `${day}/${month}/${year} ${time}`;
+                                                            })()}
                                                         </div>
                                                     ))}
                                                 </div>

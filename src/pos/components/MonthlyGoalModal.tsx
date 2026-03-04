@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { X, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Milestone } from '../lib/types';
+import { getLocalDateString } from '../lib/time';
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -19,34 +20,39 @@ export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal, sele
   const [problemId, setProblemId] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Auto-calculate period based on selectedMonth or current month
+  // Auto-calculate period based on selectedMonth or current month using time utils
   const getCurrentMonthPeriod = () => {
-    let targetDate: Date;
+    const todayStr = getLocalDateString(); // YYYY-MM-DD
+    const [todayYear, todayMonth, todayDay] = todayStr.split('-').map(Number);
+    
+    let targetYear: number, targetMonth: number;
     
     if (selectedMonth) {
-      const [year, month] = selectedMonth.split('-').map(Number);
-      targetDate = new Date(year, month - 1, 1);
+      [targetYear, targetMonth] = selectedMonth.split('-').map(Number);
     } else {
-      targetDate = new Date();
+      targetYear = todayYear;
+      targetMonth = todayMonth;
     }
     
-    const y = targetDate.getFullYear();
-    const m = targetDate.getMonth();
-    const today = new Date();
-    
     // If viewing current month, start from today; otherwise start from 1st
-    const isCurrentMonth = y === today.getFullYear() && m === today.getMonth();
-    const startDay = isCurrentMonth ? today.getDate() : 1;
+    const isCurrentMonth = targetYear === todayYear && targetMonth === todayMonth;
+    const startDay = isCurrentMonth ? todayDay : 1;
     
-    const lastDayNum = new Date(y, m + 1, 0).getDate();
-    const mm = String(m + 1).padStart(2, '0');
+    // Calculate last day of target month
+    const lastDayNum = new Date(targetYear, targetMonth, 0).getDate();
+    
+    const mm = String(targetMonth).padStart(2, '0');
     const dd = String(startDay).padStart(2, '0');
     
+    // Format month name
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = `${monthNames[targetMonth - 1]} ${targetYear}`;
+    
     return {
-      start: `${y}-${mm}-${dd}T00:00:00Z`,
-      end: `${y}-${mm}-${String(lastDayNum).padStart(2, '0')}T23:59:59Z`,
+      start: `${targetYear}-${mm}-${dd}T00:00:00Z`,
+      end: `${targetYear}-${mm}-${String(lastDayNum).padStart(2, '0')}T23:59:59Z`,
       daysLeft: lastDayNum - startDay + 1,
-      monthName: targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      monthName
     };
   };
 

@@ -85,10 +85,10 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                                 Overdue
                             </span>
                         )}
-                        {goal.dueDate && (
+                        {goal.date && (
                             <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10" style={{ color: 'var(--text-secondary)' }}>
                                 <Calendar className="w-3.5 h-3.5" />
-                                {format(parseGoalDate(goal.dueDate), 'MMM d')}
+                                {format(parseGoalDate(goal.date), 'MMM d')}
                             </span>
                         )}
                     </div>
@@ -206,7 +206,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                     <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
                         Reflections
                     </h4>
-                    <ReflectionList goalId={goal.id} />
+                    <ReflectionList entityType="goal" entityId={goal.id} />
                 </div>
             )}
         </div>

@@ -134,7 +134,7 @@ export interface UnifiedGoal {
     completed: boolean;
     completedAt: string | null;  // ISO 8601 UTC
     verified: boolean;
-    dueDate: string | null;      // ISO 8601 UTC
+    date: string | null;         // Local date YYYY-MM-DD (matches activities pattern)
     recurringPattern: string | null;
     recurringTemplateId: string | null;
     priority: 'low' | 'medium' | 'high';

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { getLocalDateString } from '../pos/lib/time';
+import { getLocalDateString, parseGoalDate, formatGoalDate } from '../pos/lib/time';
 import clsx from 'clsx';
 import { UnifiedGoal } from '../pos/lib/types';
 import { Loader } from '../components/Loader';
@@ -39,10 +39,13 @@ export function UnifiedGoalsPage() {
   const loadGoals = async () => {
     setLoading(true);
     try {
-      // Fetch ALL goals to support global stats + local filtering
+      // Calculate today's local date (YYYY-MM-DD) using time utils
+      const todayLocal = getLocalDateString();
+      
+      console.log('[UnifiedGoalsPage] Using getLocalDateString():', todayLocal);
+      
       const filters = {
-        timezone_offset: -new Date().getTimezoneOffset(),
-        // No other filters - fetch everything!
+        todayLocal: todayLocal
       };
 
       const allGoals = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
@@ -124,11 +127,15 @@ export function UnifiedGoalsPage() {
         return pMap[b.priority as keyof typeof pMap] - pMap[a.priority as keyof typeof pMap];
       }
       if (sortBy === 'due') {
-        const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        return aDate - bDate;
+        // String comparison on YYYY-MM-DD format (lexicographic = chronological)
+        const aDate = a.date || 'ZZZZ'; // No due date sorts last
+        const bDate = b.date || 'ZZZZ';
+        return aDate.localeCompare(bDate);
       }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      // Sort by createdAt: extract date from UTC timestamp
+      const aCreated = a.createdAt.split('T')[0]; // YYYY-MM-DD
+      const bCreated = b.createdAt.split('T')[0];
+      return bCreated.localeCompare(aCreated); // Newest first
     });
   }, [goals, search, sortBy, filter]);
 
@@ -191,8 +198,8 @@ export function UnifiedGoalsPage() {
             <label className="text-xs font-semibold uppercase text-(--text-tertiary)">Date:</label>
             <div className="w-[180px]">
               <DatePicker
-                date={selectedDate ? new Date(selectedDate) : undefined}
-                setDate={(date) => setSelectedDate(date ? `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}` : '')}
+                date={selectedDate ? parseGoalDate(selectedDate) : undefined}
+                setDate={(date) => setSelectedDate(date ? formatGoalDate(date) : '')}
                 placeholder="Filter by date"
               />
             </div>

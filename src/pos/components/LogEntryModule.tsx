@@ -8,7 +8,7 @@ import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { Flame, AlertCircle, BarChart3, Check } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal, Activity, Book, Milestone } from '../lib/types';
-import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
+import { formatLocalAsUTC, formatDateDDMMYYYY, parseGoalDate } from '../lib/time';
 import { extractUrls, detectUrlType } from '@/lib/kb-utils';
 import { toast } from 'sonner';
 import { BookSelector } from './BookSelector';
@@ -524,9 +524,9 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                                                     {isSelected && <Check className="w-3 h-3" />}
                                                 </div>
                                                 <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
-                                                    {goal.dueDate && (
+                                                    {goal.date && (
                                                         <span className="text-xs text-muted-foreground font-mono shrink-0">
-                                                            [{formatDateDDMMYYYY(new Date(goal.dueDate))}]
+                                                            [{formatDateDDMMYYYY(parseGoalDate(goal.date))}]
                                                         </span>
                                                     )}
                                                     <span className="truncate">{goal.text}</span>
