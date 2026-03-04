@@ -160,7 +160,7 @@ pub async fn update_milestone(
     let now = Utc::now();
 
     let mut updates: Vec<String> = vec!["updated_at = $1".to_string()];
-    let mut bind_idx = 2;
+    let bind_idx = 2;
 
     if req.target_value.is_some() {
         updates.push(format!("target_value = ${}", bind_idx));

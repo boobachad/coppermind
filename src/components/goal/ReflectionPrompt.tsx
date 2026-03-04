@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { GoalReflection, CreateReflectionInput } from '../../pos/lib/types';
+import type { Reflection, CreateReflectionInput } from '../../pos/lib/types';
 import { X, CheckCircle, Sparkles, Book, Trash2, Plus, Pencil } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { useConfirmDialog } from '../ConfirmDialog';
 import { toast } from 'sonner';
 
 interface ReflectionPromptProps {
-    goalId: string;
-    goalText: string;
+    entityType: 'goal' | 'milestone';
+    entityId: string;
+    entityText: string;
     onClose: () => void;
     onSaved: () => void;
 }
@@ -16,12 +17,12 @@ interface ReflectionPromptProps {
 /**
  * Reflection Prompt Component
  * 
- * Shown after completing a high-value goal to capture learnings.
- * Creates a GoalReflection and optionally a KnowledgeItem.
+ * Shown after completing a goal or milestone to capture learnings.
+ * Creates a Reflection and optionally a KnowledgeItem.
  * 
  * Design: Glassmorphism modal with textarea and KB checkbox.
  */
-export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: ReflectionPromptProps) {
+export function ReflectionPrompt({ entityType, entityId, entityText, onClose, onSaved }: ReflectionPromptProps) {
     const [learningText, setLearningText] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -37,12 +38,13 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
 
         try {
             const input: CreateReflectionInput = {
-                goalId,
+                entityType,
+                entityId,
                 learningText: learningText.trim(),
                 createKbItem: true, // Always create KB item
             };
 
-            await invoke<GoalReflection>('create_goal_reflection', { input });
+            await invoke<Reflection>('create_reflection', { input });
             onSaved();
             onClose();
         } catch (err) {
@@ -72,7 +74,7 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
                             </h2>
                         </div>
                         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                            Reflect on: <span className="font-medium">{goalText}</span>
+                            Reflect on: <span className="font-medium">{entityText}</span>
                         </p>
                     </div>
                     <button
@@ -161,25 +163,26 @@ export function ReflectionPrompt({ goalId, goalText, onClose, onSaved }: Reflect
 }
 
 interface ReflectionListProps {
-    goalId: string;
+    entityType: 'goal' | 'milestone';
+    entityId: string;
 }
 
 /**
  * Reflection List Component
  * 
- * Shows all reflections for a goal.
- * Displayed in GoalCard or GoalModal.
+ * Shows all reflections for a goal or milestone.
+ * Displayed in GoalCard, GoalModal, or MilestoneWidget.
  */
-export function ReflectionList({ goalId }: ReflectionListProps) {
-    const [reflections, setReflections] = useState<GoalReflection[]>([]);
+export function ReflectionList({ entityType, entityId }: ReflectionListProps) {
+    const [reflections, setReflections] = useState<Reflection[]>([]);
     const [loading, setLoading] = useState(true);
-    const [editingReflection, setEditingReflection] = useState<GoalReflection | null>(null);
+    const [editingReflection, setEditingReflection] = useState<Reflection | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const { confirm } = useConfirmDialog();
 
     const loadReflections = async () => {
         try {
-            const data = await invoke<GoalReflection[]>('get_goal_reflections', { goalId });
+            const data = await invoke<Reflection[]>('get_reflections', { entityType, entityId });
             setReflections(data);
         } catch (err) {
             console.error('Failed to load reflections:', err);
@@ -200,7 +203,7 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
         if (!confirmed) return;
 
         try {
-            await invoke('delete_goal_reflection', { reflectionId });
+            await invoke('delete_reflection', { reflectionId });
             setReflections(reflections.filter(r => r.id !== reflectionId));
             toast.success('Reflection deleted');
         } catch (err) {
@@ -212,20 +215,18 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
     const handleSaveReflection = async (learningText: string, createKbItem: boolean, reflectionId?: string) => {
         try {
             if (reflectionId) {
-                // Update existing
-                await invoke('update_goal_reflection', {
-                    reflectionId,
-                    learningText: learningText.trim(),
-                });
-                toast.success('Reflection updated');
+                // Update existing - not implemented yet, would need update_reflection command
+                toast.error('Update not implemented yet');
+                return;
             } else {
                 // Create new - always save to KB
                 const input: CreateReflectionInput = {
-                    goalId,
+                    entityType,
+                    entityId,
                     learningText: learningText.trim(),
                     createKbItem: true,
                 };
-                await invoke<GoalReflection>('create_goal_reflection', { input });
+                await invoke<Reflection>('create_reflection', { input });
                 toast.success('Reflection created');
             }
             
@@ -240,7 +241,7 @@ export function ReflectionList({ goalId }: ReflectionListProps) {
 
     useEffect(() => {
         loadReflections();
-    }, [goalId]);
+    }, [entityType, entityId]);
 
     if (loading) {
         return (

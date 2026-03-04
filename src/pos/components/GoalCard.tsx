@@ -156,7 +156,13 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
                     {/* Footer metadata */}
                     <div className="flex items-center gap-3 text-[11px] font-medium text-(--text-tertiary) border-t border-white/5 pt-3 mt-2">
-                        <span>Created {format(new Date(goal.createdAt), 'MMMM d, yyyy')}</span>
+                        <span>Created {goal.createdAt ? (() => {
+                            // Extract date from UTC timestamp without timezone conversion
+                            const utcDate = goal.createdAt.split('T')[0]; // YYYY-MM-DD
+                            const [year, month, day] = utcDate.split('-');
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+                        })() : 'Unknown'}</span>
                         {goal.originalDate && (
                             <>
                                 <span className="w-1 h-1 rounded-full bg-white/20" />

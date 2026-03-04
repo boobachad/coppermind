@@ -383,16 +383,18 @@ export interface DebtTrailItem {
 
 // ─── Reflection System ──────────────────────────────────────────
 
-export interface GoalReflection {
+export interface Reflection {
     id: string;
-    goalId: string;
+    entityType: 'goal' | 'milestone';
+    entityId: string;
     learningText: string;
     createdAt: string;             // ISO 8601 UTC
     kbItemId: string | null;
 }
 
 export interface CreateReflectionInput {
-    goalId: string;
+    entityType: 'goal' | 'milestone';
+    entityId: string;
     learningText: string;
     createKbItem: boolean;
 }

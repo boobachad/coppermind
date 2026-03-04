@@ -219,6 +219,7 @@
   --pos-segment-empty: #D6D0C0;
   --pos-activity-fallback: #93A1A1;
   --pos-goal-accent: #d97706;
+  --pos-milestone-accent: #9333ea;
 
   /* Heatmap colors - Solarized Light (darker for contrast) */
   --pos-heatmap-level-1: #c6e48b;
@@ -349,6 +350,7 @@
   --pos-segment-empty: #CBD5E0;
   --pos-activity-fallback: #718096;
   --pos-goal-accent: #3182ce;
+  --pos-milestone-accent: #a855f7;
 
   /* Heatmap colors - Blue Light */
   --pos-heatmap-level-1: #c6e48b;

@@ -86,8 +86,8 @@ export function UnifiedGoalsPage() {
     let res = goals;
 
     // Get current month to filter out previous months' debt (shown in debt trail)
-    const today = new Date();
-    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const todayStr = getLocalDateString(); // YYYY-MM-DD in local timezone
+    const currentMonth = todayStr.substring(0, 7); // YYYY-MM
 
     // 1. Text Search
     if (search) {

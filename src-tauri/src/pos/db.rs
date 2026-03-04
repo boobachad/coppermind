@@ -323,15 +323,16 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_debt_archive_month ON debt_archive(original_month)",
     "CREATE INDEX IF NOT EXISTS idx_debt_archive_goal ON debt_archive(goal_id)",
 
-    // ─── Goal Reflections ───────────────────────────────────────────
-    "CREATE TABLE IF NOT EXISTS goal_reflections (
+    // ─── Unified Reflections ────────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS reflections (
         id              TEXT PRIMARY KEY,
-        goal_id         TEXT NOT NULL REFERENCES unified_goals(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL CHECK (entity_type IN ('goal', 'milestone')),
+        entity_id       TEXT NOT NULL,
         learning_text   TEXT NOT NULL,
         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         kb_item_id      TEXT
     )",
-    "CREATE INDEX IF NOT EXISTS idx_reflections_goal_id ON goal_reflections(goal_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reflections_entity ON reflections(entity_type, entity_id)",
 
     // ─── Retrospectives ─────────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS retrospectives (

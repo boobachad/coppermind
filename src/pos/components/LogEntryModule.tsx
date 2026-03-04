@@ -58,7 +58,9 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
     // NEW: Reflection State
     const [showReflectionPrompt, setShowReflectionPrompt] = useState(false);
-    const [completedGoal, setCompletedGoal] = useState<UnifiedGoal | null>(null);
+    const [reflectionEntityType, setReflectionEntityType] = useState<'goal' | 'milestone'>('goal');
+    const [reflectionEntityId, setReflectionEntityId] = useState<string>('');
+    const [reflectionEntityText, setReflectionEntityText] = useState<string>('');
 
     // Existing useEffect hooks (PRESERVED)
     useEffect(() => {
@@ -272,13 +274,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                             activityId: editingActivity.id,
                         });
                     }
-
-                    // Trigger reflection prompt for first goal
-                    const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);
-                    if (firstGoal) {
-                        setCompletedGoal(firstGoal);
-                        setShowReflectionPrompt(true);
-                    }
                 }
 
                 toast.success('Activity updated successfully');
@@ -343,12 +338,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         }
                     }
 
-                    // Trigger reflection prompt for first goal
-                    const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);
-                    if (firstGoal) {
-                        setCompletedGoal(firstGoal);
-                        setShowReflectionPrompt(true);
-                    }
                 }
 
                 // Handle milestone if selected
@@ -366,9 +355,45 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 }
 
                 toast.success('Activity logged successfully');
+
+                // Trigger reflection prompt for first goal OR milestone BEFORE form reset
+                if (selectedGoalIds.length > 0) {
+                    const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);
+                    if (firstGoal) {
+                        setReflectionEntityType('goal');
+                        setReflectionEntityId(firstGoal.id);
+                        setReflectionEntityText(firstGoal.text);
+                        setShowReflectionPrompt(true);
+                    }
+                } else if (selectedMilestoneId) {
+                    const milestone = availableMilestones.find(m => m.id === selectedMilestoneId);
+                    if (milestone) {
+                        setReflectionEntityType('milestone');
+                        setReflectionEntityId(milestone.id);
+                        setReflectionEntityText(milestone.targetMetric);
+                        setShowReflectionPrompt(true);
+                    }
+                }
+
+                // Reset form after create (but keep reflection state)
+                const [year, month, day] = date.split('-').map(Number);
+                setStartDate(new Date(year, month - 1, day, 9, 0));
+                const now = new Date();
+                setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
+                setTitle('');
+                setDescription('');
+                setSelectedGoalIds([]);
+                setSelectedMilestoneId(null);
+                setMetricValues({});
+                setSelectedBookId(null);
+                setPagesRead('');
+                setShowBookSelector(false);
+                setSelectedBook(null);
+                setTotalPages('');
+                onSuccess?.();
             }
 
-            // Auto-capture URLs to KB
+            // Auto-capture URLs to KB (moved outside create block to work for both create and edit)
             const allText = `${title} ${description}`;
             const detectedUrls = extractUrls(allText);
             
@@ -392,23 +417,6 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     // Non-blocking - activity still succeeds
                 }
             }
-
-            // Reset form after create
-            const [year, month, day] = date.split('-').map(Number);
-            setStartDate(new Date(year, month - 1, day, 9, 0));
-            const now = new Date();
-            setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
-            setTitle('');
-            setDescription('');
-            setSelectedGoalIds([]);
-            setSelectedMilestoneId(null);
-            setMetricValues({});
-            setSelectedBookId(null);
-            setPagesRead('');
-            setShowBookSelector(false);
-            setSelectedBook(null);
-            setTotalPages('');
-            onSuccess?.();
         } catch (error) {
             const errorMsg = error && typeof error === 'object' && 'message' in error
                 ? String(error.message)
@@ -730,17 +738,20 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         </form>
 
         {/* Reflection Prompt Modal */}
-        {showReflectionPrompt && completedGoal && (
+        {showReflectionPrompt && reflectionEntityId && (
             <ReflectionPrompt
-                goalId={completedGoal.id}
-                goalText={completedGoal.text}
+                entityType={reflectionEntityType}
+                entityId={reflectionEntityId}
+                entityText={reflectionEntityText}
                 onClose={() => {
                     setShowReflectionPrompt(false);
-                    setCompletedGoal(null);
+                    setReflectionEntityId('');
+                    setReflectionEntityText('');
                 }}
                 onSaved={() => {
                     setShowReflectionPrompt(false);
-                    setCompletedGoal(null);
+                    setReflectionEntityId('');
+                    setReflectionEntityText('');
                     toast.success('Reflection saved');
                 }}
             />

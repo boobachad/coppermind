@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +42,8 @@ export function DailyPage() {
     const [hasDebt, setHasDebt] = useState(false);
     const [debtCount, setDebtCount] = useState(0);
     const [booksMap, setBooksMap] = useState<Map<string, Book>>(new Map());
+    const timelineRef = useRef<HTMLDivElement>(null);
+    const currentSlotRef = useRef<HTMLDivElement>(null);
 
     const fetchData = async () => {
         if (!date) return;
@@ -253,6 +255,20 @@ export function DailyPage() {
         fetchData();
     }, [date]);
 
+    // Auto-scroll to current time slot when viewing today
+    useEffect(() => {
+        if (isToday && currentSlotIndex >= 0 && currentSlotRef.current && timelineRef.current) {
+            // Small delay to ensure DOM is rendered
+            setTimeout(() => {
+                currentSlotRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'center'
+                });
+            }, 100);
+        }
+    }, [isToday, currentSlotIndex, daySlots.length]);
+
     if (loading) {
         return (
             <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -330,21 +346,49 @@ export function DailyPage() {
                     <CardHeader className="py-3 px-4">
                         <CardTitle className="text-sm font-medium">Timeline Overview</CardTitle>
                     </CardHeader>
-                    <div className="overflow-x-auto pb-4 px-4">
+                    <div className="overflow-x-auto pb-4 px-4 pt-2" ref={timelineRef}>
                         <div className="flex gap-0.5 h-14">
                             {daySlots.map((slot) => {
                                 const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
+                                
+                                // Check if slot has productive/goal/milestone activities
+                                const hasProductive = slot.activities.some(a => a.isProductive);
+                                const hasGoal = slot.activities.some(a => a.goalIds && a.goalIds.length > 0);
+                                const hasMilestone = slot.activities.some(a => a.milestoneId);
+                                
+                                // Build ring classes based on indicators
+                                let ringClass = '';
+                                if (hasProductive && (hasGoal || hasMilestone)) {
+                                    // Both productive AND goal/milestone: double ring
+                                    ringClass = 'ring-2 ring-offset-1';
+                                } else if (hasProductive || hasGoal || hasMilestone) {
+                                    // Single indicator: single ring
+                                    ringClass = 'ring-2';
+                                }
+                                
+                                // Determine ring color
+                                let ringColor = '';
+                                if (hasMilestone) {
+                                    ringColor = 'var(--pos-milestone-accent)'; // Purple for milestone
+                                } else if (hasGoal) {
+                                    ringColor = 'var(--pos-goal-accent)'; // Blue for goal
+                                } else if (hasProductive) {
+                                    ringColor = 'var(--pos-success-border)'; // Green for productive
+                                }
 
                                 return (
                                     <div
                                         key={slot.slotIndex}
-                                        className="w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group"
+                                        ref={isCurrentTimeSlot ? currentSlotRef : null}
+                                        className={`w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group ${ringClass}`}
                                         style={{
                                             background: slot.segments ? 'transparent' : slot.color,
                                             borderColor: isCurrentTimeSlot ? 'var(--pos-today-border)' : 'var(--border-color)',
                                             borderWidth: isCurrentTimeSlot ? '2px' : '1px',
-                                            boxShadow: isCurrentTimeSlot ? '0 0 0 2px var(--pos-today-bg)' : undefined
-                                        }}
+                                            boxShadow: isCurrentTimeSlot ? '0 0 0 2px var(--pos-today-bg)' : undefined,
+                                            '--tw-ring-color': ringColor,
+                                            '--tw-ring-offset-color': 'var(--bg-secondary)'
+                                        } as React.CSSProperties}
                                         onClick={() => {
                                             setSelectedSlot(slot.slotIndex);
                                             setShowPopup(true);
