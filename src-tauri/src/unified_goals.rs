@@ -335,6 +335,9 @@ pub async fn update_unified_goal(
     let pool = &db.0;
     let now = Utc::now();
 
+    // Clone date for later is_debt recalculation (before req is consumed)
+    let date_updated = req.date.clone();
+
     let mut updates = vec!["updated_at = $1".to_string()];
     let mut bind_idx = 2;
 
@@ -431,12 +434,50 @@ pub async fn update_unified_goal(
     if let Some(problem_id) = req.problem_id { query = query.bind(problem_id); }
     if let Some(labels) = req.labels { query = query.bind(sqlx::types::Json(labels)); }
 
-    query = query.bind(id);
+    query = query.bind(&id);
 
     let row = query
         .fetch_one(pool)
         .await
         .map_err(|e| db_context("update_unified_goal", e))?;
+
+    // If date was updated, recalculate is_debt status
+    // This ensures goals rescheduled to future dates are no longer marked as debt
+    if date_updated.is_some() {
+        let today_local = Utc::now().format("%Y-%m-%d").to_string();
+        
+        // Clear debt status if rescheduled to today or future
+        // Set debt status if rescheduled to past
+        sqlx::query(
+            r#"UPDATE unified_goals 
+               SET is_debt = CASE 
+                   WHEN date < $1 THEN TRUE 
+                   ELSE FALSE 
+               END,
+               original_date = CASE 
+                   WHEN date < $1 AND original_date IS NULL THEN date
+                   WHEN date >= $1 THEN NULL
+                   ELSE original_date
+               END
+               WHERE id = $2"#
+        )
+        .bind(&today_local)
+        .bind(&id)
+        .execute(pool)
+        .await
+        .map_err(|e| db_context("recalculate is_debt after date update", e))?;
+
+        // Fetch updated row to return correct state
+        let updated_row = sqlx::query_as::<_, UnifiedGoalRow>(
+            "SELECT id, text, description, completed, completed_at, verified, date, recurring_pattern, recurring_template_id, priority, urgent, metrics, problem_id, linked_activity_ids, labels, parent_goal_id, created_at, updated_at, original_date, is_debt FROM unified_goals WHERE id = $1"
+        )
+        .bind(&id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| db_context("fetch updated goal", e))?;
+
+        return Ok(updated_row);
+    }
 
     Ok(row)
 }

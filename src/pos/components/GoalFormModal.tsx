@@ -100,7 +100,7 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         description: formDescription || undefined,
                         priority: formPriority,
                         urgent: formUrgent,
-                        dueDate,
+                        date: dueDate,
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : '',
                     },
                 });
@@ -112,7 +112,7 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         description: formDescription || undefined,
                         priority: formPriority,
                         urgent: formUrgent,
-                        dueDate,
+                        date: dueDate || getLocalDateString(), // Default to today if not specified
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : undefined,
                     },
                 });
