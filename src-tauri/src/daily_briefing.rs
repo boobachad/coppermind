@@ -95,9 +95,11 @@ pub async fn get_daily_briefing(
         let daily_required = milestone.daily_amount;
 
         // Determine if on track: current_value >= expected_value_by_now
-        let days_elapsed = (date_parsed - milestone.period_start).num_days() + 1;
-        let expected_by_now = (milestone.daily_amount as f64 * days_elapsed as f64).floor() as i32;
+        // Days passed = days before today (today is still in progress, not counted as elapsed)
+        let days_passed = (date_parsed - milestone.period_start).num_days();
+        let expected_by_now = (milestone.daily_amount as f64 * days_passed as f64).floor() as i32;
 
+        // If behind expected, mark as behind (any debt = behind)
         let is_on_track = current_value >= expected_by_now;
         if is_on_track {
             milestones_on_track += 1;

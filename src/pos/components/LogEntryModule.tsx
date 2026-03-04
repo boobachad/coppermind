@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TimePickerInput } from '@/components/ui/time-picker-input';
-import { Flame, AlertCircle } from 'lucide-react';
+import { Flame, AlertCircle, BarChart3 } from 'lucide-react';
 import { ACTIVITY_CATEGORIES } from '../lib/config';
 import type { UnifiedGoal, Activity, Book, Milestone } from '../lib/types';
 import { formatLocalAsUTC, formatDateDDMMYYYY } from '../lib/time';
@@ -463,7 +463,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                                     {availableMilestones.map(milestone => (
                                         <SelectItem key={`milestone-${milestone.id}`} value={`milestone-${milestone.id}`}>
                                             <span className="flex items-center gap-1 max-w-[200px] truncate">
-                                                <span className="text-xs text-muted-foreground mr-1">📊</span>
+                                                <BarChart3 className="w-3 h-3 text-muted-foreground mr-1" />
                                                 <span className="truncate">{milestone.targetMetric}</span>
                                                 <span className="text-xs text-muted-foreground">({milestone.currentValue}/{milestone.targetValue})</span>
                                             </span>

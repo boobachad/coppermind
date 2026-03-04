@@ -9,30 +9,44 @@ interface MilestoneModalProps {
   onClose: () => void;
   onSuccess: () => void;
   editingGoal: Milestone | null;
+  selectedMonth?: string; // YYYY-MM format
 }
 
-export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal }: MilestoneModalProps) {
+export function MonthlyGoalModal({ isOpen, onClose, onSuccess, editingGoal, selectedMonth }: MilestoneModalProps) {
   const [targetMetric, setTargetMetric] = useState('');
   const [dailyAmount, setDailyAmount] = useState('');
   const [unit, setUnit] = useState('');
   const [problemId, setProblemId] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Auto-calculate period as current month
+  // Auto-calculate period based on selectedMonth or current month
   const getCurrentMonthPeriod = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const d = now.getDate();
+    let targetDate: Date;
+    
+    if (selectedMonth) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      targetDate = new Date(year, month - 1, 1);
+    } else {
+      targetDate = new Date();
+    }
+    
+    const y = targetDate.getFullYear();
+    const m = targetDate.getMonth();
+    const today = new Date();
+    
+    // If viewing current month, start from today; otherwise start from 1st
+    const isCurrentMonth = y === today.getFullYear() && m === today.getMonth();
+    const startDay = isCurrentMonth ? today.getDate() : 1;
+    
     const lastDayNum = new Date(y, m + 1, 0).getDate();
     const mm = String(m + 1).padStart(2, '0');
-    const dd = String(d).padStart(2, '0');
+    const dd = String(startDay).padStart(2, '0');
     
     return {
       start: `${y}-${mm}-${dd}T00:00:00Z`,
       end: `${y}-${mm}-${String(lastDayNum).padStart(2, '0')}T23:59:59Z`,
-      daysLeft: lastDayNum - d + 1,
-      monthName: now.toLocaleDateString('en-US', { month: 'long' })
+      daysLeft: lastDayNum - startDay + 1,
+      monthName: targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     };
   };
 

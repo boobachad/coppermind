@@ -6,7 +6,7 @@ import { Navbar } from '../components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Monitor, GitMerge, GitFork, Star } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../lib/time';
 
 export default function GitHubPage() {
@@ -233,19 +233,19 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-2 text-sm text-foreground opacity-70">
                 <div className="flex items-center gap-1">
-                    <span>💻</span>
+                    <Monitor className="w-4 h-4" />
                     <span>{repo.totalCommits} commits</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span>⭐</span>
+                    <Star className="w-4 h-4" />
                     <span>{repo.stars} stars</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span>🔀</span>
+                    <GitMerge className="w-4 h-4" />
                     <span>{repo.totalPrs} PRs</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span>🍴</span>
+                    <GitFork className="w-4 h-4" />
                     <span>{repo.forks} forks</span>
                 </div>
             </div>

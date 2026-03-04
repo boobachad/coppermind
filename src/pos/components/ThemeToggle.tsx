@@ -1,4 +1,4 @@
-import { Sun, Moon, Palette } from 'lucide-react';
+import { Sun, Moon, Palette, Check } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/ThemeContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,7 +42,7 @@ export function ThemeToggle() {
                             <Icon className="mr-2 h-4 w-4" />
                             <span>{label}</span>
                             {theme === themeKey && (
-                                <span className="ml-auto text-xs text-glass-text-secondary">✓</span>
+                                <Check className="ml-auto h-3 w-3 text-glass-text-secondary" />
                             )}
                         </DropdownMenuItem>
                     );

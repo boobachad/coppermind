@@ -195,6 +195,7 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
         onClose={handleModalClose}
         onSuccess={handleModalSuccess}
         editingGoal={editingGoal}
+        selectedMonth={month}
       />
     </div>
   );

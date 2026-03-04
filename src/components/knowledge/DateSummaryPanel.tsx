@@ -1,7 +1,7 @@
 // Pre-flight: A(formatDateDDMMYYYY/formatTime/getMonthShort used for display)
 //             D(no hardcoded colors) F(no mock/TODO) G(<600L) O(types match Rust camelCase)
 import React from 'react';
-import { X, Activity, Target, Code2, BookOpen, RefreshCw, BookMarked, FileText } from 'lucide-react';
+import { X, Activity, Target, Code2, BookOpen, RefreshCw, BookMarked, FileText, Zap, Check, Circle, XCircle } from 'lucide-react';
 import { formatDateDDMMYYYY, formatTime, getMonthShort } from '@/pos/lib/time';
 import type {
     YearlyGraphData, ActivitySummary, GoalSummary, SubmissionSummary,
@@ -49,7 +49,7 @@ function ActivityRow({ a }: { a: ActivitySummary }) {
                 {formatIso(a.startTime)}–{formatIso(a.endTime)}
             </div>
             {a.isProductive && (
-                <span style={{ color: 'var(--pos-heatmap-level-4)', fontSize: '10px' }}>⚡</span>
+                <Zap className="w-3 h-3" style={{ color: 'var(--pos-heatmap-level-4)' }} />
             )}
         </div>
     );
@@ -59,9 +59,11 @@ function GoalRow({ g }: { g: GoalSummary }) {
     return (
         <div className="flex items-center gap-2 py-1.5 border-b"
             style={{ borderColor: 'var(--glass-border)', fontSize: '12px' }}>
-            <span style={{ color: g.completed ? 'var(--pos-heatmap-level-3)' : 'var(--text-tertiary)' }}>
-                {g.completed ? '✓' : '○'}
-            </span>
+            {g.completed ? (
+                <Check className="w-3 h-3" style={{ color: 'var(--pos-heatmap-level-3)' }} />
+            ) : (
+                <Circle className="w-3 h-3" style={{ color: 'var(--text-tertiary)' }} />
+            )}
             <div className="flex-1" style={{
                 color: 'var(--text-primary)',
                 textDecoration: g.completed ? 'line-through' : 'none',
@@ -78,9 +80,11 @@ function SubmissionRow({ s }: { s: SubmissionSummary }) {
     return (
         <div className="flex items-center gap-2 py-1.5 border-b"
             style={{ borderColor: 'var(--glass-border)', fontSize: '12px' }}>
-            <span style={{ color: accepted ? 'var(--pos-heatmap-level-3)' : 'var(--color-error)' }}>
-                {accepted ? '✓' : '✗'}
-            </span>
+            {accepted ? (
+                <Check className="w-3 h-3" style={{ color: 'var(--pos-heatmap-level-3)' }} />
+            ) : (
+                <XCircle className="w-3 h-3" style={{ color: 'var(--color-error)' }} />
+            )}
             <div className="flex-1" style={{ color: 'var(--text-primary)' }}>{s.problemTitle}</div>
             <span style={{ color: 'var(--text-tertiary)', fontSize: '10px' }}>
                 {s.platform}{s.difficulty ? ` · ${s.difficulty}` : ''}

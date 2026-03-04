@@ -223,8 +223,9 @@ export function BookDetailPage() {
                                                         <span className="ml-2">({duration} min)</span>
                                                     </p>
                                                     {activity.pagesRead !== null && activity.pagesRead !== undefined && (
-                                                        <p className="text-sm mt-1" style={{ color: 'var(--color-accent-primary)' }}>
-                                                            📖 {activity.pagesRead} pages
+                                                        <p className="text-sm mt-1 flex items-center gap-1" style={{ color: 'var(--color-accent-primary)' }}>
+                                                            <BookOpen className="w-4 h-4" />
+                                                            {activity.pagesRead} pages
                                                         </p>
                                                     )}
                                                 </div>

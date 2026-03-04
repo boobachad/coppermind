@@ -3,14 +3,16 @@ import { invoke } from '@tauri-apps/api/core';
 import { Calendar, CheckCircle2, Circle, TrendingUp, AlertCircle, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { getLocalDateString } from '../lib/time';
-import { DailyBriefingResponse, UnifiedGoal, BalancerResult, KnowledgeItem } from '../lib/types';
+import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
 import { Loader } from '../../components/Loader';
+import { calculateTodayRequired } from '../lib/balancer-utils';
 
 export function DailyBriefingPage() {
   const [briefing, setBriefing] = useState<DailyBriefingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [newGoalText, setNewGoalText] = useState('');
   const [addingGoal, setAddingGoal] = useState(false);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
 
   useEffect(() => {
     loadBriefing();
@@ -20,10 +22,12 @@ export function DailyBriefingPage() {
     setLoading(true);
     try {
       const localDate = getLocalDateString();
-      const result = await invoke<DailyBriefingResponse>('get_daily_briefing', {
-        localDate,
-      });
-      setBriefing(result);
+      const [briefingResult, milestonesResult] = await Promise.all([
+        invoke<DailyBriefingResponse>('get_daily_briefing', { localDate }),
+        invoke<Milestone[]>('get_milestones', { activeOnly: true })
+      ]);
+      setBriefing(briefingResult);
+      setMilestones(milestonesResult);
     } catch (err) {
       const errorMsg = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
@@ -42,7 +46,7 @@ export function DailyBriefingPage() {
         req: { status: newStatus },
       });
       toast.success('KB item updated');
-      loadBriefing(); // Refresh
+      loadBriefing();
     } catch (err) {
       toast.error('Failed to update KB item', { description: String(err) });
     }
@@ -64,7 +68,7 @@ export function DailyBriefingPage() {
       });
       setNewGoalText('');
       toast.success('Goal added');
-      loadBriefing(); // Refresh
+      loadBriefing();
     } catch (err) {
       toast.error('Failed to add goal', { description: String(err) });
     } finally {
@@ -221,13 +225,13 @@ export function DailyBriefingPage() {
         )}
 
         {/* Active Milestones */}
-        <Section title="Active Milestones" count={briefing.milestones.length}>
-          {briefing.milestones.length === 0 ? (
+        <Section title="Active Milestones" count={milestones.length}>
+          {milestones.length === 0 ? (
             <EmptyState message="No active milestones" />
           ) : (
-            <div className="space-y-3">
-              {briefing.milestones.map(milestone => (
-                <MilestoneItem key={milestone.milestoneId} milestone={milestone} />
+            <div className="space-y-2">
+              {milestones.map(milestone => (
+                <MilestoneItem key={milestone.id} milestone={milestone} />
               ))}
             </div>
           )}
@@ -289,14 +293,18 @@ interface SectionProps {
   title: string;
   count: number;
   alert?: boolean;
+  fullWidth?: boolean;
   children: React.ReactNode;
 }
 
-function Section({ title, count, alert, children }: SectionProps) {
+function Section({ title, count, alert, fullWidth, children }: SectionProps) {
   return (
     <div
-      className="p-6 rounded-xl border"
+      className={fullWidth ? 'lg:col-span-2' : ''}
       style={{
+        padding: '1.5rem',
+        borderRadius: '0.75rem',
+        border: '1px solid',
         backgroundColor: alert ? 'var(--surface-error)' : 'var(--glass-bg)',
         borderColor: alert ? 'var(--color-error)' : 'var(--glass-border)',
       }}
@@ -333,7 +341,6 @@ function GoalItem({ goal, isDebt }: GoalItemProps) {
         backgroundColor: 'var(--surface-secondary)',
       }}
     >
-      {/* Read-only completion indicator */}
       <div
         className="mt-0.5"
         style={{ color: goal.completed ? 'var(--color-success)' : 'var(--text-tertiary)' }}
@@ -407,32 +414,63 @@ function GoalItem({ goal, isDebt }: GoalItemProps) {
 }
 
 interface MilestoneItemProps {
-  milestone: BalancerResult;
+  milestone: Milestone;
 }
 
 function MilestoneItem({ milestone }: MilestoneItemProps) {
+  const todayRequired = calculateTodayRequired(
+    milestone.currentValue,
+    milestone.targetValue,
+    milestone.dailyAmount,
+    milestone.periodStart,
+    milestone.periodEnd
+  );
+
   return (
     <div
-      className="p-4 rounded-lg"
+      className="flex items-center justify-between p-3 rounded-lg transition-colors hover:bg-opacity-80"
       style={{
         backgroundColor: 'var(--surface-secondary)',
       }}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex-1">
         <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
           {milestone.targetMetric}
         </p>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          {milestone.currentValue} / {milestone.targetValue}
+          {milestone.unit && ` ${milestone.unit}`}
+        </p>
       </div>
-      <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-        {milestone.message}
-      </p>
-      <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          Daily Target
-        </span>
-        <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-          {milestone.dailyRequired}
-        </span>
+      <div className="text-right">
+        <div className="flex items-baseline justify-end gap-1">
+          <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+            {todayRequired.todayBase}
+          </span>
+          {todayRequired.debt > 0 && (
+            <>
+              <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>+</span>
+              <span
+                className="text-lg font-bold border-b-2 border-dotted cursor-help"
+                style={{ 
+                  color: 'var(--color-error)',
+                  borderColor: 'var(--color-error)'
+                }}
+                title={`Debt: ${todayRequired.debt} ${milestone.unit || ''}`}
+              >
+                {todayRequired.debt}
+              </span>
+            </>
+          )}
+          {milestone.unit && (
+            <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-tertiary)' }}>
+              {milestone.unit}
+            </span>
+          )}
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          Today's Target
+        </p>
       </div>
     </div>
   );

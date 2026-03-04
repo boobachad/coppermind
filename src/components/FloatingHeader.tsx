@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, ChevronDown, StickyNote, Trash2, ExternalLink, ChevronRight, ChevronLeft } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, StickyNote, Trash2, ExternalLink, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { STICKER_TYPES } from '../lib/constants';
@@ -216,7 +216,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
                   onClick={() => setShowStickerMenu(true)}
                   className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
                 >
-                  <div className="w-4 h-4 flex items-center justify-center">✨</div>
+                  <Sparkles className="w-4 h-4" />
                   <span>Stickers</span>
                 </button>
 

@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { Calendar, TrendingUp, TrendingDown, Minus, Edit2, Trash2 } from 'lucide-react';
 import { Milestone } from '../lib/types';
-import { calculateProgress, calculateScheduleStatus } from '../lib/balancer-utils';
+import { calculateProgress, calculateScheduleStatus, calculateTodayRequired } from '../lib/balancer-utils';
 
 
 interface MonthlyGoalCardProps {
@@ -12,8 +11,6 @@ interface MonthlyGoalCardProps {
 }
 
 export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: MonthlyGoalCardProps) {
-  const [showDetails, setShowDetails] = useState(false);
-
   // Calculate progress percentage
   const progressPercent = calculateProgress(goal.currentValue, goal.targetValue);
 
@@ -25,8 +22,14 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
     goal.periodEnd
   );
 
-  // Daily target is the user-defined daily amount
-  const dailyTarget = goal.dailyAmount;
+  // Calculate today's required amount (base + debt)
+  const todayRequired = calculateTodayRequired(
+    goal.currentValue,
+    goal.targetValue,
+    goal.dailyAmount,
+    goal.periodStart,
+    goal.periodEnd
+  );
   
   // Calculate remaining days and target
   const now = new Date();
@@ -139,22 +142,44 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
         </div>
       </div>
 
-      {/* Daily Target Display */}
+      {/* Today's Target Display */}
       <div
         className="mb-4 p-3 rounded-lg"
         style={{
           backgroundColor: 'var(--glass-bg-subtle)',
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Daily Target
+            Today's Target
           </span>
-          <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            {dailyTarget}
-            {goal.unit && <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-tertiary)' }}>{goal.unit}</span>}
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+              {todayRequired.todayBase}
+            </span>
+            {todayRequired.debt > 0 && (
+              <>
+                <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>+</span>
+                <span
+                  className="text-lg font-bold border-b-2 border-dotted cursor-help"
+                  style={{ 
+                    color: 'var(--color-error)',
+                    borderColor: 'var(--color-error)'
+                  }}
+                  title={`Debt: ${todayRequired.debt} ${goal.unit || ''}`}
+                >
+                  {todayRequired.debt}
+                </span>
+              </>
+            )}
+            {goal.unit && (
+              <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-tertiary)' }}>
+                {goal.unit}
+              </span>
+            )}
+          </div>
         </div>
+        
         <div className="flex items-center justify-between mt-1">
           <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
             {remainingDays} days remaining
@@ -166,7 +191,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
       </div>
 
       {/* Status */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         {/* Schedule Status */}
         <div className="flex items-center gap-2">
           <div style={{ color: getStatusColor() }}>
@@ -177,46 +202,6 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
           </span>
         </div>
       </div>
-
-      {/* Details Toggle */}
-      <button
-        onClick={() => setShowDetails(!showDetails)}
-        className="w-full mt-2 text-xs underline"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
-        {showDetails ? 'Hide' : 'Show'} Details
-      </button>
-
-      {showDetails && (
-        <div
-          className="mt-3 p-3 rounded-lg text-sm space-y-1"
-          style={{
-            backgroundColor: 'var(--glass-bg-subtle)',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          <div className="flex justify-between">
-            <span>Target Metric:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{goal.targetMetric}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Current Progress:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{goal.currentValue}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Target Value:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{goal.targetValue}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Remaining:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{remainingTarget}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Remaining Days:</span>
-            <span style={{ color: 'var(--text-primary)' }}>{remainingDays}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
