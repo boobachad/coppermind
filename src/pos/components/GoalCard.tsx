@@ -157,11 +157,14 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                     {/* Footer metadata */}
                     <div className="flex items-center gap-3 text-[11px] font-medium text-(--text-tertiary) border-t border-white/5 pt-3 mt-2">
                         <span>Created {goal.createdAt ? (() => {
-                            // Extract date from UTC timestamp without timezone conversion
-                            const utcDate = goal.createdAt.split('T')[0]; // YYYY-MM-DD
-                            const [year, month, day] = utcDate.split('-');
+                            // Convert UTC timestamp to local date
+                            // Backend stores as TIMESTAMPTZ (UTC), we need local date for display
+                            const utcDate = new Date(goal.createdAt);
+                            const year = utcDate.getFullYear();
+                            const month = utcDate.getMonth();
+                            const day = utcDate.getDate();
                             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                            return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+                            return `${monthNames[month]} ${day}, ${year}`;
                         })() : 'Unknown'}</span>
                         {goal.originalDate && (
                             <>

@@ -200,9 +200,15 @@ pub async fn get_unified_goals(
     let (gen_start, gen_end) = if let Some(Some((start, end))) = filters.as_ref().map(|f| f.date_range) {
         (start, end)
     } else {
-        // Default to today only
-        let now = Utc::now();
-        (now, now)
+        // Default to today only (use today_local from frontend, not UTC)
+        // Parse today_local string to DateTime for consistency with date_range logic
+        let today_str = today_local.clone();
+        let today_dt = chrono::NaiveDate::parse_from_str(&today_str, "%Y-%m-%d")
+            .ok()
+            .and_then(|d| d.and_hms_opt(0, 0, 0))
+            .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+            .unwrap_or_else(|| Utc::now());
+        (today_dt, today_dt)
     };
 
     // 1. Fetch active templates (goals with recurring_pattern set, and NOT an instance themselves)

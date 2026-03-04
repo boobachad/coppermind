@@ -58,7 +58,7 @@ pub async fn get_daily_briefing(
 
     // 1.5. Query completed goals count for today (separate query to get accurate count)
     let completed_goals = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM unified_goals WHERE due_date_local = $1 AND completed = TRUE"
+        "SELECT COUNT(*) FROM unified_goals WHERE date = $1 AND completed = TRUE"
     )
     .bind(&local_date)
     .fetch_one(pool)
