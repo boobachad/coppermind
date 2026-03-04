@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { AlertTriangle, Calendar, ArrowRight, CheckCircle, Archive } from 'lucide-react';
+import { AlertTriangle, Calendar, ArrowRight, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnifiedGoal } from '../lib/types';
-import { formatDateDDMMYYYY, getLocalDateString } from '../lib/time';
+import { getLocalDateString } from '../lib/time';
+import { GoalCard } from './GoalCard';
 
 interface DebtTrailItem {
-    date: string;
-    count: number;
+    month: string;
+    debtCount: number;
     goals: UnifiedGoal[];
 }
 
@@ -17,23 +18,27 @@ interface DebtTrailProps {
      */
     endDate?: string;
     /**
-     * Number of days to look back (defaults to 30)
-     */
-    daysBack?: number;
-    /**
      * Callback when debt is resolved
      */
     onDebtResolved?: () => void;
+    /**
+     * Callback when goal is edited
+     */
+    onEdit?: (goal: UnifiedGoal) => void;
+    /**
+     * Callback when goal is deleted
+     */
+    onDelete?: (id: string) => void;
 }
 
-export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailProps) {
+export function DebtTrail({ endDate, onDebtResolved, onEdit, onDelete }: DebtTrailProps) {
     const [trailItems, setTrailItems] = useState<DebtTrailItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+    const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadDebtTrail();
-    }, [endDate, daysBack]);
+    }, [endDate]);
 
     const loadDebtTrail = async () => {
         setLoading(true);
@@ -41,11 +46,10 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
             const end = endDate || getLocalDateString();
             const result = await invoke<DebtTrailItem[]>('get_debt_trail', {
                 endDate: end,
-                daysBack,
             });
 
-            // Filter out dates with no debt
-            const filtered = result.filter(item => item.count > 0);
+            // Filter out months with no debt
+            const filtered = result.filter(item => item.debtCount > 0);
             setTrailItems(filtered);
         } catch (err) {
             toast.error('Failed to load debt trail', { description: String(err) });
@@ -54,41 +58,26 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
         }
     };
 
-    const toggleExpand = (date: string) => {
-        setExpandedDates(prev => {
+    const toggleExpand = (month: string) => {
+        setExpandedMonths(prev => {
             const next = new Set(prev);
-            if (next.has(date)) {
-                next.delete(date);
+            if (next.has(month)) {
+                next.delete(month);
             } else {
-                next.add(date);
+                next.add(month);
             }
             return next;
         });
     };
 
-    const handleCompleteGoal = async (goalId: string) => {
-        try {
-            await invoke('update_unified_goal', {
-                id: goalId,
-                req: { completed: true }
-            });
-            toast.success('Goal completed!');
-            loadDebtTrail();
-            onDebtResolved?.();
-        } catch (err) {
-            toast.error('Failed to complete goal', { description: String(err) });
-        }
+    const handleEdit = (goal: UnifiedGoal) => {
+        onEdit?.(goal);
     };
 
-    const handleArchiveGoal = async (goalId: string) => {
-        try {
-            await invoke('delete_unified_goal', { id: goalId });
-            toast.success('Goal archived');
-            loadDebtTrail();
-            onDebtResolved?.();
-        } catch (err) {
-            toast.error('Failed to archive goal', { description: String(err) });
-        }
+    const handleDelete = (id: string) => {
+        onDelete?.(id);
+        loadDebtTrail();
+        onDebtResolved?.();
     };
 
     if (loading) {
@@ -113,7 +102,7 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
                     No Debt Trail
                 </p>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    All goals completed on time for the past {daysBack} days!
+                    All goals completed on time!
                 </p>
             </div>
         );
@@ -130,27 +119,27 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
                     </h3>
                 </div>
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    {trailItems.reduce((sum, item) => sum + item.count, 0)} incomplete goals from past {daysBack} days
+                    {trailItems.reduce((sum, item) => sum + item.debtCount, 0)} incomplete goals from previous months
                 </span>
             </div>
 
             {/* Trail Items */}
             <div className="space-y-2">
                 {trailItems.map((item) => (
-                    <div key={item.date}>
-                        {/* Date Row */}
+                    <div key={item.month}>
+                        {/* Month Row */}
                         <button
-                            onClick={() => toggleExpand(item.date)}
+                            onClick={() => toggleExpand(item.month)}
                             className="w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 hover:scale-[1.01]"
                             style={{
                                 backgroundColor: 'var(--surface-secondary)',
-                                borderColor: expandedDates.has(item.date) ? 'var(--color-error)' : 'var(--border-primary)',
+                                borderColor: expandedMonths.has(item.month) ? 'var(--color-error)' : 'var(--border-primary)',
                             }}
                         >
                             <div className="flex items-center gap-3">
                                 <Calendar className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
                                 <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                    {formatDateDDMMYYYY(new Date(item.date))}
+                                    {new Date(item.month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                                 </span>
                                 <span
                                     className="px-2 py-1 rounded-full text-xs font-medium"
@@ -159,71 +148,28 @@ export function DebtTrail({ endDate, daysBack = 30, onDebtResolved }: DebtTrailP
                                         color: 'white',
                                     }}
                                 >
-                                    {item.count} debt
+                                    {item.debtCount} debt
                                 </span>
                             </div>
                             <ArrowRight
                                 className="w-4 h-4 transition-transform"
                                 style={{
                                     color: 'var(--text-tertiary)',
-                                    transform: expandedDates.has(item.date) ? 'rotate(90deg)' : 'rotate(0deg)',
+                                    transform: expandedMonths.has(item.month) ? 'rotate(90deg)' : 'rotate(0deg)',
                                 }}
                             />
                         </button>
 
                         {/* Expanded Goals */}
-                        {expandedDates.has(item.date) && (
+                        {expandedMonths.has(item.month) && (
                             <div className="mt-2 ml-6 space-y-2">
-                                {item.goals.map((goal) => (
-                                    <div
+                                {item.goals.filter(g => !g.recurringPattern).map((goal) => (
+                                    <GoalCard
                                         key={goal.id}
-                                        className="p-3 rounded-lg border flex items-start justify-between"
-                                        style={{
-                                            backgroundColor: 'var(--glass-bg)',
-                                            borderColor: 'var(--border-primary)',
-                                        }}
-                                    >
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                                                {goal.text}
-                                            </p>
-                                            {goal.metrics && goal.metrics.length > 0 && (
-                                                <div className="flex gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                                    {goal.metrics.map((metric, idx) => (
-                                                        <span key={idx}>
-                                                            {metric.label}: {metric.current}/{metric.target}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Quick Actions */}
-                                        <div className="flex gap-2 ml-4">
-                                            <button
-                                                onClick={() => handleCompleteGoal(goal.id)}
-                                                className="p-2 rounded-lg transition-colors"
-                                                style={{
-                                                    backgroundColor: 'var(--surface-secondary)',
-                                                    color: 'var(--color-success)',
-                                                }}
-                                                title="Complete"
-                                            >
-                                                <CheckCircle className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleArchiveGoal(goal.id)}
-                                                className="p-2 rounded-lg transition-colors"
-                                                style={{
-                                                    backgroundColor: 'var(--surface-secondary)',
-                                                    color: 'var(--text-tertiary)',
-                                                }}
-                                                title="Archive"
-                                            >
-                                                <Archive className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
+                                        goal={goal}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
                                 ))}
                             </div>
                         )}

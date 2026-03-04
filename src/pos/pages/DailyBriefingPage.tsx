@@ -6,6 +6,7 @@ import { getLocalDateString } from '../lib/time';
 import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
 import { Loader } from '../../components/Loader';
 import { calculateTodayRequired } from '../lib/balancer-utils';
+import { MonthSelector } from '../components/MonthSelector';
 
 export function DailyBriefingPage() {
   const [briefing, setBriefing] = useState<DailyBriefingResponse | null>(null);
@@ -13,21 +14,30 @@ export function DailyBriefingPage() {
   const [newGoalText, setNewGoalText] = useState('');
   const [addingGoal, setAddingGoal] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
 
   useEffect(() => {
     loadBriefing();
-  }, []);
+  }, [selectedDate]);
 
   const loadBriefing = async () => {
     setLoading(true);
     try {
-      const localDate = getLocalDateString();
-      const [briefingResult, milestonesResult] = await Promise.all([
-        invoke<DailyBriefingResponse>('get_daily_briefing', { localDate }),
-        invoke<Milestone[]>('get_milestones', { activeOnly: true })
+      const [briefingResult, allMilestones] = await Promise.all([
+        invoke<DailyBriefingResponse>('get_daily_briefing', { localDate: selectedDate }),
+        invoke<Milestone[]>('get_milestones', { activeOnly: false })
       ]);
+      
+      // Filter milestones that are active on selectedDate
+      const filteredMilestones = allMilestones.filter(milestone => {
+        const milestoneStart = milestone.periodStart.split('T')[0];
+        const milestoneEnd = milestone.periodEnd.split('T')[0];
+        // Milestone is active if selectedDate is within its period
+        return selectedDate >= milestoneStart && selectedDate <= milestoneEnd;
+      });
+      
       setBriefing(briefingResult);
-      setMilestones(milestonesResult);
+      setMilestones(filteredMilestones);
     } catch (err) {
       const errorMsg = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
@@ -61,7 +71,7 @@ export function DailyBriefingPage() {
       await invoke('create_unified_goal', {
         req: {
           text: newGoalText,
-          dueDateLocal: getLocalDateString(),
+          dueDateLocal: selectedDate,
           priority: 'medium',
           urgent: false,
         },
@@ -125,6 +135,13 @@ export function DailyBriefingPage() {
             <RefreshCw className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Day Navigation */}
+        <MonthSelector
+          mode="day"
+          value={selectedDate}
+          onChange={setSelectedDate}
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">

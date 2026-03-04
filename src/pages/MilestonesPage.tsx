@@ -27,8 +27,8 @@ export default function MilestonesPage() {
             backgroundColor: 'var(--bg-base)',
         }}>
             <MonthSelector
-                selectedMonth={selectedMonth}
-                onMonthChange={setSelectedMonth}
+                value={selectedMonth}
+                onChange={setSelectedMonth}
                 isArchived={isArchived}
             />
             <MilestoneWidget

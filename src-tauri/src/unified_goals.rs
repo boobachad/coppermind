@@ -170,9 +170,11 @@ pub async fn get_unified_goals(
     let today_local = now_local.format("%Y-%m-%d").to_string();
 
     // Mark goals as debt if due_date_local < today_local
+    // Set original_date = due_date_local when transitioning to debt
     sqlx::query(
         r#"UPDATE unified_goals 
-           SET is_debt = TRUE 
+           SET is_debt = TRUE,
+               original_date = due_date_local
            WHERE completed = FALSE 
            AND is_debt = FALSE 
            AND due_date_local IS NOT NULL 

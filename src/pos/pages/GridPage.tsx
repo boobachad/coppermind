@@ -8,7 +8,7 @@ import { Loader } from '@/components/Loader';
 import { AlertCircle } from 'lucide-react';
 import type { Activity } from '../lib/types';
 import { getActivityColor } from '../lib/config';
-import { formatDateDDMMYYYY, formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot } from '../lib/time';
+import { formatSlotTime, getDayName, getLocalDateString, activityOverlapsSlot, formatISODateDDMMYYYY, parseGoalDate, formatGoalDate } from '../lib/time';
 import { toast } from 'sonner';
 import { getDb } from '../../lib/db';
 
@@ -103,18 +103,26 @@ export function GridPage() {
             const journalDates = new Set(journalRows.map(r => r.date));
             setJournalEntries(journalDates);
 
-            // Batch fetch debt dates using get_accumulated_debt command
-            // This fetches all incomplete goals from before each date
+            // Batch fetch debt dates - only flag the original_date of debt goals
+            // Not all dates that have accumulated debt, but only the date when goal was originally due
             try {
-                const debtResults = await Promise.all(
-                    dates.map(async (date) => {
-                        const debtGoals = await invoke<any[]>('get_accumulated_debt', { date });
-                        return { date, hasDebt: debtGoals.length > 0 };
-                    })
-                );
-                const datesWithDebt = new Set(
-                    debtResults.filter(r => r.hasDebt).map(r => r.date)
-                );
+                // Get all debt goals up to and including the last date of the month
+                // Add one day to lastDate to include goals on the last day (query uses <, not <=)
+                const lastDate = dates[dates.length - 1];
+                const lastDateParsed = parseGoalDate(lastDate);
+                lastDateParsed.setDate(lastDateParsed.getDate() + 1);
+                const queryDate = formatGoalDate(lastDateParsed);
+                
+                const allDebtGoals = await invoke<any[]>('get_accumulated_debt', { date: queryDate });
+                
+                // Extract unique original_date values that fall within our date range
+                const datesWithDebt = new Set<string>();
+                allDebtGoals.forEach((goal: any) => {
+                    if (goal.originalDate && dates.includes(goal.originalDate)) {
+                        datesWithDebt.add(goal.originalDate);
+                    }
+                });
+                
                 setDebtDates(datesWithDebt);
             } catch (err) {
                 console.error('Failed to fetch debt data:', err);
@@ -211,8 +219,8 @@ export function GridPage() {
             <div className="flex-1">
                 <div className="max-w-[1800px] mx-auto space-y-6 p-8">
                     <MonthSelector
-                        selectedMonth={selectedMonth}
-                        onMonthChange={setSelectedMonth}
+                        value={selectedMonth}
+                        onChange={setSelectedMonth}
                         isArchived={isArchived}
                     />
 
@@ -268,7 +276,7 @@ export function GridPage() {
                                                     >
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div>
-                                                                <div className="font-medium">{formatDateDDMMYYYY(new Date(date))}</div>
+                                                                <div className="font-medium">{formatISODateDDMMYYYY(date)}</div>
                                                                 <div className="text-[10px]" style={{ color: isToday ? 'var(--pos-today-text)' : 'var(--text-secondary)' }}>
                                                                     {getDayName(date)}
                                                                 </div>

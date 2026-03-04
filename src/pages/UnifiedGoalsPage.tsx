@@ -45,7 +45,9 @@ export function UnifiedGoalsPage() {
         // No other filters - fetch everything!
       };
 
-      const result = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
+      const allGoals = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
+      // Filter out recurring templates - only show instances
+      const result = allGoals.filter(g => !g.recurringPattern);
       setGoals(result);
     } catch (err) {
       toast.error('Failed to load goals', { description: String(err) });
@@ -83,6 +85,10 @@ export function UnifiedGoalsPage() {
   const filteredGoals = useMemo(() => {
     let res = goals;
 
+    // Get current month to filter out previous months' debt (shown in debt trail)
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
     // 1. Text Search
     if (search) {
       res = res.filter(g => g.text.toLowerCase().includes(search.toLowerCase()));
@@ -96,9 +102,21 @@ export function UnifiedGoalsPage() {
     } else if (filter === 'urgent') {
       res = res.filter(g => g.urgent); // Urgent shows regardless of debt status
     } else if (filter === 'debt') {
-      res = res.filter(g => g.isDebt && !g.completed); // Show only incomplete debt
+      // Show only current month's debt (previous months shown in debt trail)
+      res = res.filter(g => {
+        if (!g.isDebt || g.completed) return false;
+        if (!g.originalDate) return true; // No original date = current month
+        return g.originalDate.startsWith(currentMonth);
+      });
+    } else {
+      // 'all' filter: exclude previous months' debt (shown in debt trail)
+      res = res.filter(g => {
+        if (!g.isDebt) return true; // Non-debt goals always shown
+        if (g.completed) return true; // Completed debt shown
+        if (!g.originalDate) return true; // No original date = current month
+        return g.originalDate.startsWith(currentMonth); // Only current month debt
+      });
     }
-    // 'all' shows everything (no filter needed)
 
     return res.sort((a, b) => {
       if (sortBy === 'priority') {
@@ -219,7 +237,11 @@ export function UnifiedGoalsPage() {
         {/* Debt Trail (if debt exists) */}
         {debtGoals.length > 0 && (
           <div className="mb-8">
-            <DebtTrail daysBack={30} onDebtResolved={loadGoals} />
+            <DebtTrail 
+              onDebtResolved={loadGoals} 
+              onEdit={handleEditGoal}
+              onDelete={deleteGoal}
+            />
           </div>
         )}
         

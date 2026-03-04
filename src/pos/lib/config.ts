@@ -1,6 +1,6 @@
 // Activity categories
 export const ACTIVITY_CATEGORIES = {
-    CODING: 'coding',
+    LEARNING: 'learning',
     CODING_LEETCODE: 'coding_leetcode',
     CODING_CODEFORCES: 'coding_codeforces',
     SLEEP: 'sleep',
@@ -26,7 +26,7 @@ export type ActivityCategory = typeof ACTIVITY_CATEGORIES[keyof typeof ACTIVITY_
 
 // Activity colors - CSS variables for theme-aware rendering
 export const ACTIVITY_COLORS: Record<string, string> = {
-    coding: 'var(--pos-activity-coding)',
+    learning: 'var(--pos-activity-learning)',
     coding_leetcode: 'var(--pos-activity-coding-leetcode)',
     coding_codeforces: 'var(--pos-activity-coding-codeforces)',
     cpp: 'var(--pos-activity-cpp)',

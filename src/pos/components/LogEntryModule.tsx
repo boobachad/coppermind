@@ -41,7 +41,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [category, setCategory] = useState<string>(editingActivity?.category || ACTIVITY_CATEGORIES.REAL_PROJECTS);
     const [title, setTitle] = useState(editingActivity?.title || '');
     const [description, setDescription] = useState(editingActivity?.description || '');
-    const [isProductive, setIsProductive] = useState(editingActivity?.isProductive ?? true);
+    const [isProductive, setIsProductive] = useState(editingActivity?.isProductive ?? false);
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
     const [availableMilestones, setAvailableMilestones] = useState<Milestone[]>([]);
@@ -68,18 +68,34 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setTitle(editingActivity.title);
             setDescription(editingActivity.description);
             setIsProductive(editingActivity.isProductive);
+            setSelectedGoalId(editingActivity.goalId || 'none');
+            setSelectedBookId(editingActivity.bookId || null);
+            setPagesRead(editingActivity.pagesRead?.toString() || '');
+            setShowBookSelector(editingActivity.category === 'book');
         } else {
+            // Reset to defaults when editingActivity is null
             const [year, month, day] = date.split('-').map(Number);
             setStartDate(new Date(year, month - 1, day, 9, 0));
             const now = new Date();
             setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
+            setCategory(ACTIVITY_CATEGORIES.REAL_PROJECTS);
+            setTitle('');
+            setDescription('');
+            setIsProductive(false);
+            setSelectedGoalId('none');
+            setMetricValues({});
+            setSelectedBookId(null);
+            setPagesRead('');
+            setShowBookSelector(false);
+            setSelectedBook(null);
+            setTotalPages('');
         }
     }, [editingActivity, date]);
 
     useEffect(() => {
         const fetchGoalsAndMilestones = async () => {
             try {
-                const [goals, milestones] = await Promise.all([
+                const [allGoals, milestones] = await Promise.all([
                     invoke<UnifiedGoal[]>('get_unified_goals', {
                         filters: { completed: false }
                     }),
@@ -87,6 +103,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         activeOnly: true
                     })
                 ]);
+                // Filter out recurring templates
+                const goals = allGoals.filter(g => !g.recurringPattern);
                 setAvailableGoals(goals);
                 setAvailableMilestones(milestones);
             } catch (error) {
@@ -356,7 +374,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 }
             }
 
-            // Reset form (ENHANCED)
+            // Reset form after create
             const [year, month, day] = date.split('-').map(Number);
             setStartDate(new Date(year, month - 1, day, 9, 0));
             const now = new Date();

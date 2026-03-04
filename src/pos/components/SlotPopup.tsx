@@ -20,7 +20,6 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
     const navigate = useNavigate();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
-    const [debtGoals, setDebtGoals] = useState<UnifiedGoal[]>([]);
     const [booksMap, setBooksMap] = useState<Map<string, Book>>(new Map());
     const [kbItemsMap, setKbItemsMap] = useState<Map<string, KnowledgeItem[]>>(new Map());
 
@@ -76,11 +75,6 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                     });
 
                     setLoading(false);
-
-                    // Fetch debt goals for this date
-                    invoke<UnifiedGoal[]>('get_accumulated_debt', { date })
-                        .then(goals => setDebtGoals(goals))
-                        .catch(err => console.error('Failed to fetch debt:', err));
                 })
                 .catch(() => {
                     setLoading(false);
@@ -236,39 +230,6 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                 ) : (
                     <div className="py-8 text-center text-muted-foreground">
                         No activities logged in this slot
-                    </div>
-                )}
-
-                {/* Debt Section */}
-                {debtGoals.length > 0 && (
-                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-primary)' }}>
-                        <div className="flex items-center gap-2 mb-3">
-                            <AlertCircle className="w-4 h-4" style={{ color: 'var(--color-error)' }} />
-                            <h4 className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                                Incomplete Goals ({debtGoals.length})
-                            </h4>
-                        </div>
-                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                            {debtGoals.map((goal) => (
-                                <div
-                                    key={goal.id}
-                                    className="p-2 rounded text-xs"
-                                    style={{
-                                        backgroundColor: 'var(--color-error-subtle-faint)',
-                                        border: '1px solid var(--color-error)',
-                                    }}
-                                >
-                                    <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                        {goal.text}
-                                    </div>
-                                    {goal.priority && (
-                                        <div className="mt-1 text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                                            Priority: {goal.priority}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
                     </div>
                 )}
             </DialogContent>

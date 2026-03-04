@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { LogEntryModule } from '../components/LogEntryModule';
 import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
+import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '@/components/Loader';
-import { formatDateDDMMYYYY, parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC } from '../lib/time';
+import { parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC, formatISODateDDMMYYYY, parseGoalDate, formatGoalDate } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, UnifiedGoal, Book } from '../lib/types';
-import { ArrowLeft, BookOpen, Pencil, AlertCircle, ExternalLink } from 'lucide-react';
+import { BookOpen, Pencil, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { getDb } from '../../lib/db';
 
 interface GridSlot {
     slotIndex: number;
@@ -24,6 +24,7 @@ interface GridSlot {
 
 export function DailyPage() {
     const { date } = useParams<{ date: string }>();
+    const navigate = useNavigate();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [goals, setGoals] = useState<UnifiedGoal[]>([]);
     const [daySlots, setDaySlots] = useState<GridSlot[]>([]);
@@ -37,7 +38,6 @@ export function DailyPage() {
     const [showPopup, setShowPopup] = useState(false);
     const [currentSlotIndex, setCurrentSlotIndex] = useState(-1);
     const [isToday, setIsToday] = useState(false);
-    const [hasJournalEntry, setHasJournalEntry] = useState(false);
     const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
     const [hasDebt, setHasDebt] = useState(false);
     const [debtCount, setDebtCount] = useState(0);
@@ -55,30 +55,31 @@ export function DailyPage() {
             const currentMinute = now.getHours() * 60 + now.getMinutes();
             setCurrentSlotIndex(Math.floor(currentMinute / 30));
 
+            // Fetch debt for this date - match GridPage logic exactly
             try {
-                const db = await getDb();
-                const journalRows = await db.select<any[]>(
-                    `SELECT id FROM journal_entries 
-                     WHERE date = $1
-                     AND reflection_text != ''
-                     AND (
-                         (expected_schedule_image != '' OR expected_schedule_data IS NOT NULL)
-                         OR (actual_schedule_image != '' OR actual_schedule_data IS NOT NULL)
-                     )`,
-                    [date]
-                );
-                setHasJournalEntry(journalRows.length > 0);
+                // GridPage adds 1 day to query date because backend uses < not <=
+                const currentDateParsed = parseGoalDate(date);
+                currentDateParsed.setDate(currentDateParsed.getDate() + 1);
+                const queryDate = formatGoalDate(currentDateParsed);
+                
+                console.log('[DAILY PAGE DEBT] Query date (date + 1):', queryDate);
+                const debtGoals = await invoke<UnifiedGoal[]>('get_accumulated_debt', { date: queryDate });
+                console.log('[DAILY PAGE DEBT] All debt goals:', debtGoals);
+                
+                // Filter: Only flag this date if debt goal has this date as original_date
+                // AND exclude recurring templates (they shouldn't be debt, only instances)
+                const debtForThisDate = debtGoals.filter(goal => {
+                    const originalDate = goal.originalDate?.split('T')[0];
+                    const isRecurringTemplate = goal.recurringPattern !== null && goal.recurringPattern !== undefined;
+                    console.log('[DAILY PAGE DEBT] Comparing:', originalDate, 'with', date, 'isTemplate:', isRecurringTemplate);
+                    return originalDate === date && !isRecurringTemplate;
+                });
+                console.log('[DAILY PAGE DEBT] Debt for this date:', debtForThisDate);
+                console.log('[DAILY PAGE DEBT] Setting hasDebt:', debtForThisDate.length > 0, 'count:', debtForThisDate.length);
+                setHasDebt(debtForThisDate.length > 0);
+                setDebtCount(debtForThisDate.length);
             } catch (err) {
-                console.error('Failed to check journal entry:', err);
-            }
-
-            // Fetch debt for this date
-            try {
-                const debtGoals = await invoke<UnifiedGoal[]>('get_accumulated_debt', { date });
-                setHasDebt(debtGoals.length > 0);
-                setDebtCount(debtGoals.length);
-            } catch (err) {
-                console.error('Failed to fetch debt:', err);
+                console.error('[DAILY PAGE DEBT] Failed to fetch debt:', err);
             }
 
             const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
@@ -195,14 +196,51 @@ export function DailyPage() {
             setDaySlots(slots);
 
             // ─── UNIFIED GOALS INTEGRATION ───
-            const { start: startOfDay, end: endOfDay } = getDayBoundariesUTC(date);
-
-            const filters = {
-                date_range: [startOfDay, endOfDay],
-                timezone_offset: 0 // Using UTC, no offset needed
-            };
-
-            const goalData = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
+            // Goals tab logic:
+            // - For past dates: Show only goals CREATED on that date (by created_at), with current status
+            // - For today: Show all accumulated debt + today's goals (by due_date)
+            
+            const today = getLocalDateString();
+            const isViewingToday = date === today;
+            
+            let goalData: UnifiedGoal[];
+            
+            if (isViewingToday) {
+                // Today: Show all debt + today's goals
+                const { start: startOfDay, end: endOfDay } = getDayBoundariesUTC(date);
+                const filters = {
+                    date_range: [startOfDay, endOfDay],
+                    timezone_offset: 0
+                };
+                const todaysGoals = await invoke<UnifiedGoal[]>('get_unified_goals', { filters });
+                
+                // Get all accumulated debt
+                const currentDateParsed = parseGoalDate(date);
+                currentDateParsed.setDate(currentDateParsed.getDate() + 1);
+                const queryDate = formatGoalDate(currentDateParsed);
+                const debtGoals = await invoke<UnifiedGoal[]>('get_accumulated_debt', { date: queryDate });
+                
+                // Combine and deduplicate, exclude recurring templates
+                const allGoals = [...debtGoals, ...todaysGoals];
+                const uniqueGoals = Array.from(new Map(allGoals.map(g => [g.id, g])).values());
+                goalData = uniqueGoals.filter(goal => !goal.recurringPattern);
+            } else {
+                // Past date: Show only goals created on this date
+                // createdAt is UTC timestamp, need to convert to local date for comparison
+                const allGoals = await invoke<UnifiedGoal[]>('get_unified_goals', { filters: {} });
+                goalData = allGoals.filter(goal => {
+                    if (!goal.createdAt) return false;
+                    // Exclude recurring templates
+                    if (goal.recurringPattern) return false;
+                    // Parse UTC timestamp and convert to local date string
+                    const createdAtUTC = new Date(goal.createdAt);
+                    const offset = createdAtUTC.getTimezoneOffset() * 60000;
+                    const createdAtLocal = new Date(createdAtUTC.getTime() - offset);
+                    const createdDate = createdAtLocal.toISOString().split('T')[0];
+                    return createdDate === date;
+                });
+            }
+            
             setGoals(goalData);
         } catch (error) {
             toast.error('Failed to fetch data', { description: String(error) });
@@ -231,47 +269,35 @@ export function DailyPage() {
 
     return (
         <div className="h-full flex flex-col text-foreground" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid', href: '/pos/grid' }, { label: date ? formatDateDDMMYYYY(new Date(date)) : 'loading' }]} />
-            <div className="max-w-[1400px] mx-auto space-y-4 p-4 flex-1 overflow-auto">
-                <div className="flex items-center gap-4">
-                    <Link to="/pos/grid" className="text-muted-foreground hover:text-foreground">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                        {formatDateDDMMYYYY(new Date(date!))}
-                        {hasDebt && (
-                            <div 
-                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{
-                                    backgroundColor: 'var(--color-error-subtle)',
-                                    border: '1px solid var(--color-error)',
-                                    color: 'var(--color-error)',
-                                }}
-                                title={`${debtCount} incomplete goal${debtCount > 1 ? 's' : ''} from previous days`}
-                            >
-                                <AlertCircle className="w-3 h-3" />
-                                {debtCount} Debt
-                            </div>
-                        )}
-                    </h1>
-                    {hasJournalEntry && (
-                        <Link to={`/journal/${date}`}>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2 hover:opacity-90"
-                                style={{
-                                    backgroundColor: 'var(--btn-primary-bg)',
-                                    color: 'var(--btn-primary-text)'
-                                }}
-                            >
-                                <BookOpen className="h-4 w-4" />
-                                View Journal
-                            </Button>
-                        </Link>
-                    )}
+            <Navbar breadcrumbItems={[{ label: 'pos', href: '/pos' }, { label: 'grid', href: '/pos/grid' }, { label: date ? formatISODateDDMMYYYY(date) : 'loading' }]} />
+            
+            {/* Day Navigation */}
+            <div className="max-w-[1400px] mx-auto w-full px-4 pt-4 pb-2">
+                <MonthSelector
+                    mode="day"
+                    value={date || getLocalDateString()}
+                    onChange={(newDate) => navigate(`/pos/grid/${newDate}`)}
+                />
+            </div>
+            
+            {/* Debt Banner */}
+            {hasDebt && (
+                <div className="max-w-[1400px] mx-auto w-full px-4 pb-4">
+                    <div 
+                        className="flex items-center gap-3 px-5 py-4 rounded-lg text-base font-semibold shadow-lg"
+                        style={{
+                            backgroundColor: 'var(--pos-error-bg)',
+                            border: '3px solid var(--pos-error-border)',
+                            color: 'var(--pos-error-text)',
+                        }}
+                    >
+                        <AlertCircle className="w-6 h-6 shrink-0" />
+                        <span>⚠️ {debtCount} incomplete goal{debtCount > 1 ? 's' : ''} from this date (debt)</span>
+                    </div>
                 </div>
+            )}
 
+            <div className="max-w-[1400px] mx-auto space-y-4 p-4 flex-1 overflow-auto">
                 {/* Stats Cards (Unchanged) */}
                 <div className="grid grid-cols-4 gap-2">
                     <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
@@ -448,13 +474,34 @@ export function DailyPage() {
                                     <p className="text-muted-foreground text-xs">No goals for this date</p>
                                 ) : (
                                     <div className="space-y-2">
-                                        {goals.map((goal) => (
+                                        {goals.map((goal) => {
+                                            // Determine status: verified / pending / debt
+                                            const today = getLocalDateString();
+                                            const dueDate = goal.dueDateLocal?.split('T')[0];
+                                            const isDebt = goal.isDebt || (dueDate && dueDate < today && !goal.completed);
+                                            const isPending = !goal.verified && !isDebt;
+                                            
+                                            let statusLabel = 'Pending';
+                                            let statusBg = 'var(--muted)';
+                                            let statusColor = 'var(--muted-foreground)';
+                                            
+                                            if (goal.verified) {
+                                                statusLabel = 'Verified';
+                                                statusBg = 'var(--pos-success-border)';
+                                                statusColor = 'var(--pos-success-text)';
+                                            } else if (isDebt) {
+                                                statusLabel = 'Debt';
+                                                statusBg = 'var(--pos-error-border)';
+                                                statusColor = 'var(--pos-error-text)';
+                                            }
+                                            
+                                            return (
                                             <div
                                                 key={goal.id}
                                                 className="border rounded p-3 transition-colors"
                                                 style={{
-                                                    borderColor: goal.verified ? 'var(--pos-success-border)' : 'var(--border-color)',
-                                                    backgroundColor: goal.verified ? 'var(--pos-success-bg)' : 'var(--bg-secondary)'
+                                                    borderColor: goal.verified ? 'var(--pos-success-border)' : isDebt ? 'var(--pos-error-border)' : 'var(--border-color)',
+                                                    backgroundColor: goal.verified ? 'var(--pos-success-bg)' : isDebt ? 'var(--pos-error-bg)' : 'var(--bg-secondary)'
                                                 }}
                                             >
                                                 <div className="flex items-start justify-between">
@@ -466,13 +513,6 @@ export function DailyPage() {
                                                                 Target: {goal.problemId}
                                                             </p>
                                                         )}
-                                                        {goal.recurringPattern && (
-                                                            <div className="flex items-center gap-1 mt-1">
-                                                                <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                                                    Recurring
-                                                                </span>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                     <span
                                                         className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 select-none"
@@ -482,21 +522,21 @@ export function DailyPage() {
                                                                     id: goal.id,
                                                                     req: { verified: !goal.verified }
                                                                 });
-                                                                fetchData(); // Reload to update UI
+                                                                fetchData();
                                                             } catch (e) {
                                                                 toast.error("Failed to update goal");
                                                             }
                                                         }}
                                                         style={{
-                                                            backgroundColor: goal.verified ? 'var(--pos-success-border)' : 'var(--muted)',
-                                                            color: goal.verified ? 'var(--pos-success-text)' : 'var(--muted-foreground)'
+                                                            backgroundColor: statusBg,
+                                                            color: statusColor
                                                         }}
                                                     >
-                                                        {goal.verified ? 'Verified' : 'Pending'}
+                                                        {statusLabel}
                                                     </span>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )})}
                                     </div>
                                 )}
                             </CardContent>

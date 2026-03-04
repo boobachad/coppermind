@@ -55,8 +55,25 @@ export function HomePage() {
       const stats = calculateTotalStats(batchResponse);
       setTotalStats(stats);
 
-      const milestonesData = await invoke<Milestone[]>('get_milestones', { activeOnly: true }).catch(() => []);
-      setActiveMilestones(milestonesData);
+      // Fetch milestones and filter by selected month
+      const allMilestones = await invoke<Milestone[]>('get_milestones', { activeOnly: false }).catch(() => []);
+      
+      // Filter milestones that overlap with selected month (date-only comparison, no timezone issues)
+      const [year, monthNum] = selectedMonth.split('-').map(Number);
+      const monthStartStr = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+      // Calculate last day of month without timezone conversion
+      const lastDay = new Date(year, monthNum, 0).getDate(); // monthNum is next month, day 0 = last day of previous month
+      const monthEndStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      
+      const filteredMilestones = allMilestones.filter(milestone => {
+        // Extract date part only (YYYY-MM-DD) - safe since we're not converting timezones
+        const milestoneStart = milestone.periodStart.split('T')[0];
+        const milestoneEnd = milestone.periodEnd.split('T')[0];
+        // Milestone overlaps with month if it starts before month ends AND ends after month starts
+        return milestoneStart <= monthEndStr && milestoneEnd >= monthStartStr;
+      });
+      
+      setActiveMilestones(filteredMilestones);
 
       const submissionsData = await invoke<Submission[]>('get_recent_submissions', { limit: 10 }).catch(() => []);
       setRecentSubmissions(submissionsData);
@@ -215,8 +232,8 @@ export function HomePage() {
 
           {/* Month Selector */}
           <MonthSelector
-            selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
+            value={selectedMonth}
+            onChange={setSelectedMonth}
             isArchived={isArchived}
           />
 

@@ -156,7 +156,7 @@
   --pos-slot-empty: rgba(255, 255, 255, 0.03);
 
   /* Category Colors (Retained for Data Viz) */
-  --pos-activity-coding: #3b82f6;
+  --pos-activity-learning: #3b82f6;
   --pos-activity-coding-leetcode: #0ea5e9;
   --pos-activity-coding-codeforces: #14b8a6;
   --pos-activity-cpp: #06b6d4;
@@ -227,7 +227,7 @@
   --pos-heatmap-level-4: #196127;
 
   /* Activity category colors - Solarized Light (darker for contrast) */
-  --pos-activity-coding: #1e40af;
+  --pos-activity-learning: #1e40af;
   --pos-activity-coding-leetcode: #0369a1;
   --pos-activity-coding-codeforces: #0f766e;
   --pos-activity-cpp: #155e75;
@@ -357,7 +357,7 @@
   --pos-heatmap-level-4: #196127;
 
   /* Activity category colors - Blue Light */
-  --pos-activity-coding: #1e40af;
+  --pos-activity-learning: #1e40af;
   --pos-activity-coding-leetcode: #0369a1;
   --pos-activity-coding-codeforces: #0f766e;
   --pos-activity-cpp: #155e75;
