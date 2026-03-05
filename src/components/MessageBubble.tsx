@@ -62,7 +62,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
                         </button>
                         <button
                             onClick={() => onMoveDown?.(message.id)}
@@ -71,7 +71,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                         </button>
                     </div>
                 )}
@@ -94,7 +94,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         content={message.content}
                         editable={false}
                         className={clsx(
-                            "prose-sm w-full !max-w-none focus:outline-none",
+                            "prose-sm w-full max-w-none! focus:outline-none",
                             "dark:prose-invert",
                             isQuestion ? "" : "",
                             "[&_p]:m-0 [&_p]:leading-normal"
@@ -112,7 +112,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
                         </button>
                         <button
                             onClick={() => onMoveDown?.(message.id)}
@@ -121,7 +121,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                         </button>
                     </div>
                 )}
@@ -131,17 +131,17 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
             {showContextMenu && createPortal(
                 <>
                     <div
-                        className="fixed inset-0 z-[9999]"
+                        className="fixed inset-0 z-9999"
                         onClick={() => setShowContextMenu(false)}
                         onContextMenu={(e) => { e.preventDefault(); setShowContextMenu(false); }}
                     />
                     <div
-                        className="fixed z-[9999] material-glass shadow-xl rounded-xl py-1 min-w-[120px]"
+                        className="fixed z-9999 material-glass shadow-xl rounded-xl py-1 min-w-[120px]"
                         style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
                     >
                         {canMoveUp && onMoveUp && (
                             <button
-                                className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-(--glass-bg-subtle) transition-colors"
                                 style={{ color: 'var(--text-primary)' }}
                                 onClick={() => {
                                     setShowContextMenu(false);
@@ -153,7 +153,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         )}
                         {canMoveDown && onMoveDown && (
                             <button
-                                className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-(--glass-bg-subtle) transition-colors"
                                 style={{ color: 'var(--text-primary)' }}
                                 onClick={() => {
                                     setShowContextMenu(false);
@@ -164,7 +164,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             </button>
                         )}
                         <button
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--glass-bg-subtle)] transition-colors"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-(--glass-bg-subtle) transition-colors"
                             style={{ color: 'var(--text-primary)' }}
                             onClick={openFocusMode}
                         >
@@ -199,7 +199,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             <span className="font-semibold text-(--text-primary)">Wait, let me cook...</span>
                             <button
                                 onClick={() => setIsFocused(false)}
-                                className="p-2 hover:bg-(--glass-bg-subtle) rounded-lg transition-colors text-(--text-secondary) hover:text-(--text-primary)"
+                                className="p-2 hover:bg-(--glass-bg-subtle) rounded-lg transition-colors text-muted-foreground hover:text-(--text-primary)"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </button>
@@ -215,7 +215,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <div className="p-4 border-t border-(--glass-border) bg-(--glass-bg-subtle)/30 flex justify-end gap-2">
                             <button
                                 onClick={() => setIsFocused(false)}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--glass-bg-subtle) transition-colors"
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-(--text-primary) hover:bg-(--glass-bg-subtle) transition-colors"
                             >
                                 Cancel
                             </button>

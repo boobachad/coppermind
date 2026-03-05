@@ -103,12 +103,12 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[9999]"
+        className="fixed inset-0 z-9999"
         onClick={onClose}
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <div
-        className="fixed z-[9999] min-w-[160px] overflow-hidden rounded-xl material-glass p-1 shadow-md animate-in fade-in-80 zoom-in-95 w-xs flex flex-col text-sm border border-[var(--glass-border)]"
+        className="fixed z-9999 min-w-[160px] overflow-hidden rounded-xl material-glass p-1 shadow-md animate-in fade-in-80 zoom-in-95 w-xs flex flex-col text-sm border border-(--glass-border)"
         style={{ top: position.y, left: position.x }}
       >
         <MenuItem icon={Copy} label="Copy" onClick={handleCopy} />
@@ -126,7 +126,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'convert' && (
-            <div className="absolute left-full top-0 ml-1 material-glass p-1 !rounded-xl w-48 z-[10000] max-h-64 overflow-y-auto">
+            <div className="absolute left-full top-0 ml-1 material-glass p-1 rounded-xl! w-48 z-10000 max-h-64 overflow-y-auto">
               <MenuItem icon={Type} label="Text" onClick={() => { editor.chain().focus().setParagraph().run(); onClose(); }} />
               <MenuItem icon={Heading1} label="Heading 1" onClick={() => { editor.chain().focus().setHeading({ level: 1 }).run(); onClose(); }} />
               <MenuItem icon={Heading2} label="Heading 2" onClick={() => { editor.chain().focus().setHeading({ level: 2 }).run(); onClose(); }} />
@@ -149,7 +149,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'text' && (
-            <div className="absolute left-full top-0 ml-1 material-glass p-2 !rounded-xl grid grid-cols-4 gap-1 w-48 z-[10000]">
+            <div className="absolute left-full top-0 ml-1 material-glass p-2 rounded-xl! grid grid-cols-4 gap-1 w-48 z-10000">
               {COLORS.map((c) => (
                 <button
                   key={c.value}
@@ -185,7 +185,7 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
             hasSubmenu
           />
           {activeSubmenu === 'bg' && (
-            <div className="absolute left-full top-0 ml-1 material-glass p-2 !rounded-xl grid grid-cols-4 gap-1 w-48 z-[10000]">
+            <div className="absolute left-full top-0 ml-1 material-glass p-2 rounded-xl! grid grid-cols-4 gap-1 w-48 z-10000">
               {BACKGROUNDS.map((c) => (
                 <button
                   key={c.value}
@@ -231,16 +231,16 @@ export const ContextMenu = ({ editor, position, onClose }: ContextMenuProps) => 
 const MenuItem = ({ icon: Icon, label, onClick, hasSubmenu, active }: any) => (
   <button
     className={`relative flex cursor-pointer select-none items-center rounded-lg! px-2 py-1.5 text-sm outline-none transition-colors 
-      focus:bg-[var(--glass-bg-subtle)] focus:text-[var(--text-primary)] 
-      data-[disabled]:pointer-events-none data-[disabled]:opacity-50 
-      text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]
-      ${active ? 'bg-[var(--glass-bg-subtle)] text-[var(--text-primary)]' : ''}`}
+      focus:bg-(--glass-bg-subtle) focus:text-(--text-primary)
+      data-disabled:pointer-events-none data-disabled:opacity-50 
+      text-muted-foregroundthover:text-(--text-primary)bg-[var(--glass-bg-subtle)]
+      ${active ? 'bg-(--glass-bg-subtle) text-(--text-primary)' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center gap-3">
-      <Icon size={16} className="text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]" />
+      <Icon size={16} className="text-(--text-tertiary) group-hover:text-muted-foreground" />
       <span>{label}</span>
     </div>
-    {hasSubmenu && <span className="text-[var(--text-tertiary)] ml-auto flex underline-0">›</span>}
+    {hasSubmenu && <span className="text-(--text-tertiary) ml-auto flex underline-0">›</span>}
   </button>
 );
