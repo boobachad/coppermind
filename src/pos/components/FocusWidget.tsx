@@ -4,7 +4,7 @@ import { ACTIVITY_CATEGORIES, getActivityColor, ActivityCategory } from '../lib/
 import {
     Play, Square, Coffee, Briefcase,
     Minimize2, Timer, Watch, Plus,
-    AlignLeft, CheckCircle2, Circle
+    AlignLeft, CheckCircle2, Circle, X
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -30,6 +30,7 @@ const formatDuration = (seconds: number) => {
 export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
     const { state, start, stop, takeBreak, resumeWork, extendTime, setDetails, restartSession } = useFocusTimer();
     const [isExpandedState, setIsExpanded] = useState(false);
+    const [isVisible, setIsVisible] = useState(true);
     const isExpanded = alwaysExpanded || isExpandedState;
 
     // Auto-collapse on work start (only relevant when not alwaysExpanded)
@@ -51,6 +52,11 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
     const mainColor = state.mode === 'break'
         ? 'var(--pos-activity-break)'
         : (state.category ? getActivityColor(state.category) : 'var(--text-primary)');
+
+    // Don't render if hidden
+    if (!isVisible) {
+        return null;
+    }
 
     // ─── Collapsed View ──────────────────────────────────────────────────
     if (!isExpanded) {
@@ -93,6 +99,13 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                             <Play className="w-4 h-4 fill-current" />
                         </button>
                     )}
+                    <button
+                        onClick={() => setIsVisible(false)}
+                        className="p-2 rounded-full hover:bg-(--glass-bg-subtle) text-muted-foreground hover:text-(--text-primary)"
+                        title="Close (reopens on refresh)"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
         );
@@ -113,14 +126,25 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         {state.mode === 'idle' ? 'Ready' : state.mode}
                     </span>
                 </div>
-                {!alwaysExpanded && (
-                    <button
-                        onClick={() => setIsExpanded(false)}
-                        className="p-1 rounded-md hover:bg-(--glass-bg-subtle) text-muted-foreground"
-                    >
-                        <Minimize2 className="w-4 h-4" />
-                    </button>
-                )}
+                <div className="flex items-center gap-1">
+                    {!alwaysExpanded && (
+                        <>
+                            <button
+                                onClick={() => setIsExpanded(false)}
+                                className="p-1 rounded-md hover:bg-(--glass-bg-subtle) text-muted-foreground"
+                            >
+                                <Minimize2 className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => setIsVisible(false)}
+                                className="p-1 rounded-md hover:bg-(--glass-bg-subtle) text-muted-foreground hover:text-(--text-primary)"
+                                title="Close (reopens on refresh)"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Inputs (Editable anytime) */}

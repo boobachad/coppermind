@@ -1,0 +1,25 @@
+/* Whiteboard container - scoped tldraw styles */
+.whiteboard-container {
+  /* Map theme variables to tldraw */
+  --tl-background: var(--bg-base);
+  --tl-foreground: var(--text-primary);
+  --tl-grid: var(--glass-border);
+}
+
+/* Apply Excalifont to canvas text */
+.whiteboard-container .tl-canvas {
+  font-family: 'Excalifont', 'Comic Sans MS', cursive;
+}
+
+/* Theme-specific overrides */
+[data-theme="dark"] .whiteboard-container {
+  --tl-background: #030303;
+}
+
+[data-theme="solarized-light"] .whiteboard-container {
+  --tl-background: #FDF6E3;
+}
+
+[data-theme="blue-light"] .whiteboard-container {
+  --tl-background: #F0F4F8;
+}

@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Excalifont for Whiteboard */
+@font-face {
+  font-family: 'Excalifont';
+  src: url('/fonts/Excalifont.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Theme Configuration - Moved to top for availability */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

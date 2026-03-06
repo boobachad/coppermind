@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Settings, Plus, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar } from 'lucide-react';
+import { FileText, Settings, Plus, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar, Pen } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -58,6 +58,7 @@ export function Sidebar() {
     { to: "/knowledge", icon: Brain, label: "Knowledge Base" },
     { to: "/briefing", icon: Sun, label: "Daily Briefing" },
     { to: "/retrospectives", icon: Calendar, label: "Retrospectives" },
+    { to: "/whiteboard", icon: Pen, label: "Whiteboard" },
     // { to: "/nodes", icon: Share2, label: "Graph" },
     { to: "/pos", icon: Box, label: "POS" },
     { to: "/pos/grid", icon: Grid3x3, label: "Grid" },

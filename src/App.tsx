@@ -19,6 +19,7 @@ import { BookDetailPage } from './pos/pages/BookDetailPage';
 import KnowledgePage from './pages/KnowledgePage';
 import MilestonesPage from './pages/MilestonesPage';
 import { RetrospectivesPage } from './pages/RetrospectivesPage';
+import { WhiteboardPage } from './components/whiteboard/WhiteboardPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
 import LadderView from './components/codeforces/LadderView';
 import CategoryBrowser from './components/codeforces/CategoryBrowser';
@@ -77,6 +78,7 @@ function App() {
             <Route path="knowledge" element={<KnowledgePage />} />
             <Route path="briefing" element={<DailyBriefingPage />} />
             <Route path="retrospectives" element={<RetrospectivesPage />} />
+            <Route path="whiteboard" element={<WhiteboardPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="pos" element={<HomePage />} />
             <Route path="pos/grid" element={<GridPage />} />
