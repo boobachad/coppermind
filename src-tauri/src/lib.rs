@@ -20,6 +20,7 @@ mod cf_recommendations;
 mod date_summary;
 mod books;
 mod daily_briefing;
+mod cross_references;
 
 pub mod github {
     pub use crate::pos::github::*;
@@ -412,6 +413,12 @@ pub fn run() {
             books::update_book,
             books::get_book_reading_history,
             books::get_all_books,
+            // Cross-Reference System
+            cross_references::resolve_entity_reference,
+            cross_references::batch_validate_references,
+            cross_references::get_all_entities_for_cache,
+            cross_references::get_entity_backlinks,
+            cross_references::update_reference_registry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
