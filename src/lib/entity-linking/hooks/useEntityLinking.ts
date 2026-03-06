@@ -7,6 +7,7 @@ import type {
   ParsedReference,
   EntityReference,
   AutocompleteResult,
+  EntityType,
 } from '../core/types';
 import { parseReferences } from '../core/parser';
 import { batchValidate } from '../core/validator';
@@ -21,6 +22,8 @@ export interface UseEntityLinkingReturn {
   validatedRefs: Map<string, EntityReference>;
   autocomplete: {
     isOpen: boolean;
+    query: string;
+    entityType: EntityType | null;
     results: AutocompleteResult[];
     selectedIndex: number;
     position: { top: number; left: number };
@@ -184,6 +187,8 @@ export function useEntityLinking(
     validatedRefs,
     autocomplete: {
       isOpen: autocomplete.state.isOpen,
+      query: autocomplete.state.query,
+      entityType: autocomplete.state.entityType,
       results: autocomplete.state.results,
       selectedIndex: autocomplete.state.selectedIndex,
       position: autocomplete.state.position,
