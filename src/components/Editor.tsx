@@ -26,6 +26,7 @@ import { ContextMenu } from './ContextMenu';
 import { PDFExtension } from './extensions/PDFExtension';
 import { MindMapTreeExtension, MindMapBlockExtension } from './extensions/MindMapExtension';
 import { AutolinkPlugin } from './extensions/AutolinkPlugin';
+import { EntityLinkPlugin } from './extensions/EntityLinkPlugin';
 import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { TableControls } from './extensions/TableControls';
@@ -103,6 +104,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, e
       MindMapTreeExtension,
       MindMapBlockExtension,
       AutolinkPlugin,
+      EntityLinkPlugin,
       SlashCommand.configure({
         suggestion,
       }),
