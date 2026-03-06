@@ -85,7 +85,7 @@ function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role
     <div className="absolute bottom-0 left-0 right-0 pb-8 pt-12 px-4 z-40" style={{
       background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)'
     }}>
-      <div className="max-w-5xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
+      <div className="max-w-6xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
 
         {/* Role Selection Tabs - Floating above input */}
         <div className="absolute -top-10 left-0 flex space-x-2">
@@ -580,7 +580,7 @@ export function NotePage() {
     <div className="h-full relative flex flex-col bg-transparent">
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto relative p-4 pb-48 custom-scrollbar">
-        <div className="max-w-3xl mx-auto w-full pt-12 relative animate-in fade-in duration-500">
+        <div className="max-w-6xl mx-auto w-full pt-12 relative animate-in fade-in duration-500">
 
           {/* Note Title Input */}
           <NoteTitleInput noteId={note.id} initialTitle={note.title || ''} />

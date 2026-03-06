@@ -232,16 +232,17 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="columns-1 md:columns-2 lg:columns-3 gap-4">
                         {items.map((item) => (
-                            <KnowledgeItemCard
-                                key={item.id}
-                                item={item}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                                onUpdateStatus={handleUpdateStatus}
-                                isHighlighted={highlightItemId === item.id}
-                            />
+                            <div key={item.id} className="break-inside-avoid mb-4 inline-block w-full">
+                                <KnowledgeItemCard
+                                    item={item}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDelete}
+                                    onUpdateStatus={handleUpdateStatus}
+                                    isHighlighted={highlightItemId === item.id}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

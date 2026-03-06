@@ -278,6 +278,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
                 toast.success('Activity updated successfully');
                 activityId = editingActivity.id;
+                onSuccess?.(); // Trigger parent refetch to update timeline colors
                 onCancelEdit?.();
             } else {
                 // Create activity with multiple goals or milestone

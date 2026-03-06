@@ -198,15 +198,16 @@ pub async fn get_yearly_graph_data(
         start_time: r.start_time, end_time: r.end_time, is_productive: r.is_productive,
     }).collect();
 
-    // ── Unified Goals (due_date is TIMESTAMPTZ, cast to date) ───────────
+    // ── Unified Goals (date is TEXT YYYY-MM-DD) ───────────
     let goal_rows = sqlx::query_as::<_, GoalRow>(
-        r#"SELECT id, due_date::date::text AS date_str, text, completed, priority, due_date
+        r#"SELECT id, date AS date_str, text, completed, priority, 
+                  (date || ' 00:00:00+00')::timestamptz AS due_date
            FROM unified_goals
-           WHERE due_date IS NOT NULL
-             AND EXTRACT(YEAR FROM due_date) = $1
-           ORDER BY due_date ASC"#,
+           WHERE date IS NOT NULL
+             AND date LIKE $1 || '%'
+           ORDER BY date ASC"#,
     )
-    .bind(year).fetch_all(pool).await
+    .bind(year.to_string()).fetch_all(pool).await
     .map_err(|e| db_context("get_yearly_graph_data:goals", e))?;
 
     let goals = goal_rows.into_iter().map(|r| GoalSummary {

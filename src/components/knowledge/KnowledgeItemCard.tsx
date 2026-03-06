@@ -194,7 +194,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
     return (
         <div
             ref={cardRef}
-            className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.002] ${
+            className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
                 isHighlighted ? 'animate-blink-border' : ''
             }`}
             style={{

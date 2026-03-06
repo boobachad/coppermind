@@ -31,7 +31,7 @@
   },
   "include": [
     "src"
-, "area51/LadderBrowser.backup.tsx", "area51/LadderView.backup.tsx"  ],
+, "area51/LadderBrowser.backup.tsx", "area51/LadderView.backup.tsx", "src/components/whiteboard"  ],
   "references": [
     {
       "path": "./tsconfig.node.json"
