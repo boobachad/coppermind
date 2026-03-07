@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Calendar, CheckCircle2, Circle, TrendingUp, AlertCircle, Plus, RefreshCw } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, TrendingUp, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { getLocalDateString } from '../lib/time';
 import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
@@ -123,17 +123,6 @@ export function DailyBriefingPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={loadBriefing}
-            className="p-2 rounded-lg transition-colors"
-            style={{
-              backgroundColor: 'var(--surface-secondary)',
-              color: 'var(--text-secondary)',
-            }}
-            title="Refresh"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Day Navigation */}

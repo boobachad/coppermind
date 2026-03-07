@@ -14,6 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { formatTime } from '../pos/lib/time';
+import { Button } from '../components/ui/button';
 
 
 export function SettingsPage() {
@@ -117,12 +118,13 @@ export function SettingsPage() {
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Choose your preferred visual style</p>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => setTheme('solarized-light')}
                     className={`h-24 rounded-lg border transition-all ${theme === 'solarized-light' ? 'ring-2' : ''}`}
                     style={{
                       borderColor: theme === 'solarized-light' ? 'var(--pos-info-border)' : 'var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
+                      backgroundColor: 'var(--glass-bg-subtle)',
                       ...(theme === 'solarized-light' && { ringColor: 'var(--pos-info-border)' })
                     }}
                   >
@@ -135,14 +137,15 @@ export function SettingsPage() {
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-solarized-bg)', borderColor: 'var(--theme-preview-solarized-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'solarized-light' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Solarized</span>
                     </div>
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => setTheme('blue-light')}
                     className={`h-24 rounded-lg border transition-all ${theme === 'blue-light' ? 'ring-2' : ''}`}
                     style={{
                       borderColor: theme === 'blue-light' ? 'var(--pos-info-border)' : 'var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
+                      backgroundColor: 'var(--glass-bg-subtle)',
                       ...(theme === 'blue-light' && { ringColor: 'var(--pos-info-border)' })
                     }}
                   >
@@ -155,14 +158,15 @@ export function SettingsPage() {
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-blue-bg)', borderColor: 'var(--theme-preview-blue-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'blue-light' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Blue Light</span>
                     </div>
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => setTheme('dark')}
                     className={`h-24 rounded-lg border transition-all ${theme === 'dark' ? 'ring-2' : ''}`}
                     style={{
                       borderColor: theme === 'dark' ? 'var(--pos-info-border)' : 'var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
+                      backgroundColor: 'var(--glass-bg-subtle)',
                       ...(theme === 'dark' && { ringColor: 'var(--pos-info-border)' })
                     }}
                   >
@@ -175,7 +179,7 @@ export function SettingsPage() {
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-dark-bg)', borderColor: 'var(--theme-preview-dark-border)' }}></div>
                       <span className="text-xs font-medium" style={{ color: theme === 'dark' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }}>Dark</span>
                     </div>
-                  </button>
+                  </Button>
                 </div>
               </div>
 

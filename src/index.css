@@ -302,13 +302,8 @@
   --pos-today-bg: #dbeafe;
   --pos-today-border: #2563eb;
   --pos-today-text: #1e40af;
-  --color-accent-primary: #0a84ff;
-  /* Apple-style Blue */
-  --color-error: #ff453a;
-  --color-success: #32d74b;
-  --color-warning: #ff9f0a;
-
-  /* Buttons - Universal Dark Mode Default (White BG, Black Text) */
+  
+  /* Buttons - Dark Mode (White BG, Black Text) v2 */
   --btn-primary-bg: #FFFFFF;
   --btn-primary-text: #000000;
 
@@ -317,6 +312,21 @@
   /* White */
   --primary-foreground: oklch(0 0 0);
   /* Black */
+  
+  --color-accent-primary: #0a84ff;
+  /* Apple-style Blue */
+  --color-error: #ff453a;
+  --color-success: #32d74b;
+  --color-warning: #ff9f0a;
+}
+
+/* Explicit Dark Theme Override */
+[data-theme="dark"] {
+  /* Buttons - Dark Mode (White BG, Black Text) */
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-text: #000000;
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
 }
 
 /* Theme Overrides */
