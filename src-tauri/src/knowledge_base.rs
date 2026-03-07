@@ -408,6 +408,7 @@ pub async fn delete_knowledge_link(
 pub async fn check_knowledge_duplicates(
     db: State<'_, PosDb>,
     content: String,
+    editing_item_id: Option<String>,
 ) -> PosResult<DuplicateCheckResult> {
     let pool = &db.0;
 
@@ -441,6 +442,11 @@ pub async fn check_knowledge_duplicates(
     // Deduplicate by ID
     all_duplicates.sort_by(|a, b| a.id.cmp(&b.id));
     all_duplicates.dedup_by(|a, b| a.id == b.id);
+
+    // Exclude the item being edited
+    if let Some(editing_id) = editing_item_id {
+        all_duplicates.retain(|item| item.id != editing_id);
+    }
 
     Ok(DuplicateCheckResult {
         is_duplicate: !all_duplicates.is_empty(),
@@ -626,7 +632,19 @@ pub async fn capture_daily_urls(
             .unwrap_or_else(|| json!({"urls": []}));
         
         if let Some(urls_array) = meta.get_mut("urls").and_then(|v| v.as_array_mut()) {
-            urls_array.extend(new_urls);
+            // Deduplicate: only add URLs that don't already exist
+            let existing_urls: std::collections::HashSet<String> = urls_array
+                .iter()
+                .filter_map(|v| v.get("url").and_then(|u| u.as_str()).map(String::from))
+                .collect();
+            
+            for new_url in new_urls {
+                if let Some(url_str) = new_url.get("url").and_then(|u| u.as_str()) {
+                    if !existing_urls.contains(url_str) {
+                        urls_array.push(new_url);
+                    }
+                }
+            }
         } else {
             meta["urls"] = json!(new_urls);
         }

@@ -257,7 +257,7 @@ export function DailyPage() {
 
     // Auto-scroll to current time slot when viewing today
     useEffect(() => {
-        if (isToday && currentSlotIndex >= 0 && currentSlotRef.current && timelineRef.current) {
+        if (!loading && isToday && currentSlotIndex >= 0 && currentSlotRef.current && timelineRef.current) {
             // Small delay to ensure DOM is rendered
             setTimeout(() => {
                 currentSlotRef.current?.scrollIntoView({
@@ -265,9 +265,9 @@ export function DailyPage() {
                     block: 'center',
                     inline: 'center'
                 });
-            }, 100);
+            }, 300);
         }
-    }, [isToday, currentSlotIndex, daySlots.length]);
+    }, [loading, isToday, currentSlotIndex]);
 
     if (loading) {
         return (

@@ -99,7 +99,8 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
 
         try {
             const result = await invoke<DuplicateCheckResult>('check_knowledge_duplicates', {
-                content: text
+                content: text,
+                editingItemId: editingItem?.id || null
             });
             
             if (result.isDuplicate) {

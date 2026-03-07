@@ -9,12 +9,30 @@ interface Skill {
     color: string;
 }
 
-export function SkillTree() {
+interface SkillTreeProps {
+    codingCount?: number;
+    readingMinutes?: number;
+    productivePercentage?: number;
+    goalCompletionRate?: number;
+}
+
+export function SkillTree({ 
+    codingCount = 0, 
+    readingMinutes = 0, 
+    productivePercentage = 0,
+    goalCompletionRate = 0 
+}: SkillTreeProps) {
+    // Calculate levels from actual data (0-5 scale)
+    const codingLevel = Math.min(5, Math.floor(codingCount / 10)); // 10 activities per level
+    const readingLevel = Math.min(5, Math.floor(readingMinutes / 300)); // 5 hours per level
+    const focusLevel = Math.min(5, Math.floor(productivePercentage / 20)); // 20% per level
+    const goalsLevel = Math.min(5, Math.floor(goalCompletionRate / 20)); // 20% per level
+
     const skills: Skill[] = [
-        { id: 'coding', name: 'Coding', level: 3, maxLevel: 5, icon: Code, color: 'var(--pos-activity-coding-leetcode)' },
-        { id: 'reading', name: 'Reading', level: 2, maxLevel: 5, icon: Book, color: 'var(--pos-activity-book)' },
-        { id: 'focus', name: 'Focus', level: 4, maxLevel: 5, icon: Zap, color: 'var(--color-accent-primary)' },
-        { id: 'goals', name: 'Goals', level: 3, maxLevel: 5, icon: Target, color: 'var(--color-success)' },
+        { id: 'coding', name: 'Coding', level: codingLevel, maxLevel: 5, icon: Code, color: 'var(--pos-activity-coding-leetcode)' },
+        { id: 'reading', name: 'Reading', level: readingLevel, maxLevel: 5, icon: Book, color: 'var(--pos-activity-book)' },
+        { id: 'focus', name: 'Focus', level: focusLevel, maxLevel: 5, icon: Zap, color: 'var(--color-accent-primary)' },
+        { id: 'goals', name: 'Goals', level: goalsLevel, maxLevel: 5, icon: Target, color: 'var(--color-success)' },
     ];
 
     return (
@@ -55,7 +73,7 @@ export function SkillTree() {
                                         {skill.name}
                                     </div>
                                     <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                        Level {skill.level}/{skill.maxLevel}
+                                        {Math.round(progress)}%
                                     </div>
                                 </div>
                             </div>

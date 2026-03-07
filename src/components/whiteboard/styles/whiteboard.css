@@ -1,25 +1,34 @@
 /* Whiteboard container - scoped tldraw styles */
 .whiteboard-container {
-  /* Map theme variables to tldraw */
-  --tl-background: var(--bg-base);
-  --tl-foreground: var(--text-primary);
-  --tl-grid: var(--glass-border);
+  width: 100%;
+  height: 100%;
 }
 
-/* Apply Excalifont to canvas text */
+/* Force tldraw canvas background */
 .whiteboard-container .tl-canvas {
+  background-color: var(--bg-primary) !important;
   font-family: 'Excalifont', 'Comic Sans MS', cursive;
 }
 
-/* Theme-specific overrides */
-[data-theme="dark"] .whiteboard-container {
-  --tl-background: #030303;
+/* Force tldraw container background */
+.whiteboard-container .tl-container,
+.whiteboard-container .tl-background,
+.whiteboard-container .tl-background__wrapper {
+  background-color: var(--bg-primary) !important;
 }
 
-[data-theme="solarized-light"] .whiteboard-container {
-  --tl-background: #FDF6E3;
+/* Override tldraw's grid color */
+.whiteboard-container .tl-grid {
+  stroke: var(--border-color) !important;
+  opacity: 0.3;
 }
 
-[data-theme="blue-light"] .whiteboard-container {
-  --tl-background: #F0F4F8;
+/* Style only the toolbar/panel CONTAINERS with glass effect, not the buttons inside */
+.whiteboard-container [class*="tlui-toolbar__inner"],
+.whiteboard-container [class*="tlui-style-panel__wrapper"],
+.whiteboard-container [class*="tlui-menu__wrapper"] {
+  background-color: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  backdrop-filter: blur(10px) !important;
 }
+

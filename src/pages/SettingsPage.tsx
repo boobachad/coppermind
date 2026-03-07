@@ -193,24 +193,26 @@ export function SettingsPage() {
                     </h3>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Adjust interface size</p>
                   </div>
-                  <span className="text-sm font-mono px-3 py-1 rounded border" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>
+                  <span className="text-sm font-mono px-3 py-1 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--text-primary)' }}>
                     {Math.round(uiScale * 100)}%
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="0.75"
-                  max="1.5"
-                  step="0.05"
-                  value={uiScale}
-                  onChange={(e) => setUiScale(parseFloat(e.target.value))}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-primary)', accentColor: 'var(--pos-info-border)' }}
-                />
-                <div className="flex justify-between mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  <span>75%</span>
-                  <span>100%</span>
-                  <span>150%</span>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0.75"
+                    max="1.5"
+                    step="0.05"
+                    value={uiScale}
+                    onChange={(e) => setUiScale(parseFloat(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                    style={{ backgroundColor: 'var(--bg-primary)', accentColor: 'var(--pos-info-border)' }}
+                  />
+                  <div className="flex mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="absolute left-0">75%</span>
+                    <span className="absolute left-1/3 -translate-x-1/2">100%</span>
+                    <span className="absolute right-0">150%</span>
+                  </div>
                 </div>
               </div>
 

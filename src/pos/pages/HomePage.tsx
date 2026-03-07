@@ -4,6 +4,7 @@ import { Navbar } from '../components/Navbar';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '../../components/Loader';
+import { SkillTree } from '../../components/gamification/SkillTree';
 import { TrendingUp, TrendingDown, Activity as ActivityIcon, Target, Code2, Zap } from 'lucide-react';
 import type { Activity, Submission, Milestone } from '../lib/types';
 import { getLocalDateString } from '../lib/time';
@@ -221,6 +222,13 @@ export function HomePage() {
 
   const productivityRate = totalStats.totalTime > 0 ? Math.round((totalStats.productiveTime / totalStats.totalTime) * 100) : 0;
 
+  // Calculate skill metrics for SkillTree
+  const codingCount = categoryBreakdown.find(c => c.category.toLowerCase().includes('coding') || c.category.toLowerCase().includes('leetcode'))?.minutes || 0;
+  const readingMinutes = categoryBreakdown.find(c => c.category.toLowerCase().includes('book') || c.category.toLowerCase().includes('reading'))?.minutes || 0;
+  const goalCompletionRate = activeMilestones.length > 0 
+    ? Math.round((activeMilestones.filter(m => m.currentValue >= m.targetValue).length / activeMilestones.length) * 100)
+    : 0;
+
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border-primary)' }}>
@@ -327,6 +335,22 @@ export function HomePage() {
             }}
           >
             <ActivityHeatmap />
+          </div>
+
+          {/* Skill Tree */}
+          <div 
+            className="rounded-2xl border"
+            style={{ 
+              backgroundColor: 'var(--surface-secondary)',
+              borderColor: 'var(--border-primary)'
+            }}
+          >
+            <SkillTree 
+              codingCount={Math.floor(codingCount / 60)} // Convert minutes to hours for counting
+              readingMinutes={readingMinutes}
+              productivePercentage={productivityRate}
+              goalCompletionRate={goalCompletionRate}
+            />
           </div>
 
           {/* Analytics Grid */}
