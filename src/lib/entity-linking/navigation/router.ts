@@ -87,9 +87,9 @@ export function navigateToEntity(
       break;
 
     case 'grid':
-      if (subIdentifier && subIdentifier.startsWith('slot-')) {
-        // Open SlotPopup modal for specific slot
-        const slotIndex = parseInt(subIdentifier.replace('slot-', ''), 10);
+      if (subIdentifier === 'slot') {
+        // Open SlotPopup modal for specific slot: grid:date:slot:N
+        const slotIndex = parseInt(ref.subSubIdentifier || '0', 10);
         if (openModal) {
           openModal('SlotPopup', { date: identifier, slotIndex });
         } else {
@@ -97,6 +97,12 @@ export function navigateToEntity(
           // Fallback: navigate to grid page
           navigate(`/pos/grid/${identifier}`);
         }
+      } else if (subIdentifier === 'activity') {
+        // Navigate to grid page with activity highlight: grid:date:activity:name
+        const activityName = ref.subSubIdentifier || '';
+        navigate(`/pos/grid/${identifier}`, {
+          state: { highlightActivity: activityName },
+        });
       } else {
         // Navigate to grid page for date
         navigate(`/pos/grid/${identifier}`);

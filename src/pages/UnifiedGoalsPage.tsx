@@ -185,7 +185,7 @@ export function UnifiedGoalsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               // onKeyDown={(e) => e.key === 'Enter' && loadGoals()} // Search is now instant/local
-              className="w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 transition-all text-sm"
               style={{
                 backgroundColor: 'var(--glass-bg-subtle)',
                 color: 'var(--text-primary)',

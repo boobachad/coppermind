@@ -215,7 +215,10 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
                     )}
                 </div>
                 {repo.isPrivate && (
-                    <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-500 rounded">
+                    <span className="ml-2 px-2 py-0.5 text-xs rounded" style={{
+                        backgroundColor: 'var(--color-warning)15',
+                        color: 'var(--color-warning)'
+                    }}>
                         Private
                     </span>
                 )}

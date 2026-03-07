@@ -4,6 +4,12 @@
 // Performance: <50ms render, smooth scroll-to-selected.
 
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+  FileText, Lightbulb, BookOpen, Target, Flag, Zap, 
+  Grid3x3, List, Folder, FileSpreadsheet, Book, 
+  RotateCcw, Link, File 
+} from 'lucide-react';
 import type { AutocompleteResult, EntityType } from '../core/types';
 
 /**
@@ -89,39 +95,78 @@ export function AutocompleteDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
-  // Adjust position if dropdown would overflow viewport
-  useEffect(() => {
-    if (!isOpen || !dropdownRef.current) return;
+  // Calculate adjusted position to prevent viewport overflow
+  const [adjustedPosition, setAdjustedPosition] = React.useState(position);
 
-    const dropdown = dropdownRef.current;
-    const rect = dropdown.getBoundingClientRect();
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const DROPDOWN_WIDTH = 320; // 80 * 4 (w-80 in pixels)
+    const DROPDOWN_MAX_HEIGHT = 256; // 64 * 4 (max-h-64 in pixels)
+    const VIEWPORT_PADDING = 8; // Padding from viewport edges
+
+    const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // If dropdown overflows bottom, position above caret
-    if (rect.bottom > viewportHeight) {
-      dropdown.style.top = `${position.top - rect.height - 25}px`;
+    let { top, left } = position;
+
+    // Adjust horizontal position if overflows right edge
+    if (left + DROPDOWN_WIDTH > viewportWidth - VIEWPORT_PADDING) {
+      left = viewportWidth - DROPDOWN_WIDTH - VIEWPORT_PADDING;
     }
+
+    // Adjust horizontal position if overflows left edge
+    if (left < VIEWPORT_PADDING) {
+      left = VIEWPORT_PADDING;
+    }
+
+    // Adjust vertical position if overflows bottom edge
+    if (top + DROPDOWN_MAX_HEIGHT > viewportHeight - VIEWPORT_PADDING) {
+      // Try positioning above the caret
+      const abovePosition = top - DROPDOWN_MAX_HEIGHT - 30; // 30px above caret
+      if (abovePosition >= VIEWPORT_PADDING) {
+        top = abovePosition;
+      } else {
+        // If can't fit above, position at bottom with max available height
+        top = viewportHeight - DROPDOWN_MAX_HEIGHT - VIEWPORT_PADDING;
+      }
+    }
+
+    setAdjustedPosition({ top, left });
   }, [isOpen, position]);
 
   if (!isOpen) return null;
 
-  return (
+  console.log('[AutocompleteDropdown] Rendering dropdown:', { 
+    isOpen, 
+    originalPosition: position, 
+    adjustedPosition,
+    resultsCount: results.length 
+  });
+
+  // Render dropdown using portal to escape stacking context issues
+  const dropdownContent = (
     <div
       ref={dropdownRef}
-      className="absolute z-50 w-80 max-h-64 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg"
+      className="fixed w-80 max-h-64 overflow-y-auto rounded-lg shadow-2xl border"
       style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
+        top: `${adjustedPosition.top}px`,
+        left: `${adjustedPosition.left}px`,
+        zIndex: 999999,
+        backgroundColor: 'var(--glass-bg)',
+        borderColor: 'var(--glass-border)',
+        color: 'var(--text-primary)',
+        backdropFilter: 'blur(20px)',
       }}
     >
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border">
+      <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--glass-border)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {entityType}
           </span>
           {query && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
               searching: "{query}"
             </span>
           )}
@@ -131,7 +176,7 @@ export function AutocompleteDropdown({
       {/* Results */}
       <div className="py-1">
         {results.length === 0 ? (
-          <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+          <div className="px-3 py-4 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
             No matches found
           </div>
         ) : (
@@ -149,8 +194,8 @@ export function AutocompleteDropdown({
       </div>
 
       {/* Footer hint */}
-      <div className="px-3 py-2 border-t border-border bg-muted/30">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--glass-border)', backgroundColor: 'var(--glass-bg-subtle)' }}>
+        <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
           <span>↑↓ Navigate</span>
           <span>↵ Select</span>
           <span>Esc Close</span>
@@ -158,6 +203,9 @@ export function AutocompleteDropdown({
       </div>
     </div>
   );
+
+  // Render using portal to escape stacking context
+  return createPortal(dropdownContent, document.body);
 }
 
 /**
@@ -177,16 +225,25 @@ const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompleteItemProps>
     return (
       <div
         ref={ref}
-        className={`
-          px-3 py-2 cursor-pointer transition-colors
-          ${isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}
-        `}
+        className="px-3 py-2 cursor-pointer transition-colors"
+        style={{
+          backgroundColor: isSelected ? 'var(--glass-bg-subtle)' : 'transparent',
+          color: 'var(--text-primary)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }
+        }}
         onClick={onClick}
       >
         {/* Entity title with highlighting */}
         <div className="flex items-center gap-2">
           <EntityTypeIcon type={entity.type} />
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-sm font-medium">
             <HighlightedText
               text={entity.title}
               ranges={highlightRanges}
@@ -197,7 +254,7 @@ const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompleteItemProps>
 
         {/* Entity preview */}
         {entity.preview && (
-          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+          <div className="mt-1 text-xs line-clamp-2 text-muted-foreground">
             {entity.preview}
           </div>
         )}
@@ -205,13 +262,16 @@ const AutocompleteItem = React.forwardRef<HTMLDivElement, AutocompleteItemProps>
         {/* Match score indicator */}
         {matchScore > 0 && (
           <div className="mt-1 flex items-center gap-1">
-            <div className="h-1 w-16 bg-muted rounded-full overflow-hidden">
+            <div className="h-1 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
               <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${matchScore * 100}%` }}
+                className="h-full transition-all"
+                style={{ 
+                  width: `${matchScore * 100}%`,
+                  backgroundColor: 'var(--color-accent-primary)',
+                }}
               />
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
               {Math.round(matchScore * 100)}%
             </span>
           </div>
@@ -233,7 +293,8 @@ interface HighlightedTextProps {
 }
 
 function HighlightedText({ text, ranges }: HighlightedTextProps) {
-  if (ranges.length === 0) {
+  // Defensive: handle undefined or empty ranges
+  if (!ranges || ranges.length === 0) {
     return <>{text}</>;
   }
 
@@ -257,7 +318,11 @@ function HighlightedText({ text, ranges }: HighlightedTextProps) {
     segments.push(
       <span
         key={`highlight-${start}`}
-        className="bg-primary/20 text-primary font-medium"
+        className="font-medium px-0.5 rounded"
+        style={{
+          backgroundColor: 'var(--color-accent-subtle)',
+          color: 'var(--color-accent-primary)',
+        }}
       >
         {text.slice(start, end)}
       </span>
@@ -282,25 +347,23 @@ function HighlightedText({ text, ranges }: HighlightedTextProps) {
  * Entity type icon component.
  */
 function EntityTypeIcon({ type }: { type: EntityType }) {
-  const iconMap: Record<EntityType, string> = {
-    note: '📝',
-    kb: '💡',
-    journal: '📔',
-    goal: '🎯',
-    milestone: '🏁',
-    activity: '⚡',
-    grid: '📊',
-    ladder: '🪜',
-    category: '📂',
-    sheets: '📋',
-    book: '📚',
-    retrospective: '🔄',
-    url: '🔗',
+  const iconMap: Record<EntityType, React.ComponentType<{ className?: string }>> = {
+    note: FileText,
+    kb: Lightbulb,
+    journal: BookOpen,
+    goal: Target,
+    milestone: Flag,
+    activity: Zap,
+    grid: Grid3x3,
+    ladder: List,
+    category: Folder,
+    sheets: FileSpreadsheet,
+    book: Book,
+    retrospective: RotateCcw,
+    url: Link,
   };
 
-  return (
-    <span className="text-base" role="img" aria-label={type}>
-      {iconMap[type] || '📄'}
-    </span>
-  );
+  const Icon = iconMap[type] || File;
+
+  return <Icon className="h-4 w-4" />;
 }

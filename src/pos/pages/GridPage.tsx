@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { SlotPopup } from '../components/SlotPopup';
 import { MonthSelector } from '../components/MonthSelector';
 import { Navbar } from '../components/Navbar';
@@ -33,8 +33,13 @@ function getMonthDates(year: number, month: number): string[] {
 }
 
 export function GridPage() {
+    const location = useLocation();
     const todayRef = useRef<HTMLTableRowElement>(null);
     const currentSlotRef = useRef<HTMLTableCellElement>(null);
+    const highlightedActivityRef = useRef<HTMLTableCellElement>(null);
+    
+    // Extract highlight activity from navigation state
+    const highlightActivity = location.state?.highlightActivity as string | undefined;
     
     // Month selector state (YYYY-MM format)
     const now = new Date();
@@ -63,6 +68,13 @@ export function GridPage() {
         if (!loading && currentSlotRef.current) {
             // Scroll to center the current slot in both directions
             currentSlotRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'center'
+            });
+        } else if (!loading && highlightedActivityRef.current) {
+            // If no current slot but we have a highlighted activity, scroll to it
+            highlightedActivityRef.current.scrollIntoView({
                 behavior: 'smooth',
                 block: 'center',
                 inline: 'center'
@@ -303,25 +315,84 @@ export function GridPage() {
                                                 </td>
                                                 {daySlots.map((slot) => {
                                                     const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
+                                                    
+                                                    // Check if slot has productive/goal/milestone activities
+                                                    const hasProductive = slot.activities.some(a => a.isProductive);
+                                                    const hasGoal = slot.activities.some(a => a.goalIds && a.goalIds.length > 0);
+                                                    const hasMilestone = slot.activities.some(a => a.milestoneId);
+                                                    
+                                                    // Determine ring color priority: milestone > goal > productive
+                                                    let ringColor = '';
+                                                    if (hasMilestone) {
+                                                        ringColor = 'var(--pos-milestone-accent)';
+                                                    } else if (hasGoal) {
+                                                        ringColor = 'var(--pos-goal-accent)';
+                                                    } else if (hasProductive) {
+                                                        ringColor = 'var(--pos-success-border)';
+                                                    }
+                                                    
+                                                    // Build ring classes
+                                                    let ringClass = '';
+                                                    if (isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone)) {
+                                                        // Current slot WITH productive/goal: double ring
+                                                        ringClass = 'ring-2 ring-offset-2';
+                                                    } else if (isCurrentTimeSlot) {
+                                                        // Current slot only: single ring with offset
+                                                        ringClass = 'ring-2 ring-offset-1';
+                                                    } else if (hasProductive && (hasGoal || hasMilestone)) {
+                                                        // Non-current with both productive AND goal/milestone: double ring
+                                                        ringClass = 'ring-2 ring-offset-2';
+                                                    } else if (hasProductive || hasGoal || hasMilestone) {
+                                                        // Non-current with single indicator: single ring
+                                                        ringClass = 'ring-2 ring-offset-1';
+                                                    }
+                                                    
+                                                    // Determine final ring color
+                                                    let finalRingColor = '';
+                                                    if (isCurrentTimeSlot) {
+                                                        finalRingColor = 'var(--pos-today-border)';
+                                                    } else {
+                                                        finalRingColor = ringColor;
+                                                    }
+                                                    
+                                                    // Check if slot contains highlighted activity
+                                                    const hasHighlightedActivity = highlightActivity && 
+                                                        slot.activities.some(act => 
+                                                            act.title.toLowerCase().includes(highlightActivity.toLowerCase())
+                                                        );
 
                                                     return (
                                                         <td
                                                             key={slot.slotIndex}
-                                                            ref={isCurrentTimeSlot ? currentSlotRef : null}
-                                                            className="w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px]"
+                                                            ref={(el) => {
+                                                                if (isCurrentTimeSlot) {
+                                                                    (currentSlotRef as React.MutableRefObject<HTMLTableCellElement | null>).current = el;
+                                                                }
+                                                                if (hasHighlightedActivity) {
+                                                                    (highlightedActivityRef as React.MutableRefObject<HTMLTableCellElement | null>).current = el;
+                                                                }
+                                                            }}
+                                                            className={`w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px] ${ringClass}`}
                                                             style={{
                                                                 background: slot.segments
                                                                     ? 'transparent'
-                                                                    : slot.color
-                                                            }}
+                                                                    : slot.color,
+                                                                boxShadow: hasHighlightedActivity 
+                                                                    ? '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)' 
+                                                                    : undefined,
+                                                                '--tw-ring-color': finalRingColor,
+                                                                '--tw-ring-offset-color': 'var(--bg-secondary)'
+                                                            } as React.CSSProperties}
                                                             onMouseEnter={(e) => {
-                                                                if (!isCurrentTimeSlot) {
+                                                                if (!isCurrentTimeSlot && !hasHighlightedActivity) {
                                                                     e.currentTarget.style.boxShadow = '0 0 0 2px var(--pos-today-border)';
                                                                 }
                                                             }}
                                                             onMouseLeave={(e) => {
-                                                                if (!isCurrentTimeSlot) {
+                                                                if (!isCurrentTimeSlot && !hasHighlightedActivity) {
                                                                     e.currentTarget.style.boxShadow = '';
+                                                                } else if (hasHighlightedActivity) {
+                                                                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)';
                                                                 }
                                                             }}
                                                             onClick={() => {
@@ -341,8 +412,15 @@ export function GridPage() {
                                                                     {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
                                                                 </div>
                                                             )}
-                                                            {isCurrentTimeSlot && (
-                                                                <div className="absolute inset-0 rounded-[4px] pointer-events-none" style={{ boxShadow: '0 0 0 2px var(--pos-today-border)' }} />
+                                                            {/* Inner ring for current slot with productive/goal */}
+                                                            {isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone) && (
+                                                                <div 
+                                                                    className="absolute inset-0 rounded-[4px] pointer-events-none ring-2 ring-offset-1"
+                                                                    style={{
+                                                                        '--tw-ring-color': ringColor,
+                                                                        '--tw-ring-offset-color': 'var(--bg-secondary)'
+                                                                    } as React.CSSProperties}
+                                                                />
                                                             )}
                                                         </td>
                                                     );

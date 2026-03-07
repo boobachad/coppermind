@@ -342,12 +342,12 @@ export function DailyPage() {
                     </Card>
                 </div>
 
-                <Card className="border overflow-hidden" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                    <CardHeader className="py-3 px-4">
+                <Card className="border px-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                    <CardHeader className="py-3">
                         <CardTitle className="text-sm font-medium">Timeline Overview</CardTitle>
                     </CardHeader>
-                    <div className="overflow-x-auto pb-4 px-4 pt-2" ref={timelineRef}>
-                        <div className="flex gap-0.5 h-14">
+                    <div className="overflow-x-auto pb-4 pt-2" ref={timelineRef}>
+                        <div className="flex gap-1 h-14 py-1">
                             {daySlots.map((slot) => {
                                 const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
                                 
@@ -356,24 +356,38 @@ export function DailyPage() {
                                 const hasGoal = slot.activities.some(a => a.goalIds && a.goalIds.length > 0);
                                 const hasMilestone = slot.activities.some(a => a.milestoneId);
                                 
-                                // Build ring classes based on indicators
-                                let ringClass = '';
-                                if (hasProductive && (hasGoal || hasMilestone)) {
-                                    // Both productive AND goal/milestone: double ring
-                                    ringClass = 'ring-2 ring-offset-1';
-                                } else if (hasProductive || hasGoal || hasMilestone) {
-                                    // Single indicator: single ring
-                                    ringClass = 'ring-2';
-                                }
-                                
-                                // Determine ring color
+                                // Determine ring color priority: milestone > goal > productive
                                 let ringColor = '';
                                 if (hasMilestone) {
-                                    ringColor = 'var(--pos-milestone-accent)'; // Purple for milestone
+                                    ringColor = 'var(--pos-milestone-accent)';
                                 } else if (hasGoal) {
-                                    ringColor = 'var(--pos-goal-accent)'; // Blue for goal
+                                    ringColor = 'var(--pos-goal-accent)';
                                 } else if (hasProductive) {
-                                    ringColor = 'var(--pos-success-border)'; // Green for productive
+                                    ringColor = 'var(--pos-success-border)';
+                                }
+                                
+                                // Build ring classes
+                                let ringClass = '';
+                                if (isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone)) {
+                                    // Current slot WITH productive/goal: double ring (inner productive, outer current)
+                                    ringClass = 'ring-2 ring-offset-2';
+                                } else if (isCurrentTimeSlot) {
+                                    // Current slot only: single ring with offset
+                                    ringClass = 'ring-2 ring-offset-1';
+                                } else if (hasProductive && (hasGoal || hasMilestone)) {
+                                    // Non-current with both productive AND goal/milestone: double ring
+                                    ringClass = 'ring-2 ring-offset-2';
+                                } else if (hasProductive || hasGoal || hasMilestone) {
+                                    // Non-current with single indicator: single ring
+                                    ringClass = 'ring-2 ring-offset-1';
+                                }
+                                
+                                // Determine final ring color
+                                let finalRingColor = '';
+                                if (isCurrentTimeSlot) {
+                                    finalRingColor = 'var(--pos-today-border)';
+                                } else {
+                                    finalRingColor = ringColor;
                                 }
 
                                 return (
@@ -383,10 +397,9 @@ export function DailyPage() {
                                         className={`w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group ${ringClass}`}
                                         style={{
                                             background: slot.segments ? 'transparent' : slot.color,
-                                            borderColor: isCurrentTimeSlot ? 'var(--pos-today-border)' : 'var(--border-color)',
-                                            borderWidth: isCurrentTimeSlot ? '2px' : '1px',
-                                            boxShadow: isCurrentTimeSlot ? '0 0 0 2px var(--pos-today-bg)' : undefined,
-                                            '--tw-ring-color': ringColor,
+                                            borderColor: 'var(--border-color)',
+                                            borderWidth: '1px',
+                                            '--tw-ring-color': finalRingColor,
                                             '--tw-ring-offset-color': 'var(--bg-secondary)'
                                         } as React.CSSProperties}
                                         onClick={() => {
@@ -400,6 +413,16 @@ export function DailyPage() {
                                                     <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
                                                 ))}
                                             </div>
+                                        )}
+                                        {/* Inner ring for current slot with productive/goal */}
+                                        {isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone) && (
+                                            <div 
+                                                className="absolute inset-0 rounded-[2px] pointer-events-none ring-2 ring-offset-1"
+                                                style={{
+                                                    '--tw-ring-color': ringColor,
+                                                    '--tw-ring-offset-color': 'var(--bg-secondary)'
+                                                } as React.CSSProperties}
+                                            />
                                         )}
                                     </div>
                                 );

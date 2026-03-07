@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { StickyNote as StickyNoteType } from '../lib/types';
 import clsx from 'clsx';
 import { Trash2, Pin, Edit, ArrowUp, ArrowDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   data: StickyNoteType;
@@ -10,15 +11,15 @@ interface Props {
   onReorder: (id: string, direction: 'front' | 'back') => void;
 }
 
-const COLORS: Record<string, string> = {
-  rose: 'bg-rose-200',
-  red: 'bg-red-200',
-  yellow: 'bg-yellow-100',
-  lightBlue: 'bg-sky-200',
-  darkBlue: 'bg-blue-300',
+// Semantic color mapping for sticky notes
+const COLORS: Record<string, { bg: string; text: string }> = {
+  rose: { bg: '#FFE4E1', text: '#8B0000' },
+  red: { bg: '#FFCCCB', text: '#8B0000' },
+  yellow: { bg: '#FFFACD', text: '#8B4513' },
+  lightBlue: { bg: '#ADD8E6', text: '#00008B' },
+  darkBlue: { bg: '#87CEEB', text: '#00008B' },
 };
 
-import { createPortal } from 'react-dom';
 
 export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
   const [isDragging, setIsDragging] = useState(false);
@@ -107,10 +108,13 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
     <>
       <div
         ref={noteRef}
-        style={{ left: data.x, top: data.y }}
+        style={{ 
+          left: data.x, 
+          top: data.y,
+          backgroundColor: COLORS[data.color]?.bg || COLORS.yellow.bg
+        }}
         className={clsx(
           "absolute w-64 h-64 rounded-xl shadow-xl transition-shadow duration-300",
-          COLORS[data.color] || COLORS.yellow,
           isDragging ? "cursor-grabbing z-50 shadow-2xl scale-105" : "cursor-grab z-10",
           "flex flex-col overflow-hidden"
         )}
@@ -120,19 +124,20 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
         {/* Pin Icon */}
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
           <div>
-            <Pin className="w-6 h-6 text-red-500 drop-shadow-md fill-current" />
+            <Pin className="w-6 h-6 drop-shadow-md fill-current" style={{ color: 'var(--color-error)' }} />
           </div>
         </div>
 
         {/* Content Area with Notebook Lines */}
         <div
           ref={contentRef}
-          className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting text-gray-800 leading-8"
+          className="flex-1 p-6 pt-8 outline-none resize-none bg-transparent font-handwriting leading-8 whitespace-pre-wrap"
           style={{
             backgroundImage: 'linear-gradient(transparent 31px, var(--color-shadow-line) 32px)',
             backgroundSize: '100% 32px',
             backgroundAttachment: 'local',
-            pointerEvents: isEditing ? 'auto' : 'none' // Disable pointer events when not editing
+            pointerEvents: isEditing ? 'auto' : 'none',
+            color: COLORS[data.color]?.text || COLORS.yellow.text
           }}
           contentEditable={isEditing}
           suppressContentEditableWarning
@@ -163,16 +168,18 @@ export function StickyNote({ data, onUpdate, onDelete, onReorder }: Props) {
               top: contextMenuPos.y, 
               left: contextMenuPos.x,
               backgroundColor: 'var(--bg-secondary)',
-              borderColor: 'var(--border-color)',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              borderColor: 'var(--border-color)'
             }}
           >
             <div className="flex gap-1 p-1 mb-1 border-b" style={{ borderColor: 'var(--border-color)' }}>
               {Object.keys(COLORS).map(color => (
                 <button
                   key={color}
-                  className={clsx("w-4 h-4 rounded-full border transition-all hover:scale-110", COLORS[color])}
-                  style={{ borderColor: 'var(--border-color)' }}
+                  className="w-4 h-4 rounded-full border transition-all hover:scale-110"
+                  style={{ 
+                    borderColor: 'var(--border-color)',
+                    backgroundColor: COLORS[color].bg
+                  }}
                   onClick={() => {
                     onUpdate(data.id, { color });
                     setShowMenu(false);

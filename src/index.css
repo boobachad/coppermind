@@ -109,6 +109,9 @@
 
   /* Base - Deep, Solid Background */
   --bg-base: #030303;
+  --bg-primary: #030303;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2a2a2a;
 
   /* Text - High Contrast for Glass */
   --text-primary: rgba(255, 255, 255, 0.95);
@@ -123,6 +126,10 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-border-highlight: rgba(255, 255, 255, 0.15);
   /* Top edges */
+  
+  /* Border aliases for consistency */
+  --border-primary: var(--glass-border);
+  --border-color: var(--glass-border);
 
   /* Sidebar Specifics */
   --glass-sidebar-bg: rgba(10, 10, 10, 0.7);
@@ -149,7 +156,6 @@
   /* Absolute contrast colors (for contrast-required contexts only) */
   --color-pure-black: #000000;
   --color-pure-white: #ffffff;
-  /* Highlight color for editor (TipTap highlight extension) */
   --color-highlight-yellow: #fef08a;
 
   /* Theme-swatch preview colors (fixed per-theme, used in SettingsPage only) */
@@ -465,11 +471,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-zinc-700 rounded-full;
+  background-color: var(--glass-bg-subtle);
+  @apply rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-zinc-600;
+  background-color: var(--glass-bg);
 }
 
 /* Hide scrollbar utility */
@@ -495,7 +502,6 @@ body {
   color: var(--text-primary);
 }
 
-/* TipTap Editor Styles */
 .ProseMirror {
   @apply outline-none text-(--text-primary);
 }
@@ -507,7 +513,8 @@ body {
 
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  @apply text-gray-400 dark:text-gray-500 float-left pointer-events-none h-0;
+  color: var(--text-tertiary);
+  @apply float-left pointer-events-none h-0;
 }
 
 .ProseMirror h1 {
@@ -546,15 +553,155 @@ body {
 }
 
 .ProseMirror code {
-  @apply bg-gray-100 dark:bg-zinc-800 rounded px-1 py-0.5 font-mono text-sm text-red-500 dark:text-red-400;
+  background-color: var(--glass-bg-subtle);
+  color: var(--text-primary);
+  @apply rounded px-1 py-0.5 font-mono text-sm;
 }
 
 .ProseMirror pre {
-  @apply bg-gray-900 text-gray-100 rounded-lg p-4 my-4 font-mono text-sm overflow-x-auto;
+  background-color: var(--glass-bg-subtle);
+  color: var(--text-primary);
+  @apply rounded-lg p-4 my-4 font-mono text-sm overflow-x-auto;
 }
 
 .ProseMirror pre code {
   @apply bg-transparent text-inherit p-0 text-sm;
+}
+
+/* Editable Cell Hover (ProblemSetView) */
+.editable-cell {
+  transition: background 0.2s;
+}
+
+.editable-cell:hover {
+  background-color: var(--glass-bg-subtle);
+}
+
+/* Markdown Renderer Styles */
+.markdown-content h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.markdown-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.markdown-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.markdown-content h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.markdown-content p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.markdown-content strong,
+.markdown-content b {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-content em,
+.markdown-content i {
+  font-style: italic;
+  color: var(--text-primary);
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.markdown-content li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content code {
+  background-color: var(--glass-bg-subtle);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+  color: var(--color-accent-primary);
+}
+
+.markdown-content pre {
+  background-color: var(--glass-bg-subtle);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid var(--glass-border);
+  padding-left: 1rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.markdown-content a {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--border-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Task List */

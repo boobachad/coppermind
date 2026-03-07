@@ -1,10 +1,9 @@
 // ─── Entity Link Textarea Component ────────────────────────────────
-// Wrapper for <textarea> with entity linking support using mirror overlay.
+// Plain textarea with entity linking autocomplete support.
 // Preserves all native textarea behaviors (selection, undo/redo, accessibility).
 
 import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { useEntityLinking } from '../hooks/useEntityLinking';
-import { MirrorOverlay } from './MirrorOverlay';
 import { AutocompleteDropdown } from './AutocompleteDropdown';
 import type { AutocompleteResult } from '../core/types';
 
@@ -21,29 +20,35 @@ export interface EntityLinkTextareaProps extends Omit<React.TextareaHTMLAttribut
 }
 
 /**
- * Textarea component with entity linking support.
+ * Textarea component with entity linking autocomplete.
  * 
  * Features:
- * - Real-time cross-reference detection and validation
- * - Mirror overlay for styled link rendering
  * - Autocomplete suggestions with fuzzy search
- * - Keyboard navigation
- * - Preserves native textarea behaviors
+ * - Keyboard navigation (Arrow keys, Enter, Escape)
+ * - Preserves all native textarea behaviors
  * - Theme-aware semantic CSS
+ * - Seamlessly integrates into any container (no extra wrapper styling)
  * 
- * Architecture:
- * - Transparent textarea (z-index: 2) for input
- * - Mirror div (z-index: 1) for styled links
- * - Synchronized scroll and dimensions
+ * Edit Mode Behavior:
+ * - Shows raw markdown: `# heading`, `**bold**`, `[[entity:id|alias]]`
+ * - No visual highlights or rendering
+ * - Autocomplete triggers on `[[` syntax
+ * 
+ * Design Philosophy:
+ * - Acts as a native textarea replacement
+ * - Inherits all styling from parent container
+ * - Minimal wrapper (only for autocomplete positioning)
+ * - No background, border, or padding by default
  * 
  * @example
  * ```tsx
  * <EntityLinkTextarea
  *   value={content}
  *   onChange={setContent}
- *   placeholder="Type note:my-note to link..."
+ *   placeholder="Type [[note:id|alias]] to link..."
  *   rows={10}
- *   className="w-full"
+ *   className="w-full p-4"
+ *   style={{ backgroundColor: 'var(--bg-secondary)' }}
  * />
  * ```
  */
@@ -54,10 +59,8 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
     // Expose textarea ref to parent
     useImperativeHandle(ref, () => textareaRef.current!);
 
-    // Entity linking logic
+    // Entity linking autocomplete logic
     const {
-      parsedRefs,
-      validatedRefs,
       autocomplete,
       handleKeyDown: handleAutocompleteKeyDown,
     } = useEntityLinking(value, onChange, textareaRef);
@@ -73,12 +76,12 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
       const textBeforeCursor = value.slice(0, cursorPos);
       const textAfterCursor = value.slice(cursorPos);
 
-      // Find the partial reference to replace
-      const match = textBeforeCursor.match(/(\w+):(\w*)$/);
+      // Find the partial reference to replace (with [[)
+      const match = textBeforeCursor.match(/\[\[(\w+):([^\]:]*)$/);
       if (!match) return;
 
       const replaceStart = cursorPos - match[0].length;
-      const newRef = `${result.entity.type}:${result.entity.id}|${result.entity.title}`;
+      const newRef = `[[${result.entity.type}:${result.entity.id}|${result.entity.title}]]`;
       const newValue = value.slice(0, replaceStart) + newRef + textAfterCursor;
 
       onChange(newValue);
@@ -109,16 +112,8 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
     };
 
     return (
-      <div className="relative">
-        {/* Mirror overlay for styled links */}
-        <MirrorOverlay
-          text={value}
-          references={validatedRefs}
-          parsedRefs={parsedRefs}
-          textareaRef={textareaRef}
-        />
-
-        {/* Transparent textarea for input */}
+      <div className="relative w-full h-full">
+        {/* Plain textarea - shows raw markdown */}
         <textarea
           ref={textareaRef}
           value={value}
@@ -126,11 +121,10 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
           onKeyDown={handleKeyDown}
           rows={rows}
           className={`
-            relative z-[2] w-full px-3 py-2 rounded-md
-            bg-transparent border border-border
-            text-transparent caret-foreground
+            w-full h-full
+            caret-foreground
             placeholder:text-muted-foreground
-            focus:outline-none focus:ring-2 focus:ring-ring
+            focus:outline-none
             resize-y whitespace-pre-wrap break-words
             ${className}
           `}
@@ -138,6 +132,8 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
             fontFamily: 'inherit',
             fontSize: 'inherit',
             lineHeight: 'inherit',
+            padding: 'inherit',
+            color: 'var(--text-primary)',
           }}
           {...props}
         />
@@ -152,6 +148,8 @@ export const EntityLinkTextarea = forwardRef<HTMLTextAreaElement, EntityLinkText
             results={autocomplete.results}
             selectedIndex={autocomplete.selectedIndex}
             onSelect={onSelectResult}
+            // No-op: Autocomplete closing is handled by the state machine in useEntityLinking
+            // when onSelectResult is called. This prop is required by the interface but intentionally empty.
             onClose={() => {}}
           />
         )}

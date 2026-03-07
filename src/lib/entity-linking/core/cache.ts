@@ -268,6 +268,39 @@ export function removeFromCache(
 }
 
 /**
+ * Type guard to check if a string is a valid EntityType.
+ * 
+ * Used for runtime validation of entity type strings.
+ * 
+ * NOTE: This array must be kept in sync with the EntityType union in types.ts.
+ * If EntityType is updated, update this array accordingly.
+ * 
+ * @param type - String to check
+ * @returns True if type is valid EntityType
+ * 
+ * Complexity: O(1)
+ */
+export function isValidEntityType(type: string): type is EntityType {
+  const validTypes: EntityType[] = [
+    'note',
+    'kb',
+    'journal',
+    'goal',
+    'milestone',
+    'activity',
+    'grid',
+    'ladder',
+    'category',
+    'sheets',
+    'book',
+    'retrospective',
+    'url',
+  ];
+  
+  return validTypes.includes(type as EntityType);
+}
+
+/**
  * Creates empty entity cache store.
  * 
  * @returns Initialized cache store

@@ -44,6 +44,7 @@ export interface ParsedReference {
   entityType: EntityType;
   identifier: string;
   subIdentifier?: string;
+  subSubIdentifier?: string;
   aliasText?: string;
   startIndex: number;
   endIndex: number;

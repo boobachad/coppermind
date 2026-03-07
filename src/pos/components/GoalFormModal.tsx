@@ -8,6 +8,8 @@ import { DatePicker } from '../../components/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { X, Repeat } from 'lucide-react';
 import clsx from 'clsx';
+import { EntityLinkTextarea } from '../../lib/entity-linking/components/EntityLinkTextarea';
+import { parseReferences } from '../../lib/entity-linking/core/parser';
 
 interface GoalFormModalProps {
     isOpen: boolean;
@@ -92,6 +94,8 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
         }
 
         try {
+            let goalId: string;
+            
             if (editingGoal) {
                 await invoke('update_unified_goal', {
                     id: editingGoal.id,
@@ -104,9 +108,10 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : '',
                     },
                 });
+                goalId = editingGoal.id;
                 toast.success('Goal updated');
             } else {
-                await invoke('create_unified_goal', {
+                const result = await invoke<UnifiedGoal>('create_unified_goal', {
                     req: {
                         text: formText,
                         description: formDescription || undefined,
@@ -116,7 +121,24 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         recurringPattern: selectedDays.length > 0 ? selectedDays.join(',') : undefined,
                     },
                 });
+                goalId = result.id;
                 toast.success('Goal created');
+            }
+
+            // Parse cross-references from description and update registry
+            const parsedRefs = parseReferences(formDescription);
+            if (parsedRefs.length > 0) {
+                try {
+                    await invoke('update_reference_registry', {
+                        sourceEntityType: 'goal',
+                        sourceEntityId: goalId,
+                        sourceField: 'description',
+                        textContent: formDescription.trim(),
+                    });
+                } catch (err) {
+                    console.error('Failed to update cross-references:', err);
+                    // Non-fatal: continue even if cross-reference update fails
+                }
             }
 
             onSuccess();
@@ -168,24 +190,31 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                             value={formText}
                             onChange={(e) => setFormText(e.target.value)}
                             placeholder="e.g. Submit report by Friday urgent"
-                            className="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500/50 transition-all text-lg font-medium bg-secondary border border-border placeholder:text-muted-foreground"
+                            className="w-full px-4 py-3 rounded-xl focus:ring-2 transition-all text-lg font-medium bg-secondary border border-border placeholder:text-muted-foreground"
                             style={{ color: 'var(--text-primary)' }}
                         />
                         <p className="text-xs italic flex items-center gap-1.5 text-muted-foreground">
-                            <span className="font-bold bg-blue-500/10 text-blue-500 px-1 rounded">TIP</span> Try "tomorrow" or "urgent" for smart parsing
+                            <span className="font-bold px-1 rounded" style={{ backgroundColor: 'var(--color-accent-subtle)', color: 'var(--color-accent-primary)' }}>TIP</span> Try "tomorrow" or "urgent" for smart parsing
                         </p>
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
                         <label className="text-xs font-bold uppercase tracking-wider text-(--text-tertiary)">Description</label>
-                        <textarea
+                        <EntityLinkTextarea
                             value={formDescription}
-                            onChange={(e) => setFormDescription(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl h-24 resize-none focus:ring-2 focus:ring-blue-500/50 bg-secondary border border-border placeholder:text-muted-foreground"
-                            style={{ color: 'var(--text-primary)' }}
-                            placeholder="Add details, context, or sub-tasks..."
+                            onChange={setFormDescription}
+                            className="w-full px-4 py-3 rounded-xl resize-none focus:ring-2 bg-secondary border placeholder:text-muted-foreground"
+                            style={{ 
+                                color: 'var(--text-primary)',
+                                borderColor: 'var(--border-primary)'
+                            }}
+                            placeholder="Add details, context, or sub-tasks... Type [[note:my-note]] to link"
+                            rows={4}
                         />
+                        <p className="text-xs italic text-muted-foreground">
+                            Use [[entity:identifier]] syntax to link (e.g., [[note:my-note]], [[kb:item-id]], [[milestone:name]])
+                        </p>
                     </div>
 
                     {/* Priority & Urgent */}
@@ -206,13 +235,15 @@ export function GoalFormModal({ isOpen, onClose, onSuccess, editingGoal }: GoalF
                         <div className="flex items-end h-full pt-6">
                             <label className={clsx(
                                 "flex items-center space-x-3 cursor-pointer p-3 border rounded-xl w-full transition-all h-11 shadow-sm",
-                                formUrgent ? "bg-red-500/5 border-red-200 dark:border-red-900" : "bg-secondary border-border hover:bg-secondary/80"
-                            )}>
+                                formUrgent ? "" : "bg-secondary border-border hover:bg-secondary/80"
+                            )}
+                            style={formUrgent ? { backgroundColor: 'var(--color-error-subtle)', borderColor: 'var(--color-error)' } : undefined}
+                            >
                                 <input
                                     type="checkbox"
                                     checked={formUrgent}
                                     onChange={(e) => setFormUrgent(e.target.checked)}
-                                    className="w-5 h-5 rounded focus:ring-red-500/50"
+                                    className="w-5 h-5 rounded focus:ring-2"
                                     style={{ accentColor: 'var(--pos-error-text)' }}
                                 />
                                 <span className="text-sm font-bold uppercase tracking-wide" style={{ color: formUrgent ? 'var(--pos-error-text)' : 'var(--text-secondary)' }}>Mark Urgent</span>

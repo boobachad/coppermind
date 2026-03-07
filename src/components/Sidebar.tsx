@@ -75,27 +75,32 @@ export function Sidebar() {
     { to: "/cf/daily", icon: Sparkles, label: "Daily Pick" },
   ];
 
-  const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => (
-    <NavLink
-      to={to}
-      end={to === "/"}
-      className={({ isActive }) => clsx(
-        "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group relative",
-        isActive
-          ? "shadow-[0_0_15px_rgba(255,255,255,0.1)] border"
-          : "hover:bg-white/5 dark:hover:bg-white/5"
-      )}
-      style={({ isActive }) => ({
-        backgroundColor: isActive ? 'var(--glass-bg-subtle)' : 'transparent',
-        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-        borderColor: isActive ? 'var(--glass-border)' : 'transparent'
-      })}
-    >
-      <Icon className="mr-3 h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-      <span className="truncate">{label}</span>
-      {/* Active Indicator Dot - Removed for cleaner look, relying on background */}
-    </NavLink>
-  );
+  const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    
+    return (
+      <NavLink
+        to={to}
+        end={to === "/"}
+        className={({ isActive }) => clsx(
+          "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group relative",
+          isActive ? "border" : ""
+        )}
+        style={({ isActive }) => ({
+          backgroundColor: isActive ? 'var(--glass-bg-subtle)' : (isHovered && !isActive ? 'var(--glass-bg-subtle)' : 'transparent'),
+          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+          borderColor: isActive ? 'var(--glass-border)' : 'transparent',
+          boxShadow: isActive ? 'var(--color-shadow-subtle)' : 'none'
+        })}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <Icon className="mr-3 h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+        <span className="truncate">{label}</span>
+        {/* Active Indicator Dot - Removed for cleaner look, relying on background */}
+      </NavLink>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -180,11 +185,13 @@ export function Sidebar() {
                       if (window.location.pathname.includes(note.id)) navigate('/');
                     }
                   }}
-                  className="absolute right-2 opacity-0 group-hover/note:opacity-100 p-1.5 hover:text-red-400 transition-opacity rounded-md backdrop-blur-sm"
+                  className="absolute right-2 opacity-0 group-hover/note:opacity-100 p-1.5 transition-opacity rounded-md backdrop-blur-sm"
                   style={{
                     color: 'var(--text-tertiary)',
                     backgroundColor: 'var(--glass-bg-subtle)'
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-error)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

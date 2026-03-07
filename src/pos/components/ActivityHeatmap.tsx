@@ -268,9 +268,8 @@ export function ActivityHeatmap() {
                                 transform: isHovered ? 'scale(1.3)' : 'scale(1)',
                                 boxShadow: isToday 
                                   ? '0 0 0 2px var(--text-primary)' 
-                                  : isHovered 
-                                    ? '0 4px 12px rgba(0,0,0,0.3)' 
-                                    : 'none',
+                                  : 'none',
+                                filter: isHovered ? 'brightness(1.2)' : 'none',
                                 zIndex: isHovered ? 10 : isToday ? 5 : 1
                               }}
                               onMouseEnter={(e) => {

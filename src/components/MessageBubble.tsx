@@ -1,4 +1,5 @@
-import { Editor } from './Editor';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
 import { Message } from '../lib/types';
 import clsx from 'clsx';
 import { useState, useEffect, memo } from 'react';
@@ -90,15 +91,9 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         borderColor: 'var(--glass-border)',
                         color: 'var(--text-primary)'
                     }}>
-                    <Editor
+                    <MarkdownRenderer
                         content={message.content}
-                        editable={false}
-                        className={clsx(
-                            "prose-sm w-full max-w-none! focus:outline-none",
-                            "dark:prose-invert",
-                            isQuestion ? "" : "",
-                            "[&_p]:m-0 [&_p]:leading-normal"
-                        )}
+                        className="w-full"
                     />
                 </div>
 
@@ -171,7 +166,10 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                             Edit Message
                         </button>
                         <button
-                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="w-full text-left px-4 py-2 text-sm transition-colors"
+                            style={{ color: 'var(--color-error)' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-error-subtle)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                             onClick={async () => {
                                 setShowContextMenu(false);
                                 const confirmed = await confirm({
@@ -204,12 +202,21 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-transparent">
-                            <Editor
-                                content={draftContent}
-                                editable={true}
+                        <div className="flex-1 overflow-hidden bg-transparent">
+                            <EntityLinkTextarea
+                                value={draftContent}
                                 onChange={setDraftContent}
-                                className="prose prose-sm max-w-none focus:outline-none min-h-full text-(--text-primary) [&_.ProseMirror]:text-(--text-primary) [&_p]:text-(--text-primary) [&_h1]:text-(--text-primary) [&_h2]:text-(--text-primary) [&_h3]:text-(--text-primary) [&_ul]:text-(--text-primary) [&_ol]:text-(--text-primary) [&_strong]:text-(--text-primary)"
+                                rows={20}
+                                className="w-full h-full resize-none border-0 focus:ring-0 p-6"
+                                style={{
+                                    backgroundColor: 'transparent',
+                                    color: 'var(--text-primary)',
+                                    fontFamily: 'inherit',
+                                    fontSize: '0.875rem',
+                                    lineHeight: '1.5',
+                                    outline: 'none'
+                                }}
+                                placeholder="Edit your message..."
                             />
                         </div>
                         <div className="p-4 border-t border-(--glass-border) bg-(--glass-bg-subtle)/30 flex justify-end gap-2">
@@ -239,13 +246,15 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
         </>
     );
 }, (prev, next) => {
-    // Custom comparison to ensure strict equality check
     return (
         prev.message.id === next.message.id &&
         prev.message.content === next.message.content &&
         prev.message.role === next.message.role &&
-        // Handlers are stable references, so strict equality is fine
         prev.onUpdate === next.onUpdate &&
-        prev.onDelete === next.onDelete
+        prev.onDelete === next.onDelete &&
+        prev.canMoveUp === next.canMoveUp &&
+        prev.canMoveDown === next.canMoveDown &&
+        prev.onMoveUp === next.onMoveUp &&
+        prev.onMoveDown === next.onMoveDown
     );
 });

@@ -35,8 +35,10 @@ const NodeWrapper = ({ children, label, icon: Icon, selected, id }: { children: 
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{label}</span>
         </div>
         <button
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all"
           style={{ color: 'var(--text-tertiary)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-error-subtle)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           onClick={(e) => {
             e.stopPropagation();
             (deleteElements as (opts: { nodes: { id: string }[] }) => void)({ nodes: [{ id }] });
@@ -51,20 +53,20 @@ const NodeWrapper = ({ children, label, icon: Icon, selected, id }: { children: 
       </div>
 
       {/* Top Handles */}
-      <Handle type="target" position={Position.Top} id="top-target" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ left: '40%' }} />
-      <Handle type="source" position={Position.Top} id="top-source" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ left: '60%' }} />
+      <Handle type="target" position={Position.Top} id="top-target" className="w-3 h-3 border" style={{ left: '40%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
+      <Handle type="source" position={Position.Top} id="top-source" className="w-3 h-3 border" style={{ left: '60%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
 
       {/* Bottom Handles */}
-      <Handle type="target" position={Position.Bottom} id="bottom-target" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ left: '40%' }} />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ left: '60%' }} />
+      <Handle type="target" position={Position.Bottom} id="bottom-target" className="w-3 h-3 border" style={{ left: '40%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-source" className="w-3 h-3 border" style={{ left: '60%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
 
       {/* Left Handles */}
-      <Handle type="target" position={Position.Left} id="left-target" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ top: '40%' }} />
-      <Handle type="source" position={Position.Left} id="left-source" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ top: '60%' }} />
+      <Handle type="target" position={Position.Left} id="left-target" className="w-3 h-3 border" style={{ top: '40%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
+      <Handle type="source" position={Position.Left} id="left-source" className="w-3 h-3 border" style={{ top: '60%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
 
       {/* Right Handles */}
-      <Handle type="target" position={Position.Right} id="right-target" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ top: '40%' }} />
-      <Handle type="source" position={Position.Right} id="right-source" className="w-3 h-3 bg-blue-500 border border-white/20" style={{ top: '60%' }} />
+      <Handle type="target" position={Position.Right} id="right-target" className="w-3 h-3 border" style={{ top: '40%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
+      <Handle type="source" position={Position.Right} id="right-source" className="w-3 h-3 border" style={{ top: '60%', backgroundColor: 'var(--color-accent-primary)', borderColor: 'var(--glass-border)' }} />
     </div>
   );
 };
@@ -94,7 +96,15 @@ const NoteNode = ({ id, data, selected }: { id: string, data: any, selected?: bo
 const TaskNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
   <NodeWrapper label="Task" icon={CheckSquare} selected={selected} id={id}>
     <div className="flex items-center space-x-2">
-      <div className={`w-4 h-4 rounded border ${data.completed ? 'bg-green-500 border-green-500' : ''}`} style={!data.completed ? { borderColor: 'var(--glass-border)' } : {}} />
+      <div 
+        className="w-4 h-4 rounded border" 
+        style={data.completed ? { 
+          backgroundColor: 'var(--color-success)', 
+          borderColor: 'var(--color-success)' 
+        } : { 
+          borderColor: 'var(--glass-border)' 
+        }} 
+      />
       <span className={`text-sm ${data.completed ? 'line-through' : ''}`} style={{ color: data.completed ? 'var(--text-tertiary)' : 'var(--text-primary)' }}>
         {data.label || "New Task"}
       </span>
@@ -118,7 +128,7 @@ const GraphNode = ({ id, selected }: { id: string, selected?: boolean }) => (
   <NodeWrapper label="Graph" icon={BarChart} selected={selected} id={id}>
     <div className="w-full h-32 flex items-end justify-between space-x-1 px-2 pt-4 pb-0 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
       {[40, 70, 30, 85, 50, 65].map((h, i) => (
-        <div key={i} className="w-full bg-blue-500 rounded-t" style={{ height: `${h}%`, opacity: 0.6 + (i * 0.05) }} />
+        <div key={i} className="w-full rounded-t" style={{ height: `${h}%`, opacity: 0.6 + (i * 0.05), backgroundColor: 'var(--color-accent-primary)' }} />
       ))}
     </div>
     <div className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>Sales Report</div>
@@ -127,12 +137,12 @@ const GraphNode = ({ id, selected }: { id: string, selected?: boolean }) => (
 
 const FileNode = ({ id, data, selected }: { id: string, data: any, selected?: boolean }) => (
   <NodeWrapper label="PDF File" icon={FileText} selected={selected} id={id}>
-    <div className="flex flex-col items-center justify-center p-4 bg-red-500/10 rounded border border-red-500/20 h-32">
-      <FileText className="w-12 h-12 text-red-400 mb-2" />
-      <span className="text-xs font-medium text-red-300 text-center line-clamp-2 px-1">
+    <div className="flex flex-col items-center justify-center p-4 rounded border h-32" style={{ backgroundColor: 'var(--color-error-subtle)', borderColor: 'var(--color-error)' }}>
+      <FileText className="w-12 h-12 mb-2" style={{ color: 'var(--color-error)' }} />
+      <span className="text-xs font-medium text-center line-clamp-2 px-1" style={{ color: 'var(--color-error)' }}>
         {data.fileName || "Document.pdf"}
       </span>
-      <a href={data.url} download={data.fileName} className="mt-2 text-[10px] text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>
+      <a href={data.url} download={data.fileName} className="mt-2 text-[10px] hover:underline" style={{ color: 'var(--color-accent-primary)' }} onClick={(e) => e.stopPropagation()}>
         Download
       </a>
     </div>
@@ -364,12 +374,16 @@ export function NodesPage() {
           fitView
           proOptions={{ hideAttribution: true }}
         >
-          <Background color="#555" gap={16} variant={BackgroundVariant.Dots} />
+          <Background color="var(--text-tertiary)" gap={16} variant={BackgroundVariant.Dots} />
           <Controls className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 p-1.5 rounded-lg material-glass-subtle [&>button]:p-2 [&>button]:rounded-md [&>button]:bg-transparent! [&>button]:border-transparent! [&>button]:text-(--text-secondary)! [&>button]:transition-all [&>button:hover]:bg-(--glass-bg)! [&>button:hover]:text-(--text-primary)! [&>button:hover]:scale-105 shadow-xl" />
           <MiniMap
-            className="!absolute !bottom-4 !right-4 z-10 !bg-black/20 !border-white/10 !m-0 rounded-lg overflow-hidden"
-            maskColor="rgba(0, 0, 0, 0.4)"
-            nodeColor="#666"
+            className="!absolute !bottom-4 !right-4 z-10 !m-0 rounded-lg overflow-hidden"
+            style={{
+              backgroundColor: 'var(--glass-bg)',
+              borderColor: 'var(--glass-border)'
+            }}
+            maskColor="var(--overlay-bg)"
+            nodeColor="var(--text-tertiary)"
             pannable
             zoomable
           />

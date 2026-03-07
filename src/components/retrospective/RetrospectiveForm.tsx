@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Retrospective, CreateRetrospectiveInput, RetrospectiveQuestions } from '../../pos/lib/types';
 import { Calendar, TrendingUp, Zap, CheckCircle, X } from 'lucide-react';
+import { EntityLinkTextarea } from '../../lib/entity-linking/components/EntityLinkTextarea';
 
 interface RetrospectiveFormProps {
     onClose: () => void;
@@ -203,11 +204,11 @@ export const RetrospectiveForm: React.FC<RetrospectiveFormProps> = ({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                             Accomplishments
                         </label>
-                        <textarea
+                        <EntityLinkTextarea
                             rows={3}
                             value={formData.questionsData.accomplishments || ''}
-                            onChange={(e) => updateQuestion('accomplishments', e.target.value)}
-                            placeholder="What did you achieve?"
+                            onChange={(value: string) => updateQuestion('accomplishments', value)}
+                            placeholder="What did you achieve? Use [[note:id]] to link..."
                             className="w-full px-3 py-2 rounded-lg border resize-none"
                             style={{
                                 backgroundColor: 'var(--surface-secondary)',
@@ -222,11 +223,11 @@ export const RetrospectiveForm: React.FC<RetrospectiveFormProps> = ({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                             Challenges
                         </label>
-                        <textarea
+                        <EntityLinkTextarea
                             rows={3}
                             value={formData.questionsData.challenges || ''}
-                            onChange={(e) => updateQuestion('challenges', e.target.value)}
-                            placeholder="What obstacles did you face?"
+                            onChange={(value: string) => updateQuestion('challenges', value)}
+                            placeholder="What obstacles did you face? Use [[note:id]] to link..."
                             className="w-full px-3 py-2 rounded-lg border resize-none"
                             style={{
                                 backgroundColor: 'var(--surface-secondary)',
@@ -241,11 +242,11 @@ export const RetrospectiveForm: React.FC<RetrospectiveFormProps> = ({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                             Areas for Improvement
                         </label>
-                        <textarea
+                        <EntityLinkTextarea
                             rows={3}
                             value={formData.questionsData.improvements || ''}
-                            onChange={(e) => updateQuestion('improvements', e.target.value)}
-                            placeholder="What can you improve?"
+                            onChange={(value: string) => updateQuestion('improvements', value)}
+                            placeholder="What can you improve? Use [[note:id]] to link..."
                             className="w-full px-3 py-2 rounded-lg border resize-none"
                             style={{
                                 backgroundColor: 'var(--surface-secondary)',
@@ -260,11 +261,11 @@ export const RetrospectiveForm: React.FC<RetrospectiveFormProps> = ({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                             Goals for Next {formData.periodType === 'weekly' ? 'Week' : 'Month'}
                         </label>
-                        <textarea
+                        <EntityLinkTextarea
                             rows={3}
                             value={formData.questionsData.goals_next_period || ''}
-                            onChange={(e) => updateQuestion('goals_next_period', e.target.value)}
-                            placeholder="What do you want to accomplish?"
+                            onChange={(value: string) => updateQuestion('goals_next_period', value)}
+                            placeholder="What do you want to accomplish? Use [[note:id]] to link..."
                             className="w-full px-3 py-2 rounded-lg border resize-none"
                             style={{
                                 backgroundColor: 'var(--surface-secondary)',

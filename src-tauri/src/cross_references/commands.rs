@@ -1,6 +1,7 @@
 // ─── Cross-Reference Tauri Commands ─────────────────────────────────
 // Command handlers for entity resolution and validation.
 
+use chrono::Utc;
 use tauri::State;
 
 use crate::PosDb;
@@ -17,7 +18,8 @@ use super::registry;
 /// # Arguments
 /// * `entity_type` - Type of entity (note, kb, journal, etc.)
 /// * `identifier` - Primary identifier for the entity
-/// * `sub_identifier` - Optional sub-identifier (e.g., slot number for grid)
+/// * `sub_identifier` - Optional sub-identifier (e.g., "slot" or "activity" for grid)
+/// * `sub_sub_identifier` - Optional sub-sub-identifier (e.g., slot number or activity name)
 /// * `db` - Database connection state
 ///
 /// # Errors
@@ -28,6 +30,7 @@ pub async fn resolve_entity_reference(
     entity_type: String,
     identifier: String,
     sub_identifier: Option<String>,
+    sub_sub_identifier: Option<String>,
     db: State<'_, PosDb>,
 ) -> Result<EntityReference, String> {
     let pool = &db.0;
@@ -39,7 +42,7 @@ pub async fn resolve_entity_reference(
         "goal" => resolver::resolve_goal(pool, &identifier).await,
         "milestone" => resolver::resolve_milestone(pool, &identifier).await,
         "activity" => resolver::resolve_activity(pool, &identifier).await,
-        "grid" => resolver::resolve_grid(pool, &identifier, sub_identifier.as_deref()).await,
+        "grid" => resolver::resolve_grid(pool, &identifier, sub_identifier.as_deref(), sub_sub_identifier.as_deref()).await,
         "ladder" => resolver::resolve_ladder(pool, &identifier, sub_identifier.as_deref()).await,
         "category" => resolver::resolve_category(pool, &identifier, sub_identifier.as_deref()).await,
         "sheets" => resolver::resolve_sheets(pool, &identifier, sub_identifier.as_deref()).await,
@@ -73,6 +76,7 @@ pub async fn batch_validate_references(
             req.entity_type.clone(),
             req.identifier.clone(),
             req.sub_identifier,
+            None, // sub_sub_identifier not used in batch validation
             db.clone(),
         ).await {
             Ok(entity) => results.push(entity),
@@ -107,10 +111,14 @@ pub async fn get_all_entities_for_cache(
     // Fetch all entity types
     entities.extend(resolver::fetch_notes_for_cache(pool).await.unwrap_or_default());
     entities.extend(resolver::fetch_kb_items_for_cache(pool).await.unwrap_or_default());
+    entities.extend(resolver::fetch_journals_for_cache(pool).await.unwrap_or_default());
     entities.extend(resolver::fetch_goals_for_cache(pool).await.unwrap_or_default());
     entities.extend(resolver::fetch_milestones_for_cache(pool).await.unwrap_or_default());
     entities.extend(resolver::fetch_books_for_cache(pool).await.unwrap_or_default());
     entities.extend(resolver::fetch_retrospectives_for_cache(pool).await.unwrap_or_default());
+    entities.extend(resolver::fetch_ladders_for_cache(pool).await.unwrap_or_default());
+    entities.extend(resolver::fetch_categories_for_cache(pool).await.unwrap_or_default());
+    entities.extend(resolver::fetch_sheets_for_cache(pool).await.unwrap_or_default());
     
     Ok(entities)
 }
@@ -222,4 +230,85 @@ pub async fn update_reference_registry(
     }
     
     Ok(())
+}
+
+/// Fetches activities for a specific date (for autocomplete).
+///
+/// # Arguments
+/// * `date` - Date in YYYY-MM-DD format
+/// * `db` - Database connection state
+///
+/// # Performance
+/// O(log n) indexed query by date
+#[tauri::command]
+#[must_use]
+pub async fn get_activities_for_date_autocomplete(
+    date: String,
+    db: State<'_, PosDb>,
+) -> Result<Vec<CachedEntity>, String> {
+    let pool = &db.0;
+    resolver::fetch_activities_for_date(pool, &date)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Fetches recent grid dates (last 30 days with activities).
+/// Used for instant autocomplete on [[grid: trigger.
+///
+/// # Arguments
+/// * `db` - Database connection state
+///
+/// # Performance
+/// O(log n) with date index, returns ~30 dates
+#[tauri::command]
+#[must_use]
+pub async fn get_recent_grid_dates(
+    db: State<'_, PosDb>,
+) -> Result<Vec<String>, String> {
+    let pool = &db.0;
+    resolver::fetch_recent_grid_dates(pool)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Searches grid months by year (e.g., '2026' → ['2026-03', '2026-04']).
+/// Returns all months with activities for the given year.
+///
+/// # Arguments
+/// * `year` - Year in YYYY format (4 digits)
+/// * `db` - Database connection state
+///
+/// # Performance
+/// O(log n) with date index, max 12 months per year
+#[tauri::command]
+#[must_use]
+pub async fn search_grid_months(
+    year: String,
+    db: State<'_, PosDb>,
+) -> Result<Vec<String>, String> {
+    let pool = &db.0;
+    resolver::search_grid_months(pool, &year)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Searches grid dates in a specific month (e.g., '2026-03' → ['2026-03-07', '2026-03-27']).
+/// Returns all dates with activities for the given year-month.
+///
+/// # Arguments
+/// * `year_month` - Year-month in YYYY-MM format (7 chars)
+/// * `db` - Database connection state
+///
+/// # Performance
+/// O(log n) with date index, max 31 dates per month
+#[tauri::command]
+#[must_use]
+pub async fn search_grid_dates_in_month(
+    year_month: String,
+    db: State<'_, PosDb>,
+) -> Result<Vec<String>, String> {
+    let pool = &db.0;
+    resolver::search_grid_dates_in_month(pool, &year_month)
+        .await
+        .map_err(|e| e.to_string())
 }

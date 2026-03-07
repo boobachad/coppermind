@@ -110,15 +110,97 @@ export function useEntityLinking(
       const textBeforeCursor = value.slice(0, cursorPos);
       const textAfterCursor = value.slice(cursorPos);
 
-      // Find partial reference pattern before cursor
-      const match = textBeforeCursor.match(/(\w+):(\w*)$/);
+      // ─── Case 1: Editing existing complete grid activity reference with alias ───
+      // Pattern: [[grid:2026-03-07:activity:partial|alias]]
+      // User is editing the activity name inside an existing complete reference
+      const existingGridActivityMatch = textBeforeCursor.match(/\[\[grid:(\d{4}-\d{2}-\d{2}):activity:([^\]|]*)$/);
+      
+      if (existingGridActivityMatch) {
+        const [partialMatch, date] = existingGridActivityMatch;
+        const replaceStart = cursorPos - partialMatch.length;
+        
+        // Find the end of the existing reference (look for closing ]])
+        const afterCursorMatch = textAfterCursor.match(/^[^\]]*\|[^\]]*\]\]/);
+        const replaceEnd = afterCursorMatch 
+          ? cursorPos + afterCursorMatch[0].length 
+          : cursorPos;
+        
+        // Build new 4-part reference: [[grid:date:activity:name|alias]]
+        const newRef = `[[grid:${date}:activity:${result.entity.title}|${result.entity.title}]]`;
+        
+        const newValue = value.slice(0, replaceStart) + newRef + value.slice(replaceEnd);
+        onChange(newValue);
+        
+        setTimeout(() => {
+          const newCursorPos = replaceStart + newRef.length;
+          inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+          inputRef.current?.focus();
+        }, 0);
+        return;
+      }
+
+      // ─── Case 2: Creating new incomplete grid activity reference ───
+      // Pattern: [[grid:2026-03-07:activity:partial (no closing ]])
+      const gridActivityMatch = textBeforeCursor.match(/\[\[grid:(\d{4}-\d{2}-\d{2}):activity:([^\]:]*)$/);
+      
+      if (gridActivityMatch) {
+        const [fullMatch, date] = gridActivityMatch;
+        const replaceStart = cursorPos - fullMatch.length;
+        
+        // Build 4-part reference: [[grid:date:activity:name|alias]]
+        const newRef = `[[grid:${date}:activity:${result.entity.title}|${result.entity.title}]]`;
+        
+        const newValue = value.slice(0, replaceStart) + newRef + textAfterCursor;
+        onChange(newValue);
+        
+        setTimeout(() => {
+          const newCursorPos = replaceStart + newRef.length;
+          inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+          inputRef.current?.focus();
+        }, 0);
+        return;
+      }
+
+      // ─── Case 3: Editing existing complete standard reference with alias ───
+      // Pattern: [[type:id|alias]]
+      // User is editing inside an existing complete reference
+      // Exclude hyphens to prevent grid patterns (e.g., [[grid:2026-03) from being captured
+      const existingStandardMatch = textBeforeCursor.match(/\[\[(\w+):([^\]\|\:\-]*)$/);
+      
+      if (existingStandardMatch) {
+        const [partialMatch] = existingStandardMatch;
+        const replaceStart = cursorPos - partialMatch.length;
+        
+        // Find the end of the existing reference (look for closing ]])
+        const afterCursorMatch = textAfterCursor.match(/^[^\]]*\|[^\]]*\]\]|^[^\]]*\]\]/);
+        const replaceEnd = afterCursorMatch 
+          ? cursorPos + afterCursorMatch[0].length 
+          : cursorPos;
+        
+        // Build new complete reference with alias
+        const newRef = `[[${result.entity.type}:${result.entity.id}|${result.entity.title}]]`;
+        
+        const newValue = value.slice(0, replaceStart) + newRef + value.slice(replaceEnd);
+        onChange(newValue);
+        
+        setTimeout(() => {
+          const newCursorPos = replaceStart + newRef.length;
+          inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+          inputRef.current?.focus();
+        }, 0);
+        return;
+      }
+
+      // ─── Case 4: Creating new incomplete standard reference ───
+      // Pattern: [[type:partial (no closing ]])
+      const match = textBeforeCursor.match(/\[\[(\w+):([^\]:]*)$/);
       if (!match) return;
 
       // Calculate replacement range
       const replaceStart = cursorPos - match[0].length;
 
-      // Build complete reference with alias
-      const newRef = `${result.entity.type}:${result.entity.id}|${result.entity.title}`;
+      // Build complete reference with alias and closing brackets
+      const newRef = `[[${result.entity.type}:${result.entity.id}|${result.entity.title}]]`;
 
       // Insert complete reference
       const newValue = value.slice(0, replaceStart) + newRef + textAfterCursor;

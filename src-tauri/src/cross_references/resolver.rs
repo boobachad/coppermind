@@ -201,37 +201,186 @@ pub async fn resolve_activity(
     }
 }
 
-/// Resolves a grid page or specific slot by date.
+/// Resolves a grid page or specific slot/activity by date.
 #[must_use]
 pub async fn resolve_grid(
     pool: &PgPool,
     date: &str,
-    slot: Option<&str>,
+    sub_identifier: Option<&str>,
+    sub_sub_identifier: Option<&str>,
 ) -> Result<EntityReference, CrossReferenceError> {
     if !is_valid_date(date) {
         return Err(CrossReferenceError::InvalidDateFormat(date.to_string()));
     }
     
-    let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM pos_activities WHERE date = $1"
+    match sub_identifier {
+        Some("slot") => {
+            // Slot reference: grid:date:slot:N
+            let slot_num = sub_sub_identifier.unwrap_or("0");
+            Ok(EntityReference {
+                entity_type: "grid".to_string(),
+                entity_id: date.to_string(),
+                title: format!("Grid: {} (Slot {})", date, slot_num),
+                preview: None,
+                exists: true,
+            })
+        },
+        Some("activity") => {
+            // Activity name reference: grid:date:activity:name
+            let activity_name = sub_sub_identifier.ok_or_else(|| 
+                CrossReferenceError::InvalidInput("Activity name required".to_string())
+            )?;
+            
+            let result = sqlx::query_as::<_, (String, String)>(
+                "SELECT id, title FROM pos_activities 
+                 WHERE date = $1 AND title ILIKE $2 
+                 LIMIT 1"
+            )
+            .bind(date)
+            .bind(format!("%{}%", activity_name))
+            .fetch_optional(pool)
+            .await?;
+            
+            match result {
+                Some((id, title)) => Ok(EntityReference {
+                    entity_type: "grid".to_string(),
+                    entity_id: date.to_string(),
+                    title: format!("Grid: {} - {}", date, title),
+                    preview: Some(format!("Activity: {}", title)),
+                    exists: true,
+                }),
+                None => Ok(EntityReference {
+                    entity_type: "grid".to_string(),
+                    entity_id: date.to_string(),
+                    title: format!("Grid: {} - {} (not found)", date, activity_name),
+                    preview: None,
+                    exists: false,
+                }),
+            }
+        },
+        None => {
+            // Grid page reference: grid:date
+            let count = sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM pos_activities WHERE date = $1"
+            )
+            .bind(date)
+            .fetch_one(pool)
+            .await?;
+            
+            Ok(EntityReference {
+                entity_type: "grid".to_string(),
+                entity_id: date.to_string(),
+                title: format!("Grid: {}", date),
+                preview: Some(format!("{} activities", count)),
+                exists: count > 0,
+            })
+        },
+        _ => Err(CrossReferenceError::InvalidInput(
+            format!("Unknown grid sub-type: {:?}", sub_identifier)
+        )),
+    }
+}
+
+/// Fetch activities for a specific date (for autocomplete).
+pub async fn fetch_activities_for_date(
+    pool: &PgPool,
+    date: &str,
+) -> Result<Vec<CachedEntity>, CrossReferenceError> {
+    if !is_valid_date(date) {
+        return Err(CrossReferenceError::InvalidDateFormat(date.to_string()));
+    }
+    
+    let activities = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, title FROM pos_activities 
+         WHERE date = $1 
+         ORDER BY start_time ASC"
     )
     .bind(date)
-    .fetch_one(pool)
+    .fetch_all(pool)
     .await?;
     
-    let title = if let Some(slot_id) = slot {
-        format!("Grid: {} ({})", date, slot_id)
-    } else {
-        format!("Grid: {}", date)
-    };
+    Ok(activities.into_iter().map(|(id, title)| CachedEntity {
+        entity_type: "activity".to_string(),
+        entity_id: id.clone(),
+        title: title.clone(),
+        searchable_text: title,
+        metadata: Some(date.to_string()),
+    }).collect())
+}
+
+/// Fetch recent grid dates (last 30 days with activities).
+/// Used for instant autocomplete on [[grid: trigger.
+/// 
+/// # Performance
+/// O(log n) with date index, returns ~30 dates
+pub async fn fetch_recent_grid_dates(pool: &PgPool) -> Result<Vec<String>, CrossReferenceError> {
+    let dates = sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT TO_CHAR(date, 'YYYY-MM-DD') as date_str
+         FROM pos_activities 
+         WHERE date >= CURRENT_DATE - INTERVAL '30 days'
+         ORDER BY date DESC"
+    )
+    .fetch_all(pool)
+    .await?;
     
-    Ok(EntityReference {
-        entity_type: "grid".to_string(),
-        entity_id: date.to_string(),
-        title,
-        preview: Some(format!("{} activities", count)),
-        exists: count > 0,
-    })
+    Ok(dates)
+}
+
+/// Search grid months by year (e.g., '2026' → ['2026-03', '2026-04']).
+/// Returns all months with activities for the given year.
+/// 
+/// # Performance
+/// O(log n) with date index, max 12 months per year
+pub async fn search_grid_months(
+    pool: &PgPool,
+    year: &str,
+) -> Result<Vec<String>, CrossReferenceError> {
+    // Validate year is 4 digits
+    if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+        return Err(CrossReferenceError::InvalidInput(
+            "Year must be 4 digits".to_string()
+        ));
+    }
+    
+    let months = sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT SUBSTRING(date FROM 1 FOR 7) as month
+         FROM pos_activities
+         WHERE date LIKE $1 || '%'
+         ORDER BY month DESC"
+    )
+    .bind(year)
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(months)
+}
+
+/// Search grid dates in a specific month (e.g., '2026-03' → ['2026-03-07', '2026-03-27']).
+/// Returns all dates with activities for the given year-month.
+/// 
+/// # Performance
+/// O(log n) with date index, max 31 dates per month
+pub async fn search_grid_dates_in_month(
+    pool: &PgPool,
+    year_month: &str,
+) -> Result<Vec<String>, CrossReferenceError> {
+    // Validate year-month is 7 chars (YYYY-MM)
+    if year_month.len() != 7 || !year_month.chars().all(|c| c.is_ascii_digit() || c == '-') {
+        return Err(CrossReferenceError::InvalidInput(
+            "Year-month must be YYYY-MM format".to_string()
+        ));
+    }
+    
+    let dates = sqlx::query_scalar::<_, String>(
+        "SELECT DISTINCT date FROM pos_activities
+         WHERE date LIKE $1 || '%'
+         ORDER BY date DESC"
+    )
+    .bind(year_month)
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(dates)
 }
 
 /// Resolves a ladder or specific problem.
@@ -507,6 +656,77 @@ pub async fn fetch_retrospectives_for_cache(pool: &PgPool) -> Result<Vec<CachedE
     
     Ok(retros.into_iter().map(|(id, title)| CachedEntity {
         entity_type: "retrospective".to_string(),
+        entity_id: id.clone(),
+        title: title.clone(),
+        searchable_text: title,
+        metadata: None,
+    }).collect())
+}
+
+/// Fetch all journal entries for cache.
+pub async fn fetch_journals_for_cache(pool: &PgPool) -> Result<Vec<CachedEntity>, CrossReferenceError> {
+    let journals = sqlx::query_as::<_, (String,)>(
+        "SELECT date FROM journal_entries ORDER BY date DESC"
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(journals.into_iter().map(|(date,)| {
+        let title = format!("Journal: {}", date);
+        CachedEntity {
+            entity_type: "journal".to_string(),
+            entity_id: date.clone(),
+            title: title.clone(),
+            searchable_text: title,
+            metadata: Some(date),
+        }
+    }).collect())
+}
+
+/// Fetch all ladders for cache.
+pub async fn fetch_ladders_for_cache(pool: &PgPool) -> Result<Vec<CachedEntity>, CrossReferenceError> {
+    let ladders = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, name FROM cf_ladders ORDER BY name"
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(ladders.into_iter().map(|(id, name)| CachedEntity {
+        entity_type: "ladder".to_string(),
+        entity_id: id.clone(),
+        title: name.clone(),
+        searchable_text: name,
+        metadata: None,
+    }).collect())
+}
+
+/// Fetch all categories for cache.
+pub async fn fetch_categories_for_cache(pool: &PgPool) -> Result<Vec<CachedEntity>, CrossReferenceError> {
+    let categories = sqlx::query_as::<_, (String, String)>(
+        "SELECT id, name FROM cf_categories ORDER BY name"
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(categories.into_iter().map(|(id, name)| CachedEntity {
+        entity_type: "category".to_string(),
+        entity_id: id.clone(),
+        title: name.clone(),
+        searchable_text: name,
+        metadata: None,
+    }).collect())
+}
+
+/// Fetch all sheets problems for cache.
+pub async fn fetch_sheets_for_cache(pool: &PgPool) -> Result<Vec<CachedEntity>, CrossReferenceError> {
+    let sheets = sqlx::query_as::<_, (String, String)>(
+        "SELECT DISTINCT problem_id, problem_title FROM pos_submissions ORDER BY problem_title"
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(sheets.into_iter().map(|(id, title)| CachedEntity {
+        entity_type: "sheets".to_string(),
         entity_id: id.clone(),
         title: title.clone(),
         searchable_text: title,

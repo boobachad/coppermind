@@ -79,10 +79,10 @@ export function calculateScheduleStatus(
  */
 export function calculateDebt(
     current: number,
-    target: number,
+    _target: number,
     dailyAmount: number,
     periodStart: string,
-    periodEnd: string
+    _periodEnd: string
 ): number {
     const today = getLocalDateString();
     const startDate = periodStart.split('T')[0];

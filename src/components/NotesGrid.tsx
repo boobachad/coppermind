@@ -310,7 +310,8 @@ export function NotesGrid({ parentId = null, embedded = false }: { parentId?: st
             </button>
             <div className="h-px my-1" style={{ backgroundColor: 'var(--glass-border)' }} />
             <button
-              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center transition-colors"
+              className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors hover:bg-[var(--color-error-subtle)] focus:bg-[var(--color-error-subtle)] focus-visible:bg-[var(--color-error-subtle)]"
+              style={{ color: 'var(--color-error)' }}
               onClick={() => {
                 setDeleteConfirm(contextMenu.noteId);
                 setContextMenu(null);

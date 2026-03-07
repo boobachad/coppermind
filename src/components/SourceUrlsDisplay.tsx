@@ -111,7 +111,7 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                             e.stopPropagation();
                             onRemove(url);
                         }}
-                        className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5 text-[var(--text-tertiary)] hover:text-[var(--color-error)] focus-visible:text-[var(--color-error)]"
                     >
                         <X className="w-3 h-3" />
                     </button>
@@ -134,8 +134,11 @@ export function SourceUrlsDisplay({ urls, onAdd, onRemove }: SourceUrlsDisplayPr
                             "w-48 px-2.5 py-1 rounded-full text-xs",
                             "bg-(--glass-bg) text-(--text-primary)",
                             "border border-(--glass-border)",
-                            "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            "focus:outline-none focus:ring-1"
                         )}
+                        style={{
+                            outlineColor: 'var(--color-accent-primary)'
+                        }}
                         autoFocus
                     />
                 </div>

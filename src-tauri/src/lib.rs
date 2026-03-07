@@ -419,6 +419,10 @@ pub fn run() {
             cross_references::get_all_entities_for_cache,
             cross_references::get_entity_backlinks,
             cross_references::update_reference_registry,
+            cross_references::get_activities_for_date_autocomplete,
+            cross_references::get_recent_grid_dates,
+            cross_references::search_grid_months,
+            cross_references::search_grid_dates_in_month,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

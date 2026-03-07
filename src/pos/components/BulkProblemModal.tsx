@@ -153,7 +153,7 @@ export function BulkProblemModal({ isOpen, onClose, onSuccess }: BulkProblemModa
                             value={urlsText}
                             onChange={(e) => handleUrlsChange(e.target.value)}
                             placeholder="https://codeforces.com/problemset/problem/1234/A&#10;https://leetcode.com/problems/two-sum/&#10;https://codeforces.com/contest/1234/problem/B"
-                            className="w-full px-4 py-3 rounded-xl h-48 resize-none focus:ring-2 focus:ring-blue-500/50 bg-secondary border font-mono text-sm"
+                            className="w-full px-4 py-3 rounded-xl h-48 resize-none focus:ring-2 bg-secondary border font-mono text-sm"
                             style={{ 
                                 color: 'var(--text-primary)',
                                 borderColor: validation.invalid > 0 ? 'var(--pos-error-border)' : 'var(--border-color)'
@@ -186,10 +186,13 @@ export function BulkProblemModal({ isOpen, onClose, onSuccess }: BulkProblemModa
                                 onClick={() => setAction('saveToLadder')}
                                 className={clsx(
                                     'p-4 rounded-xl border-2 transition-all text-left',
-                                    action === 'saveToLadder'
-                                        ? 'border-blue-500 bg-blue-500/10'
-                                        : 'border-border bg-secondary hover:bg-secondary/80'
+                                    action !== 'saveToLadder' && 'border-border bg-secondary hover:bg-secondary/80'
                                 )}
+                                style={
+                                    action === 'saveToLadder'
+                                        ? { borderColor: 'var(--color-accent-primary)', backgroundColor: 'var(--color-accent-subtle)' }
+                                        : undefined
+                                }
                             >
                                 <div className="flex items-center gap-2 mb-2">
                                     <Link2 className="w-5 h-5" style={{ color: action === 'saveToLadder' ? 'var(--pos-info-text)' : 'var(--text-secondary)' }} />
@@ -206,10 +209,13 @@ export function BulkProblemModal({ isOpen, onClose, onSuccess }: BulkProblemModa
                                 onClick={() => setAction('goalForToday')}
                                 className={clsx(
                                     'p-4 rounded-xl border-2 transition-all text-left',
-                                    action === 'goalForToday'
-                                        ? 'border-green-500 bg-green-500/10'
-                                        : 'border-border bg-secondary hover:bg-secondary/80'
+                                    action !== 'goalForToday' && 'border-border bg-secondary hover:bg-secondary/80'
                                 )}
+                                style={
+                                    action === 'goalForToday'
+                                        ? { borderColor: 'var(--color-success)', backgroundColor: 'var(--color-success-subtle)' }
+                                        : undefined
+                                }
                             >
                                 <div className="flex items-center gap-2 mb-2">
                                     <CheckCircle2 className="w-5 h-5" style={{ color: action === 'goalForToday' ? 'var(--pos-success-text)' : 'var(--text-secondary)' }} />

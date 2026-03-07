@@ -5,22 +5,22 @@
 import type { ParsedReference, EntityType } from './types'
 
 // Regex pattern for cross-reference syntax
-// Pattern: entity:identifier[:sub_identifier][|alias]
-// Examples: note:my-note, grid:2024-03-06:slot-3, kb:item|Custom Title
-const CROSS_REF_REGEX = /(\w+):([^:\s|]+)(?::([^:\s|]+))?(?:\|([^|\n]+))?/g;
+// Pattern: [[entity:identifier[:sub_identifier][:sub_sub_identifier][|alias]]]
+// Examples: [[note:my-note]], [[grid:2024-03-06:slot:3]], [[grid:2024-03-06:activity:Deep Work]], [[kb:item|Custom Title]]
+const CROSS_REF_REGEX = /\[\[(\w+):([^:\s|\]]+)(?::([^:\s|\]]+))?(?::([^:\s|\]]+))?(?:\|([^|\]\n]+))?\]\]/g;
 
 /**
  * Parses cross-references from text.
  * 
  * Extracts all cross-reference patterns matching the syntax:
- * `entity:identifier[:sub_identifier][|alias]`
+ * `[[entity:identifier[:sub_identifier][|alias]]]`
  * 
  * @param text - Text content to parse
  * @returns Array of parsed references with position information
  * 
  * @example
  * ```ts
- * const refs = parseReferences('See note:my-note and grid:2024-03-06:slot-3');
+ * const refs = parseReferences('See [[note:my-note]] and [[grid:2024-03-06:slot-3]]');
  * // Returns 2 ParsedReference objects
  * ```
  * 
@@ -37,7 +37,8 @@ export function parseReferences(text: string): ParsedReference[] {
       entityType: match[1] as EntityType,
       identifier: match[2],
       subIdentifier: match[3] || undefined,
-      aliasText: match[4] || undefined,
+      subSubIdentifier: match[4] || undefined,
+      aliasText: match[5] || undefined,
       startIndex: match.index,
       endIndex: regex.lastIndex,
       rawText: match[0],

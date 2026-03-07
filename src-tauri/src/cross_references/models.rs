@@ -68,6 +68,7 @@ pub struct ParsedReference {
     pub entity_type: String,
     pub identifier: String,
     pub sub_identifier: Option<String>,
+    pub sub_sub_identifier: Option<String>,
     pub alias_text: Option<String>,
     pub start_index: usize,
     pub end_index: usize,
@@ -91,6 +92,9 @@ pub enum CrossReferenceError {
     
     #[error("Invalid URL format: {0}")]
     InvalidUrlFormat(String),
+    
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
     
     #[error("Database error: {0}")]
     DatabaseError(String),

@@ -72,17 +72,18 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
       {/* Pill #1: Note Title */}
       <div className="relative group">
-        <div className={clsx(
-          "flex items-center justify-center px-4 py-2 rounded-full transition-all duration-300",
-          // Light Mode: High contrast text, subtle white glass, distinct border
-          "bg-white/40 backdrop-blur-xl border border-gray-200/50 shadow-sm text-gray-900",
-          // Dark Mode: High contrast text, dark glass, distinct border
-          "dark:bg-black/40 dark:border-white/10 dark:text-white dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]",
-          "hover:bg-white/60 dark:hover:bg-black/60",
-          "hover:scale-[1.02] hover:shadow-md",
-          "text-sm font-semibold tracking-wide", // Increased weight for readability
-          isEditing ? "w-64" : "min-w-[120px] max-w-[200px]"
-        )}>
+        <div 
+          className={clsx(
+            "flex items-center justify-center px-4 py-2 rounded-full transition-all duration-300 backdrop-blur-xl shadow-sm border",
+            "hover:scale-[1.02] hover:shadow-md text-sm font-semibold tracking-wide",
+            isEditing ? "w-64" : "min-w-[120px] max-w-[200px]"
+          )}
+          style={{
+            backgroundColor: 'var(--glass-bg)',
+            borderColor: 'var(--glass-border)',
+            color: 'var(--text-primary)'
+          }}
+        >
           {isEditing ? (
             <input
               type="text"
@@ -92,6 +93,7 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
               autoFocus
               className="w-full bg-transparent outline-none text-center"
+              style={{ color: 'var(--text-primary)' }}
             />
           ) : (
             <span
@@ -111,33 +113,51 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
           onMouseEnter={() => setShowBreadcrumbDropdown(true)}
           onMouseLeave={() => setShowBreadcrumbDropdown(false)}
         >
-          <div className={clsx(
-            "flex items-center justify-center px-3 py-2 rounded-full backdrop-blur-xl shadow-sm border cursor-pointer transition-all duration-300",
-            // Light Mode
-            "bg-white/40 border-gray-200/50 text-gray-800 hover:bg-white/60 hover:border-gray-300",
-            // Dark Mode
-            "dark:bg-black/40 dark:border-white/10 dark:text-gray-100 dark:hover:bg-black/60",
-            "hover:shadow-md hover:scale-[1.02]",
-            "text-sm font-medium"
-          )}>
+          <div 
+            className={clsx(
+              "flex items-center justify-center px-3 py-2 rounded-full backdrop-blur-xl shadow-sm border cursor-pointer transition-all duration-300",
+              "hover:shadow-md hover:scale-[1.02] text-sm font-medium"
+            )}
+            style={{
+              backgroundColor: 'var(--glass-bg)',
+              borderColor: 'var(--glass-border)',
+              color: 'var(--text-primary)'
+            }}
+          >
             {getBreadcrumbLabel()}
             <ChevronDown className="w-3 h-3 ml-2 opacity-60" />
           </div>
 
           {showBreadcrumbDropdown && (
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white/95 dark:bg-dark-surface/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 dark:border-dark-border overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+            <div 
+              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 backdrop-blur-2xl rounded-2xl shadow-2xl border overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200"
+              style={{
+                backgroundColor: 'var(--glass-bg)',
+                borderColor: 'var(--glass-border)'
+              }}
+            >
               <div className="flex flex-col">
                 {breadcrumbs.map((crumb) => (
                   <div
                     key={crumb.id}
                     onClick={() => navigate(`/notes/${crumb.id}`)}
-                    className="px-4 py-2 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer text-xs flex items-center text-gray-700 dark:text-dark-text-primary"
+                    className="px-4 py-2 cursor-pointer text-xs flex items-center transition-colors"
+                    style={{ color: 'var(--text-primary)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <span className="truncate flex-1">{crumb.title || 'Untitled'}</span>
-                    <ChevronRight className="w-3 h-3 text-gray-400 ml-1" />
+                    <ChevronRight className="w-3 h-3 ml-1" style={{ color: 'var(--text-tertiary)' }} />
                   </div>
                 ))}
-                <div className="px-4 py-2 bg-black/5 dark:bg-white/5 text-xs font-semibold text-gray-900 dark:text-dark-text-primary truncate border-t border-gray-200 dark:border-dark-border">
+                <div 
+                  className="px-4 py-2 text-xs font-semibold truncate border-t"
+                  style={{
+                    backgroundColor: 'var(--glass-bg-subtle)',
+                    borderColor: 'var(--glass-border)',
+                    color: 'var(--text-primary)'
+                  }}
+                >
                   {title || 'Current Note'}
                 </div>
               </div>
@@ -152,28 +172,41 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
           onClick={() => setShowMenu(!showMenu)}
           className={clsx(
             "w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-xl shadow-sm border transition-all duration-300",
-            // Light Mode
-            "bg-white/40 border-gray-200/50 text-gray-800 hover:bg-white/60 hover:border-gray-300",
-            // Dark Mode
-            "dark:bg-black/40 dark:border-white/10 dark:text-gray-100 dark:hover:bg-black/60",
             "hover:shadow-md hover:scale-105"
           )}
+          style={{
+            backgroundColor: 'var(--glass-bg)',
+            borderColor: 'var(--glass-border)',
+            color: 'var(--text-primary)'
+          }}
         >
           <MoreHorizontal className="w-5 h-5" />
         </button>
 
         {showMenu && (
-          <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-dark-surface rounded-2xl shadow-xl border border-gray-200 dark:border-dark-border overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 z-50">
+          <div 
+            className="absolute top-full right-0 mt-2 w-56 rounded-2xl shadow-xl border overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200 z-50"
+            style={{
+              backgroundColor: 'var(--glass-bg)',
+              borderColor: 'var(--glass-border)'
+            }}
+          >
             {showStickerMenu ? (
               <>
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-dark-border flex items-center">
+                <div 
+                  className="px-4 py-2 border-b flex items-center"
+                  style={{ borderColor: 'var(--glass-border)' }}
+                >
                   <button
                     onClick={() => setShowStickerMenu(false)}
-                    className="mr-2 text-gray-500 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+                    className="mr-2 transition-colors"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-dark-text-primary">Stickers</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Stickers</span>
                 </div>
                 <div className="p-2 grid grid-cols-3 gap-2">
                   {STICKER_TYPES.map(type => (
@@ -184,21 +217,25 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
                         setShowMenu(false);
                         setShowStickerMenu(false);
                       }}
-                      className="flex flex-col items-center justify-center p-2 rounded hover:bg-gray-100 dark:hover:bg-dark-node-bg transition-colors"
+                      className="flex flex-col items-center justify-center p-2 rounded transition-colors"
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                       title={type.label}
                     >
                       <type.icon className="w-6 h-6 mb-1" style={{ color: type.color }} />
-                      <span className="text-[10px] text-gray-600 dark:text-dark-text-secondary">{type.label}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{type.label}</span>
                     </button>
                   ))}
                 </div>
               </>
             ) : (
               <>
-
                 <button
                   onClick={() => { onAction('new-sticky'); setShowMenu(false); }}
-                  className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <StickyNote className="w-4 h-4" />
                   <span>New Sticky Note</span>
@@ -206,7 +243,8 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
                 <button
                   disabled
-                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-400 dark:text-dark-text-muted text-left cursor-not-allowed"
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left cursor-not-allowed"
+                  style={{ color: 'var(--text-tertiary)' }}
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>Open in New Tab</span>
@@ -214,17 +252,23 @@ export function FloatingHeader({ title, onTitleChange, breadcrumbs, onAction }: 
 
                 <button
                   onClick={() => setShowStickerMenu(true)}
-                  className="w-full px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-node-bg flex items-center gap-3 text-sm text-black dark:text-dark-text-primary text-left transition-colors"
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Stickers</span>
                 </button>
 
-                <div className="h-px bg-gray-200 dark:bg-dark-border my-1 mx-2" />
+                <div className="h-px my-1 mx-2" style={{ backgroundColor: 'var(--glass-border)' }} />
 
                 <button
                   onClick={() => { onAction('delete'); setShowMenu(false); }}
-                  className="w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-sm text-red-600 dark:text-red-400 text-left transition-colors"
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-left transition-colors"
+                  style={{ color: 'var(--color-error)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-error-subtle)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Note</span>

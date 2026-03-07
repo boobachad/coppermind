@@ -13,6 +13,8 @@ import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateDDMMYYYY } from '../pos/lib/time';
 import { softDelete } from '../lib/softDelete';
+import { EntityLinkTextarea } from '../lib/entity-linking/components/EntityLinkTextarea';
+import { migrateTipTapToPlainText } from '../lib/tiptap-migration';
 
 function NoteTitleInput({ noteId, initialTitle }: { noteId: string, initialTitle: string }) {
   const [title, setTitle] = useState(initialTitle);
@@ -81,6 +83,13 @@ function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role
     setShowStickyMenu(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 pb-8 pt-12 px-4 z-40" style={{
       background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)'
@@ -126,28 +135,27 @@ function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role
         </div>
 
         <div className={clsx(
-          "material-glass-subtle rounded-2xl flex items-end p-2 transition-all ring-0 outline-none",
+          "material-glass-subtle rounded-2xl flex items-end gap-2 p-2 transition-all ring-0 outline-none",
         )}>
-          <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              // Auto-grow
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
-            className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 shadow-none ring-0 outline-none"
-            style={{ color: 'var(--text-primary)' }}
-            rows={1}
-          />
+          <div className="flex-1 min-w-0">
+            <EntityLinkTextarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(newValue) => {
+                setInputValue(newValue);
+                // Auto-grow
+                if (inputRef.current) {
+                  inputRef.current.style.height = 'auto';
+                  inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
+              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 shadow-none ring-0 outline-none"
+              style={{ color: 'var(--text-primary)' }}
+              rows={1}
+            />
+          </div>
           
           {/* Sticky Note Dropdown */}
           <div className="relative">
@@ -339,9 +347,10 @@ export function NotePage() {
           const parsed = JSON.parse(loadedNote.content);
 
           if (Array.isArray(parsed)) {
-            // Ensure robust handling of roles if data comes from external sources
+            // Migrate legacy TipTap format to plain text
             const validatedMessages = parsed.map((m: any) => ({
               ...m,
+              content: migrateTipTapToPlainText(m.content),
               // Normalize roles: 'user' -> 'question', 'assistant' -> 'answer'
               role: (m.role === 'user' || m.role === 'question') ? 'question' : 'answer'
             }));
@@ -356,7 +365,7 @@ export function NotePage() {
             const initialMsg: Message = {
               id: uuidv4(),
               role: 'answer',
-              content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: loadedNote.content }] }] }),
+              content: loadedNote.content,
               created_at: loadedNote.created_at
             };
             setMessages([initialMsg]);
@@ -439,7 +448,7 @@ export function NotePage() {
     const newUserMsg: Message = {
       id: uuidv4(),
       role: role,
-      content: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: content }] }] }),
+      content: content,
       created_at: Date.now()
     };
 

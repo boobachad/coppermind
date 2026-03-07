@@ -65,11 +65,17 @@ export function EntityLink({
    * 
    * Priority:
    * 1. Custom displayText prop
-   * 2. Alias from reference
+   * 2. Alias from reference (if provided)
    * 3. Entity title (if validated)
    * 4. Identifier fallback
+   * 
+   * Note: showRawSyntax is removed - we always show the alias/title
+   * The raw syntax is visible in the textarea underneath
    */
-  const text = displayText || reference.aliasText || entity?.title || reference.identifier;
+  const text = displayText 
+    || reference.aliasText 
+    || entity?.title 
+    || reference.identifier;
 
   /**
    * Determines if link is valid.

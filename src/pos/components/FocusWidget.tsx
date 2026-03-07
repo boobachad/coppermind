@@ -198,12 +198,26 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
 
                     <button
                         onClick={() => setDetails({ isProductive: !state.isProductive })}
-                        className={clsx(
-                            "p-1 rounded-md border transition-colors",
+                        className="p-1 rounded-md border transition-colors"
+                        style={
                             state.isProductive
-                                ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
-                                : "bg-zinc-500/10 border-zinc-500/20 text-zinc-500 hover:bg-zinc-500/20"
-                        )}
+                                ? { backgroundColor: 'var(--pos-productive-bg)', borderColor: 'var(--pos-success-border)', color: 'var(--pos-productive-text)' }
+                                : { backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)', color: 'var(--text-secondary)' }
+                        }
+                        onMouseEnter={(e) => {
+                            if (state.isProductive) {
+                                e.currentTarget.style.backgroundColor = 'var(--color-success-subtle)';
+                            } else {
+                                e.currentTarget.style.backgroundColor = 'var(--glass-bg)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (state.isProductive) {
+                                e.currentTarget.style.backgroundColor = 'var(--pos-productive-bg)';
+                            } else {
+                                e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)';
+                            }
+                        }}
                         title={state.isProductive ? "Marked as Productive" : "Marked as Unproductive"}
                     >
                         {state.isProductive ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
@@ -320,7 +334,19 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         {state.timerType === 'pomodoro' && (
                             <button
                                 onClick={extendTime}
-                                className="flex-1 py-2 rounded-lg bg-zinc-800/50 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center justify-center gap-1 transition-colors"
+                                className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                                style={{
+                                    backgroundColor: 'var(--glass-bg-subtle)',
+                                    color: 'var(--text-secondary)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--glass-bg)';
+                                    e.currentTarget.style.color = 'var(--text-primary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)';
+                                    e.currentTarget.style.color = 'var(--text-secondary)';
+                                }}
                             >
                                 <Plus className="w-3 h-3" />
                                 10m

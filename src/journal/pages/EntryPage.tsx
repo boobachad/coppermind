@@ -14,6 +14,8 @@ import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { getDb } from '../../lib/db';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { softDelete } from '@/lib/softDelete';
+import { parseReferences } from '@/lib/entity-linking/core/parser';
+import { invoke } from '@tauri-apps/api/core';
 
 export default function EntryPage() {
   const { date } = useParams<{ date: string }>();
@@ -93,6 +95,24 @@ export default function EntryPage() {
         'UPDATE journal_entries SET expected_schedule_image = $1, actual_schedule_image = $2, reflection_text = $3, expected_schedule_data = $4, actual_schedule_data = $5, updated_at = $6 WHERE date = $7',
         [expectedImage, actualImage, reflectionText, expectedScheduleDataJson, actualScheduleDataJson, now, date]
       );
+      
+      // Parse cross-references from reflection text and update registry
+      if (entry?.id) {
+        const parsedRefs = parseReferences(reflectionText);
+        if (parsedRefs.length > 0) {
+          try {
+            await invoke('update_reference_registry', {
+              sourceEntityType: 'journal',
+              sourceEntityId: entry.id,
+              sourceField: 'reflection_text',
+              textContent: reflectionText.trim(),
+            });
+          } catch (err) {
+            console.error('Failed to update cross-references:', err);
+            // Non-fatal: continue even if cross-reference update fails
+          }
+        }
+      }
       
       setHasChanges(false);
       toast.success('Changes saved');

@@ -38,8 +38,11 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                         <div className="flex items-center gap-2 shrink-0">
                             {goal.verified && (
                                 <div
-                                    className="px-2 py-0.5 rounded-full flex items-center justify-center gap-1 bg-linear-to-r from-emerald-500/10 to-emerald-500/5"
-                                    style={{ border: '1px solid var(--pos-success-border)' }}
+                                    className="px-2 py-0.5 rounded-full flex items-center justify-center gap-1"
+                                    style={{ 
+                                        border: '1px solid var(--pos-success-border)',
+                                        backgroundColor: 'var(--pos-success-bg)'
+                                    }}
                                     title="Verified"
                                 >
                                     <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--pos-success-text)' }} />
@@ -48,10 +51,11 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                             )}
                             {goal.recurringPattern && (
                                 <div
-                                    className="w-7 h-7 rounded-full flex items-center justify-center bg-blue-500/10"
+                                    className="w-7 h-7 rounded-full flex items-center justify-center"
+                                    style={{ backgroundColor: 'var(--color-accent-subtle)' }}
                                     title={`Repeats: ${goal.recurringPattern}`}
                                 >
-                                    <Repeat className="w-3.5 h-3.5 text-blue-500" />
+                                    <Repeat className="w-3.5 h-3.5" style={{ color: 'var(--color-accent-primary)' }} />
                                 </div>
                             )}
                         </div>
@@ -95,7 +99,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
                     {/* Description */}
                     {goal.description && (
-                        <p className="text-sm leading-relaxed mb-4 text-muted-foreground">
+                        <p className="text-sm leading-relaxed mb-4 text-muted-foreground whitespace-pre-wrap">
                             {goal.description}
                         </p>
                     )}
@@ -113,7 +117,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
                     {/* Metrics */}
                     {goal.metrics && goal.metrics.length > 0 && (
-                        <div className="space-y-3 mb-4 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-white/10">
+                        <div className="space-y-3 mb-4 p-3 rounded-xl border" style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)' }}>
                             {goal.metrics.map((metric) => {
                                 const progress = Math.min((metric.current / metric.target) * 100, 100);
                                 return (
@@ -134,7 +138,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="h-1.5 w-full rounded-full overflow-hidden bg-black/10 dark:bg-white/10">
+                                        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                             <div
                                                 className="h-full transition-all duration-500 rounded-full"
                                                 style={{
@@ -178,10 +182,16 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                 {/* Edit button (hover only) */}
                 <button
                     onClick={() => onEdit(goal)}
-                    className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl transition-all hover:bg-blue-500/10 hover:scale-105 shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl transition-all hover:scale-105 shrink-0"
                     style={{ color: 'var(--text-tertiary)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--pos-info-text)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--pos-info-text)';
+                        e.currentTarget.style.backgroundColor = 'var(--pos-info-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--text-tertiary)';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Edit goal"
                 >
                     <Pencil className="w-4 h-4" />
@@ -190,10 +200,16 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                 {/* Delete button (hover only) */}
                 <button
                     onClick={() => onDelete(goal.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl transition-all hover:bg-red-500/10 hover:scale-105 shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl transition-all hover:scale-105 shrink-0"
                     style={{ color: 'var(--text-tertiary)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--pos-error-text)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--pos-error-text)';
+                        e.currentTarget.style.backgroundColor = 'var(--pos-error-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--text-tertiary)';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Delete goal"
                 >
                     <Trash2 className="w-4 h-4" />

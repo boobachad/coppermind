@@ -220,8 +220,7 @@ export function SheetsPage() {
                     {/* LeetCode Card */}
                     <div className="p-6 rounded-xl border relative overflow-hidden group" style={{
                         backgroundColor: 'var(--glass-bg)',
-                        borderColor: 'var(--pos-warning-border)',
-                        background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, transparent 100%)'
+                        borderColor: 'var(--pos-warning-border)'
                     }}>
                         <div className="flex justify-between items-start mb-4">
                             <div>
@@ -261,8 +260,7 @@ export function SheetsPage() {
                     {/* Codeforces Card */}
                     <div className="p-6 rounded-xl border relative overflow-hidden group" style={{
                         backgroundColor: 'var(--glass-bg)',
-                        borderColor: 'var(--pos-info-border)',
-                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%)'
+                        borderColor: 'var(--pos-info-border)'
                     }}>
                         <div className="flex justify-between items-start mb-4">
                             <div>

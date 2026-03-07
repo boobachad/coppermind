@@ -8,26 +8,29 @@ use super::models::{ParsedReference, CrossReference, CrossReferenceError};
 
 /// Parses cross-references from text using regex.
 ///
-/// Pattern: `(\w+):([^:\s|]+)(?::([^:\s|]+))?(?:\|([^|\n]+))?`
+/// Pattern: `(\w+):([^:\s|]+)(?::([^:\s|]+))?(?::([^:\s|]+))?(?:\|([^|\n]+))?`
 /// - `(\w+)` - Entity type (note, kb, goal, etc.)
 /// - `:` - Separator
 /// - `([^:\s|]+)` - Primary identifier
 /// - `(?::([^:\s|]+))?` - Optional sub-identifier
+/// - `(?::([^:\s|]+))?` - Optional sub-sub-identifier
 /// - `(?:\|([^|\n]+))?` - Optional alias text
 ///
 /// # Examples
 /// - `note:my-note` → note with ID "my-note"
-/// - `grid:2024-03-06:slot-3` → grid date with slot 3
+/// - `grid:2024-03-06:slot:3` → grid date with slot 3
+/// - `grid:2024-03-06:activity:Deep Work` → grid date with activity name
 /// - `kb:item-id|Custom Title` → KB item with alias
 pub fn parse_references(text: &str) -> Vec<ParsedReference> {
-    let re = Regex::new(r"(\w+):([^:\s|]+)(?::([^:\s|]+))?(?:\|([^|\n]+))?").unwrap();
+    let re = Regex::new(r"(\w+):([^:\s|]+)(?::([^:\s|]+))?(?::([^:\s|]+))?(?:\|([^|\n]+))?").unwrap();
     let mut references = Vec::new();
     
     for cap in re.captures_iter(text) {
         let entity_type = cap.get(1).unwrap().as_str().to_string();
         let identifier = cap.get(2).unwrap().as_str().to_string();
         let sub_identifier = cap.get(3).map(|m| m.as_str().to_string());
-        let alias_text = cap.get(4).map(|m| m.as_str().to_string());
+        let sub_sub_identifier = cap.get(4).map(|m| m.as_str().to_string());
+        let alias_text = cap.get(5).map(|m| m.as_str().to_string());
         let start_index = cap.get(0).unwrap().start();
         let end_index = cap.get(0).unwrap().end();
         let raw_text = cap.get(0).unwrap().as_str().to_string();
@@ -36,6 +39,7 @@ pub fn parse_references(text: &str) -> Vec<ParsedReference> {
             entity_type,
             identifier,
             sub_identifier,
+            sub_sub_identifier,
             alias_text,
             start_index,
             end_index,

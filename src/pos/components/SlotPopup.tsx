@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Star, BookOpen, ExternalLink, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { ACTIVITY_COLORS } from '../lib/config';
 import { formatSlotTime, activityOverlapsSlot, formatActivityTime, getSlotBoundaries } from '../lib/time';
 import type { Activity, Book, KnowledgeItem } from '../lib/types';
@@ -115,7 +116,9 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                         <div className="flex-1">
                                             <div className="font-medium text-foreground">{activity.title}</div>
                                             {activity.description && (
-                                                <div className="text-xs text-muted-foreground mt-1">{activity.description}</div>
+                                                <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+                                                    <MarkdownRenderer content={activity.description} />
+                                                </div>
                                             )}
                                             {book && (
                                                 <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -137,22 +140,38 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                                 style={{ backgroundColor: ACTIVITY_COLORS[activity.category] }}
                                             />
                                             {activity.isProductive && (
-                                                <span className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                                                <span className="text-xs px-2 py-1 rounded border" style={{
+                                                    backgroundColor: 'var(--pos-productive-bg)',
+                                                    color: 'var(--pos-productive-text)',
+                                                    borderColor: 'var(--pos-success-border)'
+                                                }}>
                                                     Productive
                                                 </span>
                                             )}
                                             {activity.isShadow && (
-                                                <span className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                <span className="text-xs px-2 py-1 rounded border" style={{
+                                                    backgroundColor: 'var(--pos-shadow-bg)',
+                                                    color: 'var(--pos-shadow-text)',
+                                                    borderColor: 'var(--pos-info-border)'
+                                                }}>
                                                     Shadow
                                                 </span>
                                             )}
                                             {activity.goalIds && activity.goalIds.length > 0 && (
-                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 border" style={{
+                                                    backgroundColor: 'var(--pos-goal-link-bg)',
+                                                    color: 'var(--pos-goal-link-text)',
+                                                    borderColor: 'var(--pos-goal-link-border)'
+                                                }}>
                                                     {activity.goalIds.length} Goal{activity.goalIds.length > 1 ? 's' : ''} <Star className="w-3 h-3" />
                                                 </span>
                                             )}
                                             {activity.milestoneId && (
-                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                                <span className="text-xs px-2 py-1 rounded flex items-center gap-1 border" style={{
+                                                    backgroundColor: 'var(--pos-info-bg)',
+                                                    color: 'var(--pos-info-text)',
+                                                    borderColor: 'var(--pos-info-border)'
+                                                }}>
                                                     Milestone <Star className="w-3 h-3" />
                                                 </span>
                                             )}
@@ -163,7 +182,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                     {kbItems.length > 0 && (
                                         <div className="mt-3 pt-3 border-t border-border/30">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <Lightbulb className="w-4 h-4 text-purple-500" />
+                                                <Lightbulb className="w-4 h-4" style={{ color: 'var(--color-accent-primary)' }} />
                                                 <span className="text-sm font-medium text-foreground">
                                                     Knowledge Items ({kbItems.length})
                                                 </span>
@@ -173,11 +192,27 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                                     <button
                                                         key={item.id}
                                                         onClick={() => handleKbItemClick(item.id)}
-                                                        className="w-full text-left p-3 rounded-lg bg-purple-500/5 border border-purple-500/20 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all cursor-pointer group"
+                                                        className="w-full text-left p-3 rounded-lg border transition-all cursor-pointer group"
+                                                        style={{
+                                                            backgroundColor: 'var(--pos-info-bg)',
+                                                            borderColor: 'var(--pos-info-border)'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'var(--color-accent-subtle)';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'var(--pos-info-bg)';
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'var(--color-accent-subtle)';
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'var(--pos-info-bg)';
+                                                        }}
                                                     >
                                                         <div className="flex items-start justify-between gap-3">
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="text-sm text-foreground line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                                                <div className="text-sm text-foreground line-clamp-2 transition-colors" style={{ color: 'var(--text-primary)' }}>
                                                                     {item.content}
                                                                 </div>
                                                                 {item.tags.length > 0 && (
@@ -185,7 +220,12 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                                                         {item.tags.slice(0, 4).map((tag) => (
                                                                             <span
                                                                                 key={tag}
-                                                                                className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                                                                                className="text-xs px-2 py-0.5 rounded-full border"
+                                                                                style={{
+                                                                                    backgroundColor: 'var(--pos-info-bg)',
+                                                                                    color: 'var(--pos-info-text)',
+                                                                                    borderColor: 'var(--pos-info-border)'
+                                                                                }}
                                                                             >
                                                                                 {tag}
                                                                             </span>
@@ -202,7 +242,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                                                 <span className="text-xs px-2 py-1 rounded bg-secondary/80 text-muted-foreground border border-border/50">
                                                                     {item.status}
                                                                 </span>
-                                                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-purple-500 transition-colors" />
+                                                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground transition-colors" style={{ color: 'var(--color-accent-primary)' }} />
                                                             </div>
                                                         </div>
                                                     </button>

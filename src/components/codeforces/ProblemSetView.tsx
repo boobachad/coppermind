@@ -245,16 +245,15 @@ export function ProblemSetView({
     return (
       <div
         onDoubleClick={() => setEditingCell({ problemId, field, value: displayValue })}
+        className="editable-cell"
         style={{
           cursor: 'pointer',
           padding: '0.25rem 0.5rem',
           borderRadius: '0.25rem',
-          transition: 'background 0.2s',
           color: field === 'problemName' ? 'var(--text-primary)' : 'var(--text-secondary)',
           fontSize: field === 'problemName' ? '1rem' : '0.875rem',
           fontWeight: field === 'problemName' ? '400' : 'normal',
         }}
-        className="hover:bg-zinc-800/30"
         title="Double-click to edit"
       >
         {displayValue || '-'}
@@ -272,26 +271,37 @@ export function ProblemSetView({
   };
 
   const getJudgeColor = (judge: string | null) => {
-    if (!judge) return 'var(--surface-secondary)';
+    if (!judge) return 'var(--glass-bg-subtle)';
     
-    // Better hash with prime multipliers for distribution
-    let hash = 0;
-    const str = judge.toLowerCase();
-    const primes = [31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
+    // Use predefined semantic colors for judge badges
+    const judgeColors: Record<string, string> = {
+      'codeforces': 'var(--pos-activity-coding-codeforces)',
+      'leetcode': 'var(--pos-activity-coding-leetcode)',
+      'atcoder': 'var(--pos-activity-cpp)',
+      'codechef': 'var(--pos-activity-learning)',
+    };
     
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash * primes[i % primes.length] + str.charCodeAt(i)) | 0;
+    const lowerJudge = judge.toLowerCase();
+    for (const [key, color] of Object.entries(judgeColors)) {
+      if (lowerJudge.includes(key)) return color;
     }
     
-    // Use golden ratio for better hue distribution
-    const goldenRatio = 0.618033988749895;
-    const hue = Math.abs((hash * goldenRatio) % 1) * 360;
+    // Fallback to activity category colors based on hash
+    const categoryColors = [
+      'var(--pos-activity-learning)',
+      'var(--pos-activity-coding-leetcode)',
+      'var(--pos-activity-coding-codeforces)',
+      'var(--pos-activity-cpp)',
+      'var(--pos-activity-real-projects)',
+    ];
     
-    // Vary saturation and lightness based on different hash bits
-    const saturation = 60 + (Math.abs(hash >> 8) % 30); // 60-90%
-    const lightness = 40 + (Math.abs(hash >> 16) % 20); // 40-60%
+    let hash = 0;
+    for (let i = 0; i < judge.length; i++) {
+      hash = ((hash << 5) - hash) + judge.charCodeAt(i);
+      hash = hash & hash;
+    }
     
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    return categoryColors[Math.abs(hash) % categoryColors.length];
   };
 
   const getProgressColor = (percent: number) => {

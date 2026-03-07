@@ -99,11 +99,11 @@ export function ConfirmDialogProvider({ children }: ConfirmDialogProviderProps) 
                         )}
                         <AlertDialogAction
                             onClick={handleConfirm}
-                            className={
+                            className={`border-none hover:opacity-90 ${
                                 options?.variant === 'destructive'
-                                    ? 'bg-red-500 hover:bg-red-600 text-white border-none'
-                                    : 'bg-(--text-primary) text-(--bg-base) hover:opacity-90 border-none'
-                            }
+                                    ? 'bg-[var(--color-error)] text-[var(--text-primary)]'
+                                    : 'bg-[var(--text-primary)] text-[var(--bg-base)]'
+                            }`}
                         >
                             {options?.confirmText || 'Confirm'}
                         </AlertDialogAction>

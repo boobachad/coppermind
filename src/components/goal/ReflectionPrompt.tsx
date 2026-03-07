@@ -5,6 +5,7 @@ import { X, CheckCircle, Sparkles, Book, Trash2, Plus, Pencil } from 'lucide-rea
 import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { useConfirmDialog } from '../ConfirmDialog';
 import { toast } from 'sonner';
+import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
 
 interface ReflectionPromptProps {
     entityType: 'goal' | 'milestone';
@@ -94,9 +95,9 @@ export function ReflectionPrompt({ entityType, entityId, entityText, onClose, on
                     <label className="block mb-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                         Your Learning
                     </label>
-                    <textarea
+                    <EntityLinkTextarea
                         value={learningText}
-                        onChange={(e) => setLearningText(e.target.value)}
+                        onChange={setLearningText}
                         placeholder="What insights did you gain? What would you do differently next time?"
                         rows={6}
                         className="w-full rounded-lg px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
@@ -204,7 +205,7 @@ export function ReflectionList({ entityType, entityId }: ReflectionListProps) {
 
         try {
             await invoke('delete_reflection', { reflectionId });
-            setReflections(reflections.filter(r => r.id !== reflectionId));
+            setReflections(prev => prev.filter(r => r.id !== reflectionId));
             toast.success('Reflection deleted');
         } catch (err) {
             console.error('Failed to delete reflection:', err);
@@ -212,7 +213,7 @@ export function ReflectionList({ entityType, entityId }: ReflectionListProps) {
         }
     };
 
-    const handleSaveReflection = async (learningText: string, createKbItem: boolean, reflectionId?: string) => {
+    const handleSaveReflection = async (learningText: string, _createKbItem: boolean, reflectionId?: string) => {
         try {
             if (reflectionId) {
                 // Update existing - not implemented yet, would need update_reflection command
@@ -385,9 +386,9 @@ function ReflectionForm({ initialText = '', onSave, onCancel }: ReflectionFormPr
                 border: '1px solid var(--border-primary)',
             }}
         >
-            <textarea
+            <EntityLinkTextarea
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={setText}
                 placeholder="What did you learn from this goal?"
                 rows={4}
                 className="w-full rounded-lg px-3 py-2 text-sm mb-3 transition-all focus:outline-none focus:ring-2"

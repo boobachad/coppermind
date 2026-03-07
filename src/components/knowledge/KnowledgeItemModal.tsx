@@ -5,12 +5,12 @@ import { toast } from 'sonner';
 import type { KnowledgeItem, DuplicateCheckResult, KnowledgeLink } from '@/pos/lib/types';
 import { parseTemporalKeywords } from '@/lib/kb-utils';
 import { formatDateDDMMYYYY } from '@/pos/lib/time';
-import { getDb } from '@/lib/db';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
+import { parseReferences } from '@/lib/entity-linking/core/parser';
 
 interface KnowledgeItemModalProps {
     isOpen: boolean;
@@ -24,58 +24,20 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
     const [source, setSource] = useState<string>('Manual');
     const [content, setContent] = useState('');
     const [status, setStatus] = useState<string>('Inbox');
-    const [linkedNoteId, setLinkedNoteId] = useState<string>('');
-    const [linkedJournalDate, setLinkedJournalDate] = useState<string>('');
     const [linkedKbItemIds, setLinkedKbItemIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResult | null>(null);
-    const [notes, setNotes] = useState<{ id: string; title: string }[]>([]);
-    const [journalDates, setJournalDates] = useState<string[]>([]);
     const [kbItems, setKbItems] = useState<KnowledgeItem[]>([]);
-    const [loadingNotes, setLoadingNotes] = useState(false);
-    const [loadingJournals, setLoadingJournals] = useState(false);
     const [loadingKbItems, setLoadingKbItems] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            loadNotes();
-            loadJournalDates();
             loadKbItems();
             if (editingItem) {
                 loadExistingLinks(editingItem.id);
             }
         }
     }, [isOpen, editingItem]);
-
-    const loadNotes = async () => {
-        setLoadingNotes(true);
-        try {
-            const db = await getDb();
-            const result = await db.select<{ id: string; title: string }[]>(
-                'SELECT id, title FROM notes WHERE parent_id IS NULL ORDER BY updated_at DESC'
-            );
-            setNotes(result);
-        } catch (err) {
-            console.error('Failed to load notes:', err);
-        } finally {
-            setLoadingNotes(false);
-        }
-    };
-
-    const loadJournalDates = async () => {
-        setLoadingJournals(true);
-        try {
-            const db = await getDb();
-            const result = await db.select<{ date: string }[]>(
-                'SELECT date FROM journal_entries ORDER BY date DESC'
-            );
-            setJournalDates(result.map(r => r.date));
-        } catch (err) {
-            console.error('Failed to load journal dates:', err);
-        } finally {
-            setLoadingJournals(false);
-        }
-    };
 
     const loadKbItems = async () => {
         setLoadingKbItems(true);
@@ -113,8 +75,6 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
             setSource(editingItem.source);
             setContent(editingItem.content);
             setStatus(editingItem.status);
-            setLinkedNoteId(editingItem.linkedNoteId || '');
-            setLinkedJournalDate(editingItem.linkedJournalDate || '');
         } else {
             resetForm();
         }
@@ -130,8 +90,6 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
         setSource('Manual');
         setContent('');
         setStatus('Inbox');
-        setLinkedNoteId('');
-        setLinkedJournalDate('');
         setLinkedKbItemIds([]);
         setDuplicateCheck(null);
     };
@@ -194,8 +152,6 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                         tags: tagsArray,
                         content: content.trim(),
                         status,
-                        linkedNoteId: linkedNoteId.trim() || null,
-                        linkedJournalDate: linkedJournalDate.trim() || null,
                     }
                 });
                 itemId = editingItem.id;
@@ -210,8 +166,6 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                         status,
                         metadata: null,
                         nextReviewDate: null,
-                        linkedNoteId: linkedNoteId.trim() || null,
-                        linkedJournalDate: linkedJournalDate.trim() || null,
                     }
                 });
                 itemId = result.id;
@@ -226,7 +180,23 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                 }
             }
             
-            // Create KB item links
+            // Parse cross-references from content and update registry
+            const parsedRefs = parseReferences(content);
+            if (parsedRefs.length > 0) {
+                try {
+                    await invoke('update_reference_registry', {
+                        sourceEntityType: 'kb',
+                        sourceEntityId: itemId,
+                        sourceField: 'content',
+                        textContent: content.trim(),
+                    });
+                } catch (err) {
+                    console.error('Failed to update cross-references:', err);
+                    // Non-fatal: continue even if cross-reference update fails
+                }
+            }
+            
+            // Create KB item links (legacy support)
             for (const targetId of linkedKbItemIds) {
                 try {
                     await invoke('create_knowledge_link', {
@@ -365,17 +335,19 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                             >
                                 Content
                             </label>
-                            <Textarea
-                                placeholder="Enter content, URLs, notes, anything..."
+                            <EntityLinkTextarea
                                 value={content}
-                                onChange={(e) => handleContentChange(e.target.value)}
+                                onChange={handleContentChange}
+                                placeholder="Type [[note:my-note]] or [[journal:2024-03-06]] to create links..."
                                 rows={6}
                                 style={{
                                     background: 'var(--glass-bg-subtle)',
                                     border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
                                 }}
                             />
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                                Use [[entity:identifier]] syntax to link (e.g., [[note:my-note]], [[journal:2024-03-06]], [[goal:project-name]])
+                            </p>
                         </div>
                     )}
 
@@ -436,72 +408,6 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                             </div>
                         </div>
                     )}
-
-                    {/* Linked Note */}
-                    <div>
-                        <label
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            Linked Note (Optional)
-                        </label>
-                        <Select 
-                            value={linkedNoteId || 'none'} 
-                            onValueChange={(val) => setLinkedNoteId(val === 'none' ? '' : val)}
-                            disabled={loadingNotes}
-                        >
-                            <SelectTrigger
-                                style={{
-                                    background: 'var(--glass-bg-subtle)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
-                                }}
-                            >
-                                <SelectValue placeholder={loadingNotes ? "Loading notes..." : "Select a note"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {notes.map((note) => (
-                                    <SelectItem key={note.id} value={note.id}>
-                                        {note.title || 'Untitled'}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Linked Journal Date */}
-                    <div>
-                        <label
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            Linked Journal Entry (Optional)
-                        </label>
-                        <Select 
-                            value={linkedJournalDate || 'none'} 
-                            onValueChange={(val) => setLinkedJournalDate(val === 'none' ? '' : val)}
-                            disabled={loadingJournals}
-                        >
-                            <SelectTrigger
-                                style={{
-                                    background: 'var(--glass-bg-subtle)',
-                                    border: '1px solid var(--glass-border)',
-                                    color: 'var(--text-primary)',
-                                }}
-                            >
-                                <SelectValue placeholder={loadingJournals ? "Loading journal entries..." : "Select a journal entry"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {journalDates.map((date) => (
-                                    <SelectItem key={date} value={date}>
-                                        {formatDateDDMMYYYY(new Date(date + 'T00:00:00'))}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
 
                     {/* Linked KB Items */}
                     <div>

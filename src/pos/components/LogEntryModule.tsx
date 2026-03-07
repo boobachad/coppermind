@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TimePickerInput } from '@/components/ui/time-picker-input';
@@ -13,6 +12,8 @@ import { extractUrls, detectUrlType } from '@/lib/kb-utils';
 import { toast } from 'sonner';
 import { BookSelector } from './BookSelector';
 import { ReflectionPrompt } from '@/components/goal/ReflectionPrompt';
+import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
+import { parseReferences } from '@/lib/entity-linking/core/parser';
 
 interface LogEntryModuleProps {
     date: string;
@@ -27,8 +28,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         if (editingActivity) {
             return new Date(editingActivity.startTime);
         }
-        const [year, month, day] = date.split('-').map(Number);
-        return new Date(year, month - 1, day, 9, 0);
+        // Will be set by useEffect after fetching last activity
+        return undefined;
     });
     const [endDate, setEndDate] = useState<Date | undefined>(() => {
         if (editingActivity) {
@@ -62,6 +63,41 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [reflectionEntityId, setReflectionEntityId] = useState<string>('');
     const [reflectionEntityText, setReflectionEntityText] = useState<string>('');
 
+    // Fetch last activity's end time to set as default start time
+    useEffect(() => {
+        const fetchLastActivityEndTime = async () => {
+            if (editingActivity) return; // Don't fetch if editing
+            
+            try {
+                const response = await invoke<{ activities: Activity[] }>('get_activities', { date });
+                const activities = response.activities;
+                
+                if (activities.length > 0) {
+                    // Sort by end time descending to get the last activity
+                    const sortedActivities = [...activities].sort((a, b) =>
+                        new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+                    );
+                    const lastActivity = sortedActivities[0];
+                    const lastEndTime = new Date(lastActivity.endTime);
+                    
+                    // Set start time to last activity's end time
+                    setStartDate(lastEndTime);
+                } else {
+                    // No activities logged yet, default to 09:00
+                    const [year, month, day] = date.split('-').map(Number);
+                    setStartDate(new Date(year, month - 1, day, 9, 0));
+                }
+            } catch (error) {
+                console.error('Failed to fetch last activity:', error);
+                // Fallback to 09:00 on error
+                const [year, month, day] = date.split('-').map(Number);
+                setStartDate(new Date(year, month - 1, day, 9, 0));
+            }
+        };
+        
+        fetchLastActivityEndTime();
+    }, [date, editingActivity]);
+
     // Existing useEffect hooks (PRESERVED)
     useEffect(() => {
         if (editingActivity) {
@@ -78,9 +114,9 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setShowBookSelector(editingActivity.category === 'book');
         } else {
             // Reset to defaults when editingActivity is null
-            const [year, month, day] = date.split('-').map(Number);
-            setStartDate(new Date(year, month - 1, day, 9, 0));
+            // Start time will be set by fetchLastActivityEndTime useEffect
             const now = new Date();
+            const [year, month, day] = date.split('-').map(Number);
             setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
             setCategory(ACTIVITY_CATEGORIES.REAL_PROJECTS);
             setTitle('');
@@ -377,9 +413,10 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 }
 
                 // Reset form after create (but keep reflection state)
-                const [year, month, day] = date.split('-').map(Number);
-                setStartDate(new Date(year, month - 1, day, 9, 0));
+                // Set start time to the end time of the activity we just created
+                setStartDate(endDate);
                 const now = new Date();
+                const [year, month, day] = date.split('-').map(Number);
                 setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
                 setTitle('');
                 setDescription('');
@@ -416,6 +453,22 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 } catch (err) {
                     console.error('Failed to capture URLs to KB:', err);
                     // Non-blocking - activity still succeeds
+                }
+            }
+
+            // Parse cross-references from description and update registry
+            const parsedRefs = parseReferences(description);
+            if (parsedRefs.length > 0) {
+                try {
+                    await invoke('update_reference_registry', {
+                        sourceEntityType: 'activity',
+                        sourceEntityId: activityId,
+                        sourceField: 'description',
+                        textContent: description.trim(),
+                    });
+                } catch (err) {
+                    console.error('Failed to update cross-references:', err);
+                    // Non-fatal: continue even if cross-reference update fails
                 }
             }
         } catch (error) {
@@ -531,8 +584,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                                                         </span>
                                                     )}
                                                     <span className="truncate">{goal.text}</span>
-                                                    {goal.urgent && <Flame className="w-3 h-3 text-orange-500 shrink-0" />}
-                                                    {goal.isDebt && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" />}
+                                                    {goal.urgent && <Flame className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
+                                                    {goal.isDebt && <AlertCircle className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
                                                 </span>
                                             </div>
                                         );
@@ -603,12 +656,20 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             {/* Row 3: Description */}
             <div>
                 <label className="block text-sm font-medium mb-2">Description (Optional)</label>
-                <Textarea
+                <EntityLinkTextarea
                     value={description}
-                    onChange={(e) => handleDescriptionChange(e.target.value)}
-                    placeholder="Additional details about this activity..."
+                    onChange={handleDescriptionChange}
+                    placeholder="Additional details about this activity... Type [[note:my-note]] to link"
                     rows={3}
+                    className="w-full px-4 py-3 rounded-xl resize-none focus:ring-2 bg-secondary border placeholder:text-muted-foreground"
+                    style={{ 
+                        color: 'var(--text-primary)',
+                        borderColor: 'var(--border-primary)'
+                    }}
                 />
+                <p className="text-xs italic text-muted-foreground mt-1">
+                    Use [[entity:identifier]] syntax to link (e.g., [[note:my-note]], [[kb:item-id]], [[goal:name]])
+                </p>
             </div>
 
             {/* Row 4: Productive Checkbox */}
