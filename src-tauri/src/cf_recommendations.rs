@@ -108,55 +108,86 @@ pub async fn get_daily_recommendations(
                     .map(|r| r as i32)
             });
 
-            // Map rating to A2OJ difficulty range
-            let (min_diff, max_diff) = if let Some(rating) = user_rating {
+            // Map rating to A2OJ difficulty level (1-10 scale)
+            let base_level: i32 = if let Some(rating) = user_rating {
                 match rating {
-                    0..=1199 => (1, 2),
-                    1200..=1499 => (2, 3),
-                    1500..=1799 => (3, 4),
-                    1800..=2099 => (4, 5),
-                    2100..=2399 => (5, 6),
-                    2400..=2699 => (6, 7),
-                    2700..=2999 => (7, 8),
-                    3000..=3299 => (8, 9),
-                    _ => (9, 10),
+                    0..=1199 => 1,
+                    1200..=1499 => 2,
+                    1500..=1799 => 3,
+                    1800..=2099 => 4,
+                    2100..=2399 => 5,
+                    2400..=2699 => 6,
+                    2700..=2999 => 7,
+                    3000..=3299 => 8,
+                    _ => 9,
                 }
             } else {
-                (3, 4)  // Default to intermediate if no rating
+                3 // Default to intermediate if no rating
             };
-            
-            // Branch based on whether category_id is provided
+
+            // Query problems with graceful degradation: try exact level, then expand outward
+            // Returns (problems, actual_level_used)
+            async fn fetch_with_fallback(
+                pool: &sqlx::PgPool,
+                cat_id: Option<&str>,
+                base: i32,
+                n: i32,
+            ) -> Result<(Vec<(String, String, String, String, Option<i32>)>, i32), sqlx::Error> {
+                // Try base level, then base+1, base-1, base+2, base-2, ...
+                let offsets: Vec<i32> = (0..=9).flat_map(|d| {
+                    if d == 0 { vec![0] } else { vec![d, -d] }
+                }).collect();
+
+                for offset in offsets {
+                    let level = base + offset;
+                    if level < 1 || level > 10 { continue; }
+
+                    let rows = if let Some(cid) = cat_id {
+                        sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+                            r#"SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                               FROM cf_category_problems p
+                               WHERE p.category_id = $1 AND p.difficulty = $2
+                               AND NOT EXISTS (
+                                   SELECT 1 FROM pos_submissions s
+                                   WHERE s.problem_id = ('cf-' || p.problem_id)
+                                   AND s.platform = 'codeforces' AND s.verdict = 'OK'
+                               )
+                               ORDER BY p.position LIMIT $3"#
+                        )
+                        .bind(cid)
+                        .bind(level)
+                        .bind(n)
+                        .fetch_all(pool)
+                        .await?
+                    } else {
+                        sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+                            r#"SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                               FROM cf_category_problems p
+                               WHERE p.difficulty = $1
+                               AND NOT EXISTS (
+                                   SELECT 1 FROM pos_submissions s
+                                   WHERE s.problem_id = ('cf-' || p.problem_id)
+                                   AND s.platform = 'codeforces' AND s.verdict = 'OK'
+                               )
+                               GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
+                               ORDER BY RANDOM() LIMIT $2"#
+                        )
+                        .bind(level)
+                        .bind(n)
+                        .fetch_all(pool)
+                        .await?
+                    };
+
+                    if !rows.is_empty() {
+                        return Ok((rows, level));
+                    }
+                }
+                Ok((vec![], base))
+            }
+
             if let Some(cat_id) = category_id {
-                // SPECIFIC TOPIC: Get problems from selected category
-                log::info!("[CF RECOMMENDATIONS] Category strategy (specific): category_id={}, difficulty {}-{}", 
-                    cat_id, min_diff, max_diff);
-                
-                let category_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
-                    r#"
-                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                    FROM cf_category_problems p
-                    WHERE p.category_id = $1
-                    AND p.difficulty >= $2 
-                    AND p.difficulty <= $3
-                    AND NOT EXISTS (
-                        SELECT 1 FROM pos_submissions s 
-                        WHERE s.problem_id = ('cf-' || p.problem_id) 
-                        AND s.platform = 'codeforces'
-                        AND s.verdict = 'OK'
-                    )
-                    ORDER BY p.difficulty, p.position
-                    LIMIT $4
-                    "#
-                )
-                .bind(&cat_id)
-                .bind(min_diff)
-                .bind(max_diff)
-                .bind(n)
-                .fetch_all(&db.0)
-                .await
-                .map_err(|e| db_context("get category recommendations", e))?;
-                
-                // Get category name for better reason text
+                log::info!("[CF RECOMMENDATIONS] Category strategy (specific): category_id={}, base_level={}", cat_id, base_level);
+
                 let category_name: String = sqlx::query_scalar(
                     "SELECT name FROM cf_categories WHERE id = $1"
                 )
@@ -164,59 +195,54 @@ pub async fn get_daily_recommendations(
                 .fetch_one(&db.0)
                 .await
                 .unwrap_or_else(|_| "Unknown".to_string());
-                
-                for (problem_id, problem_name, problem_url, online_judge, difficulty) in category_problems {
+
+                let (problems, actual_level) = fetch_with_fallback(&db.0, Some(&cat_id), base_level, n)
+                    .await
+                    .map_err(|e| db_context("get category recommendations with fallback", e))?;
+
+                let level_note = if actual_level != base_level {
+                    format!(" (nearest available: level {})", actual_level)
+                } else {
+                    String::new()
+                };
+
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in problems {
                     recs.push(DailyRecommendation {
                         problem_id,
                         problem_name,
                         problem_url,
                         online_judge,
                         difficulty,
-                        reason: format!("{} (difficulty {})", category_name, difficulty.unwrap_or(0)),
+                        reason: format!("{} (level {}{})", category_name, actual_level, level_note),
                         strategy: "category".to_string(),
                     });
                 }
             } else {
-                // RANDOM TOPICS: Get problems from all categories
-                log::info!("[CF RECOMMENDATIONS] Category strategy (random): difficulty {}-{}", min_diff, max_diff);
-                
-                let category_problems = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
-                    r#"
-                    SELECT p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                    FROM cf_category_problems p
-                    WHERE p.difficulty >= $1 
-                    AND p.difficulty <= $2
-                    AND NOT EXISTS (
-                        SELECT 1 FROM pos_submissions s 
-                        WHERE s.problem_id = ('cf-' || p.problem_id) 
-                        AND s.platform = 'codeforces'
-                        AND s.verdict = 'OK'
-                    )
-                    GROUP BY p.problem_id, p.problem_name, p.problem_url, p.online_judge, p.difficulty
-                    ORDER BY p.difficulty, RANDOM()
-                    LIMIT $3
-                    "#
-                )
-                .bind(min_diff)
-                .bind(max_diff)
-                .bind(n)
-                .fetch_all(&db.0)
-                .await
-                .map_err(|e| db_context("get category recommendations", e))?;
-                
-                for (problem_id, problem_name, problem_url, online_judge, difficulty) in category_problems {
+                log::info!("[CF RECOMMENDATIONS] Category strategy (random): base_level={}", base_level);
+
+                let (problems, actual_level) = fetch_with_fallback(&db.0, None, base_level, n)
+                    .await
+                    .map_err(|e| db_context("get category recommendations with fallback", e))?;
+
+                let level_note = if actual_level != base_level {
+                    format!(" (nearest available: level {})", actual_level)
+                } else {
+                    String::new()
+                };
+
+                for (problem_id, problem_name, problem_url, online_judge, difficulty) in problems {
                     recs.push(DailyRecommendation {
                         problem_id,
                         problem_name,
                         problem_url,
                         online_judge,
                         difficulty,
-                        reason: format!("Topic-based problem (difficulty {})", difficulty.unwrap_or(0)),
+                        reason: format!("Topic-based problem (level {}{})", actual_level, level_note),
                         strategy: "category".to_string(),
                     });
                 }
             }
-            
+
             log::info!("[CF RECOMMENDATIONS] Generated {} recommendations using category strategy", recs.len());
         }
 

@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import clsx from 'clsx';
 import { useParams } from 'react-router-dom';
 import { MessageBubble } from '../components/MessageBubble';
 import { StickyNote } from '../components/StickyNote';
@@ -13,253 +12,17 @@ import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateDDMMYYYY } from '../pos/lib/time';
 import { softDelete } from '../lib/softDelete';
-import { EntityLinkTextarea } from '../lib/entity-linking/components/EntityLinkTextarea';
 import { migrateTipTapToPlainText } from '../lib/tiptap-migration';
-
-function NoteTitleInput({ noteId, initialTitle }: { noteId: string, initialTitle: string }) {
-  const [title, setTitle] = useState(initialTitle);
-  const saveTimeoutRef = useRef<any>(null);
-  const isTypingRef = useRef(false);
-
-  useEffect(() => {
-    if (!isTypingRef.current) {
-      setTitle(initialTitle);
-    }
-  }, [initialTitle]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    isTypingRef.current = true;
-    const val = e.target.value;
-    setTitle(val);
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const db = await getDb();
-        await db.execute('UPDATE notes SET title = $1, updated_at = $2 WHERE id = $3', [
-          val,
-          Date.now(),
-          noteId
-        ]);
-        window.dispatchEvent(new Event('notes-updated'));
-        isTypingRef.current = false;
-      } catch (err) {
-        console.error("Error updating title:", err);
-        isTypingRef.current = false;
-      }
-    }, 1000);
-  };
-
-  return (
-    <input
-      type="text"
-      value={title}
-      onChange={handleChange}
-      placeholder="Untitled"
-      className="w-full text-4xl font-bold bg-transparent border-none outline-none mb-4 px-4"
-      style={{ color: 'var(--text-primary)' }}
-    />
-  );
-}
-
-function MessageInputArea({ onSendMessage, onAddSticky }: { onSendMessage: (role: 'question' | 'answer', content: string) => void, onAddSticky: (type: 'note' | 'postal' | 'check' | 'smile') => void }) {
-  const [inputValue, setInputValue] = useState('');
-  const [inputRole, setInputRole] = useState<'question' | 'answer'>('question');
-  const [showStickyMenu, setShowStickyMenu] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleSend = () => {
-    if (inputValue.trim()) {
-      onSendMessage(inputRole, inputValue);
-      setInputValue('');
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto';
-      }
-    }
-  };
-
-  const handleStickySelect = (type: 'note' | 'postal' | 'check' | 'smile') => {
-    onAddSticky(type);
-    setShowStickyMenu(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  return (
-    <div className="absolute bottom-0 left-0 right-0 pb-8 pt-12 px-4 z-40" style={{
-      background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)'
-    }}>
-      <div className="max-w-6xl mx-auto relative cursor-text" onClick={() => inputRef.current?.focus()}>
-
-        {/* Role Selection Tabs - Floating above input */}
-        <div className="absolute -top-10 left-0 flex space-x-2">
-          <button
-            onClick={() => setInputRole('question')}
-            className={clsx(
-              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
-              inputRole === 'question'
-                ? "shadow-lg"
-                : "material-glass-subtle"
-            )}
-            style={inputRole === 'question' ? {
-              backgroundColor: 'var(--text-primary)',
-              color: 'var(--bg-base)'
-            } : {
-              color: 'var(--text-secondary)'
-            }}
-          >
-            Question
-          </button>
-          <button
-            onClick={() => setInputRole('answer')}
-            className={clsx(
-              "px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
-              inputRole === 'answer'
-                ? "shadow-lg"
-                : "material-glass-subtle"
-            )}
-            style={inputRole === 'answer' ? {
-              backgroundColor: 'var(--text-primary)',
-              color: 'var(--bg-base)'
-            } : {
-              color: 'var(--text-secondary)'
-            }}
-          >
-            Answer
-          </button>
-        </div>
-
-        <div className={clsx(
-          "material-glass-subtle rounded-2xl flex items-end gap-2 p-2 transition-all ring-0 outline-none",
-        )}>
-          <div className="flex-1 min-w-0">
-            <EntityLinkTextarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(newValue) => {
-                setInputValue(newValue);
-                // Auto-grow
-                if (inputRef.current) {
-                  inputRef.current.style.height = 'auto';
-                  inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={inputRole === 'question' ? "Ask a question..." : "Write an answer..."}
-              className="w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none max-h-[200px] min-h-[44px] py-3 px-3 shadow-none ring-0 outline-none"
-              style={{ color: 'var(--text-primary)' }}
-              rows={1}
-            />
-          </div>
-          
-          {/* Sticky Note Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowStickyMenu(!showStickyMenu)}
-              className="mb-1 p-2 rounded-xl transition-all shrink-0"
-              style={{
-                backgroundColor: 'var(--color-accent-primary)',
-                color: 'var(--bg-primary)',
-              }}
-              title="Add Sticky Note or Stamp"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
-            </button>
-            
-            {showStickyMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowStickyMenu(false)}
-                />
-                <div className="absolute bottom-full right-0 mb-2 material-glass-subtle rounded-lg shadow-xl border p-2 z-20 min-w-[160px]" style={{ borderColor: 'var(--border-color)' }}>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => handleStickySelect('note')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
-                      style={{ color: 'var(--text-primary)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
-                      Sticky Note
-                    </button>
-                    <div className="h-px my-1" style={{ backgroundColor: 'var(--border-primary)' }} />
-                    <div className="text-xs px-3 py-1" style={{ color: 'var(--text-secondary)' }}>Stamps:</div>
-                    <button
-                      onClick={() => handleStickySelect('postal')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
-                      style={{ color: 'var(--color-error)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2"/><path d="M5 7 3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9l-2-2"/><path d="M9 7v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V7"/></svg>
-                      Postal
-                    </button>
-                    <button
-                      onClick={() => handleStickySelect('check')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
-                      style={{ color: 'var(--color-success)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                      Approved
-                    </button>
-                    <button
-                      onClick={() => handleStickySelect('smile')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors"
-                      style={{ color: 'var(--color-warning)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
-                      Smile
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          
-          <button
-            onClick={handleSend}
-            disabled={!inputValue.trim()}
-            className={clsx(
-              "mb-1 p-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shrink-0 shadow-md"
-            )}
-            style={{
-              backgroundColor: 'var(--text-primary)',
-              color: 'var(--bg-base)'
-            }}
-          >
-            {/* Arrow Up Icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg>
-          </button>
-        </div>
-        <div className="text-center text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-          Press Enter to send, Shift+Enter for new line
-        </div>
-      </div>
-    </div>
-  );
-}
+import { NoteTitleInput, MessageInputArea } from './NotePageComps';
 
 export function NotePage() {
   const { id } = useParams<{ id: string }>();
-  // const navigate = useNavigate(); // Unused
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [stickyNotes, setStickyNotes] = useState<StickyNoteType[]>([]);
-  const saveTimeoutRef = useRef<any>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stickerLayerRef = useRef<StickerLayerRef>(null);
 
-  // Messages state
   const [messages, setMessages] = useState<Message[]>([]);
   const [sourceUrls, setSourceUrls] = useState<string[]>([]);
   const { confirm } = useConfirmDialog();
@@ -267,54 +30,27 @@ export function NotePage() {
   useEffect(() => {
     loadNote();
     loadStickyNotes();
-    // Track this as the active note for capture
     if (id) {
       setActiveNote(id);
     }
     return () => setActiveNote(null);
   }, [id]);
 
-
-  // Listen for capture events and sticky note updates
   useEffect(() => {
     const handleUrlUpdate = (e: CustomEvent<{ noteId: string }>) => {
-      console.log('[NotePage] Received note-urls-updated for:', e.detail.noteId, 'current id:', id);
       if (e.detail.noteId === id) loadNote();
     };
     const handleContentUpdate = (e: CustomEvent<{ noteId: string }>) => {
-      console.log(`[NotePage] Received note-content-updated for: ${e.detail.noteId}, current id: ${id}`);
-      if (e.detail.noteId === id) {
-        console.log('[NotePage] Received notes-updated, reloading note');
+      if (e.detail.noteId === id) loadNote();
+    };
+    const handleNotesUpdated = () => loadNote();
+    const handleStickyNotesUpdated = () => loadStickyNotes();
 
-        // Fetch and log current content for debugging
-        getDb().then(db => {
-          db.select<{ content: string }[]>('SELECT content FROM notes WHERE id = $1', [id])
-            .then(result => {
-              if (result && result.length > 0) {
-                console.log(`[NotePage] Content in DB for note ${id}:`, result[0].content);
-              } else {
-                console.log(`[NotePage] No content found in DB for note ${id}`);
-              }
-            });
-        });
-
-        loadNote();
-      }
-    };
-    const handleNotesUpdated = () => {
-      console.log('[NotePage] Received notes-updated, reloading note');
-      loadNote();
-    };
-    const handleStickyNotesUpdated = () => {
-      console.log('[NotePage] Received sticky-notes-updated, reloading sticky notes');
-      loadStickyNotes();
-    };
-    
     window.addEventListener('note-urls-updated', handleUrlUpdate as EventListener);
     window.addEventListener('note-content-updated', handleContentUpdate as EventListener);
     window.addEventListener('notes-updated', handleNotesUpdated);
     window.addEventListener('sticky-notes-updated', handleStickyNotesUpdated);
-    
+
     return () => {
       window.removeEventListener('note-urls-updated', handleUrlUpdate as EventListener);
       window.removeEventListener('note-content-updated', handleContentUpdate as EventListener);
@@ -333,7 +69,6 @@ export function NotePage() {
         const loadedNote = result[0];
         setNote(loadedNote);
 
-        // Load source URLs
         try {
           const urlsStr = loadedNote.source_urls as string | undefined;
           const urls = JSON.parse(urlsStr || '[]');
@@ -342,25 +77,19 @@ export function NotePage() {
           setSourceUrls([]);
         }
 
-        // Load messages from content
         try {
           const parsed = JSON.parse(loadedNote.content);
-
           if (Array.isArray(parsed)) {
-            // Migrate legacy TipTap format to plain text
-            const validatedMessages = parsed.map((m: any) => ({
+            const validatedMessages = parsed.map((m: { id: string; role: string; content: string; created_at: number }) => ({
               ...m,
               content: migrateTipTapToPlainText(m.content),
-              // Normalize roles: 'user' -> 'question', 'assistant' -> 'answer'
-              role: (m.role === 'user' || m.role === 'question') ? 'question' : 'answer'
+              role: (m.role === 'user' || m.role === 'question' ? 'question' : 'answer') as 'question' | 'answer'
             }));
             setMessages(validatedMessages);
           } else {
-            // Handle legacy/empty content
             setMessages([]);
           }
         } catch {
-          // Fallback for non-JSON content (legacy plain text)
           if (loadedNote.content) {
             const initialMsg: Message = {
               id: uuidv4(),
@@ -375,7 +104,7 @@ export function NotePage() {
         }
       }
     } catch (err) {
-      console.error("Error loading note:", err);
+      console.error('Error loading note:', err);
     } finally {
       setLoading(false);
     }
@@ -385,11 +114,13 @@ export function NotePage() {
     if (!id) return;
     try {
       const db = await getDb();
-      // Only load text sticky notes, not stamps (stamps are handled by StickerLayer)
-      const result = await db.select<StickyNoteType[]>('SELECT * FROM sticky_notes WHERE note_id = $1 AND type = $2', [id, 'text']);
+      const result = await db.select<StickyNoteType[]>(
+        'SELECT * FROM sticky_notes WHERE note_id = $1 AND type = $2',
+        [id, 'text']
+      );
       setStickyNotes(result);
     } catch (err) {
-      console.error("Error loading sticky notes:", err);
+      console.error('Error loading sticky notes:', err);
     }
   };
 
@@ -400,26 +131,21 @@ export function NotePage() {
       const contentStr = JSON.stringify(newMessages);
       const now = Date.now();
       await db.execute('UPDATE notes SET content = $1, updated_at = $2 WHERE id = $3', [
-        contentStr,
-        now,
-        id
+        contentStr, now, id
       ]);
       window.dispatchEvent(new Event('notes-updated'));
       setNote(prev => prev ? { ...prev, content: contentStr, updated_at: now } : null);
     } catch (err) {
-      console.error("Error saving messages:", err);
+      console.error('Error saving messages:', err);
     }
   };
 
-
-
   const handleAddSticky = (type: 'note' | 'postal' | 'check' | 'smile') => {
     if (type === 'note') {
-      // Add sticky note directly to state and DB
       const stickyId = uuidv4();
       const newSticky: StickyNoteType = {
         id: stickyId,
-        note_id: id!, // Use the actual note ID from URL params
+        note_id: id!,
         content: '',
         color: 'yellow',
         x: 100,
@@ -430,8 +156,6 @@ export function NotePage() {
         scale: 1
       };
       setStickyNotes(prev => [...prev, newSticky]);
-      
-      // Save to DB
       getDb().then(db => {
         db.execute(
           'INSERT INTO sticky_notes (id, note_id, content, color, x, y, created_at, type, rotation, scale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -439,39 +163,34 @@ export function NotePage() {
         );
       });
     } else {
-      // Add stamp via StickerLayer
       stickerLayerRef.current?.addSticker(type);
     }
   };
 
   const handleSendMessage = (role: 'question' | 'answer', content: string) => {
-    const newUserMsg: Message = {
+    const newMsg: Message = {
       id: uuidv4(),
-      role: role,
-      content: content,
+      role,
+      content,
       created_at: Date.now()
     };
-
-    const updatedMessages = [...messages, newUserMsg];
+    const updatedMessages = [...messages, newMsg];
     setMessages(updatedMessages);
     saveMessages(updatedMessages);
   };
 
-  const handleStickyReorder = (id: string, direction: 'front' | 'back') => {
+  const handleStickyReorder = (stickyId: string, direction: 'front' | 'back') => {
     setStickyNotes(prev => {
-      const noteIndex = prev.findIndex(n => n.id === id);
+      const noteIndex = prev.findIndex(n => n.id === stickyId);
       if (noteIndex === -1) return prev;
-
-      const note = prev[noteIndex];
+      const stickyNote = prev[noteIndex];
       const newNotes = [...prev];
       newNotes.splice(noteIndex, 1);
-
       if (direction === 'front') {
-        newNotes.push(note);
+        newNotes.push(stickyNote);
       } else {
-        newNotes.unshift(note);
+        newNotes.unshift(stickyNote);
       }
-
       return newNotes;
     });
   };
@@ -480,10 +199,8 @@ export function NotePage() {
     const db = await getDb();
     const current = stickyNotes.find(s => s.id === stickyId);
     if (!current) return;
-
     const updated = { ...current, ...updates };
     setStickyNotes(prev => prev.map(s => s.id === stickyId ? updated : s));
-
     if (updates.x !== undefined || updates.y !== undefined) {
       await db.execute('UPDATE sticky_notes SET x = $1, y = $2 WHERE id = $3', [updated.x, updated.y, stickyId]);
     }
@@ -513,9 +230,7 @@ export function NotePage() {
     setSourceUrls(newUrls);
     const db = await getDb();
     await db.execute('UPDATE notes SET source_urls = $1, updated_at = $2 WHERE id = $3', [
-      JSON.stringify(newUrls),
-      Date.now(),
-      id
+      JSON.stringify(newUrls), Date.now(), id
     ]);
   };
 
@@ -525,83 +240,74 @@ export function NotePage() {
     setSourceUrls(newUrls);
     const db = await getDb();
     await db.execute('UPDATE notes SET source_urls = $1, updated_at = $2 WHERE id = $3', [
-      JSON.stringify(newUrls),
-      Date.now(),
-      id
+      JSON.stringify(newUrls), Date.now(), id
     ]);
   };
 
-  // Stable handlers for messages using Ref
   const messagesRef = useRef<Message[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  const handleMessageUpdate = useRef((id: string, newContent: string) => {
-    const currentMessages = messagesRef.current;
-    const updated = currentMessages.map(m => m.id === id ? { ...m, content: newContent } : m);
+  const handleMessageUpdate = useRef((msgId: string, newContent: string) => {
+    const current = messagesRef.current;
+    const updated = current.map(m => m.id === msgId ? { ...m, content: newContent } : m);
     setMessages(updated);
-
-    // Save logic
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveMessages(updated);
-    }, 1000);
+    saveTimeoutRef.current = setTimeout(() => saveMessages(updated), 1000);
   }).current;
 
-  const handleMessageDelete = useRef((id: string) => {
-    const currentMessages = messagesRef.current;
-    const updated = currentMessages.filter(m => m.id !== id);
+  const handleMessageDelete = useRef((msgId: string) => {
+    const current = messagesRef.current;
+    const updated = current.filter(m => m.id !== msgId);
     setMessages(updated);
     saveMessages(updated);
   }).current;
 
-  const handleMessageMoveUp = useRef((id: string) => {
-    const currentMessages = messagesRef.current;
-    const index = currentMessages.findIndex(m => m.id === id);
-    if (index <= 0) return; // Already at top or not found
-    
-    const updated = [...currentMessages];
+  const handleMessageMoveUp = useRef((msgId: string) => {
+    const current = messagesRef.current;
+    const index = current.findIndex(m => m.id === msgId);
+    if (index <= 0) return;
+    const updated = [...current];
     [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
     setMessages(updated);
     saveMessages(updated);
   }).current;
 
-  const handleMessageMoveDown = useRef((id: string) => {
-    const currentMessages = messagesRef.current;
-    const index = currentMessages.findIndex(m => m.id === id);
-    if (index === -1 || index >= currentMessages.length - 1) return; // Not found or already at bottom
-    
-    const updated = [...currentMessages];
+  const handleMessageMoveDown = useRef((msgId: string) => {
+    const current = messagesRef.current;
+    const index = current.findIndex(m => m.id === msgId);
+    if (index === -1 || index >= current.length - 1) return;
+    const updated = [...current];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
     setMessages(updated);
     saveMessages(updated);
   }).current;
-
 
   if (loading) {
     return <div className="flex items-center justify-center h-full"><Loader /></div>;
   }
 
   if (!note) {
-    return <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>Note not found</div>;
+    return (
+      <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>
+        Note not found
+      </div>
+    );
   }
 
   return (
     <div className="h-full relative flex flex-col bg-transparent">
-      {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto relative p-4 pb-48 custom-scrollbar">
         <div className="max-w-6xl mx-auto w-full pt-12 relative animate-in fade-in duration-500">
 
-          {/* Note Title Input */}
           <NoteTitleInput noteId={note.id} initialTitle={note.title || ''} />
 
-          {/* Meta Row */}
           <div className="flex items-center mb-8 text-sm gap-4 px-4" style={{ color: 'var(--text-secondary)' }}>
             <SourceUrlsDisplay
               urls={sourceUrls}
               onAdd={handleAddUrl}
               onRemove={handleRemoveUrl}
             />
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             <span className="text-xs opacity-60">
               {note.updated_at ? formatDateDDMMYYYY(new Date(note.updated_at)) : ''}
             </span>
@@ -609,7 +315,6 @@ export function NotePage() {
 
           <StickerLayer ref={stickerLayerRef} noteId={note.id} />
 
-          {/* Chat Messages */}
           <div className="space-y-6">
             {messages.map((msg, index) => (
               <MessageBubble
@@ -623,14 +328,14 @@ export function NotePage() {
                 canMoveDown={index < messages.length - 1}
               />
             ))}
-            {/* Fallback for empty new notes */}
             {messages.length === 0 && (
-              <div className="italic text-center p-4" style={{ color: 'var(--text-tertiary)' }}>Start writing...</div>
+              <div className="italic text-center p-4" style={{ color: 'var(--text-tertiary)' }}>
+                Start writing...
+              </div>
             )}
           </div>
         </div>
 
-        {/* Sticky Notes Overlay */}
         {stickyNotes.map(sn => (
           <StickyNote
             key={sn.id}
@@ -642,9 +347,8 @@ export function NotePage() {
         ))}
       </div>
 
-      {/* Input Pill Area */}
-      <MessageInputArea 
-        onSendMessage={handleSendMessage} 
+      <MessageInputArea
+        onSendMessage={handleSendMessage}
         onAddSticky={handleAddSticky}
       />
     </div>

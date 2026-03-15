@@ -9,6 +9,7 @@ use sqlx::postgres::PgPoolOptions;
 mod pos;
 mod unified_goals;
 mod knowledge_base;
+mod knowledge_base_commands;
 mod milestones;
 mod debt_system;
 mod context_engine;
@@ -361,11 +362,11 @@ pub fn run() {
             knowledge_base::get_knowledge_links,
             knowledge_base::delete_knowledge_link,
             knowledge_base::check_knowledge_duplicates,
-            knowledge_base::quick_save_link,
-            knowledge_base::get_backlinks,
-            knowledge_base::bulk_update_kb_status,
-            knowledge_base::capture_daily_urls,
-            knowledge_base::get_kb_items_for_activity,
+            knowledge_base_commands::quick_save_link,
+            knowledge_base_commands::get_backlinks,
+            knowledge_base_commands::bulk_update_kb_status,
+            knowledge_base_commands::capture_daily_urls,
+            knowledge_base_commands::get_kb_items_for_activity,
             milestones::create_milestone,
             milestones::get_milestones,
             milestones::update_milestone,

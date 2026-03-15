@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatMonthYear, parseGoalDate, formatGoalDate } from '../lib/time';
+import { formatMonthYear, formatISODateDDMMYYYY, formatISODateDDMMYYYYWithDay, parseGoalDate, formatGoalDate } from '../lib/time';
 
 type DateMode = 'day' | 'month' | 'year';
 
@@ -8,9 +8,10 @@ interface MonthSelectorProps {
   onChange: (value: string) => void;
   mode?: DateMode;
   isArchived?: boolean;
+  showDayName?: boolean;
 }
 
-export function MonthSelector({ value, onChange, mode = 'month', isArchived = false }: MonthSelectorProps) {
+export function MonthSelector({ value, onChange, mode = 'month', isArchived = false, showDayName = false }: MonthSelectorProps) {
   const parseValue = () => {
     if (mode === 'day') {
       // value is YYYY-MM-DD, parse without timezone conversion
@@ -77,9 +78,9 @@ export function MonthSelector({ value, onChange, mode = 'month', isArchived = fa
 
   const getDisplayText = () => {
     if (mode === 'day') {
-      // Parse without timezone conversion
-      const date = parseGoalDate(value);
-      return date.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' });
+      return showDayName
+        ? formatISODateDDMMYYYYWithDay(value)
+        : formatISODateDDMMYYYY(value);
     } else if (mode === 'month') {
       const date = new Date(year, month - 1, 1);
       return formatMonthYear(date);

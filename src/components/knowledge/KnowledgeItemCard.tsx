@@ -145,48 +145,55 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
 
         return (
             <div className="space-y-2">
-                {dailyCaptureUrls.map((urlData: any, idx: number) => (
-                    <div
-                        key={idx}
-                        className="p-2 rounded-lg border"
-                        style={{
-                            background: 'var(--glass-bg-subtle)',
-                            borderColor: 'var(--glass-border)',
-                        }}
-                    >
-                        <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                                <div
-                                    onClick={() => invoke('open_link', { url: urlData.url })}
-                                    className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
-                                    style={{ color: 'var(--color-accent-primary)' }}
-                                >
-                                    {urlData.url}
-                                </div>
-                                <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                    From: {urlData.activity_title} ({urlData.activity_category})
-                                </div>
-                                {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                {dailyCaptureUrls.map((urlData: any, idx: number) => {
+                    // Support both old shape (activity_title) and new shape (source_title/source_type)
+                    const sourceLabel = urlData.source_title || urlData.activity_title || 'Unknown';
+                    const sourceType = urlData.source_type || 'activity';
+                    const sourceContext = urlData.source_context || urlData.detected_in || '';
+
+                    return (
+                        <div
+                            key={idx}
+                            className="p-2 rounded-lg border"
+                            style={{
+                                background: 'var(--glass-bg-subtle)',
+                                borderColor: 'var(--glass-border)',
+                            }}
+                        >
+                            <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
                                     <div
-                                        className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
-                                        style={{
-                                            background: `${getTypeColor()}15`,
-                                            color: getTypeColor(),
-                                        }}
+                                        onClick={() => invoke('open_link', { url: urlData.url })}
+                                        className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
+                                        style={{ color: 'var(--color-accent-primary)' }}
                                     >
-                                        {urlData.url_type}
+                                        {urlData.url}
                                     </div>
-                                )}
+                                    <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                                        {sourceType} · {sourceLabel}{sourceContext ? ` (${sourceContext})` : ''}
+                                    </div>
+                                    {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                                        <div
+                                            className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
+                                            style={{
+                                                background: `${getTypeColor()}15`,
+                                                color: getTypeColor(),
+                                            }}
+                                        >
+                                            {urlData.url_type}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => invoke('open_link', { url: urlData.url })}
+                                    className="flex-shrink-0 p-1 rounded hover:bg-secondary"
+                                >
+                                    <ExternalLink className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+                                </button>
                             </div>
-                            <button
-                                onClick={() => invoke('open_link', { url: urlData.url })}
-                                className="flex-shrink-0 p-1 rounded hover:bg-secondary"
-                            >
-                                <ExternalLink className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
-                            </button>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         );
     };
@@ -263,7 +270,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                 {isDailyCapture ? (
                     <>
                         <div className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-                            {dailyCaptureUrls.length} URL{dailyCaptureUrls.length !== 1 ? 's' : ''} captured from activities
+                            {dailyCaptureUrls.length} link{dailyCaptureUrls.length !== 1 ? 's' : ''} captured
                         </div>
                         {renderDailyCaptureContent()}
                     </>

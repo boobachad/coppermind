@@ -5,6 +5,7 @@
 pub mod models;
 pub mod commands;
 pub mod resolver;
+pub mod resolver_cache;
 pub mod registry;
 
 // Re-export public types for convenience

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Calendar, CheckCircle2, Circle, TrendingUp, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { getLocalDateString } from '../lib/time';
+import { getLocalDateString, formatISODateDDMMYYYYWithDay } from '../lib/time';
 import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
 import { Loader } from '../../components/Loader';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
@@ -115,12 +115,7 @@ export function DailyBriefingPage() {
                 Daily Briefing
               </h1>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {new Date(briefing.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {formatISODateDDMMYYYYWithDay(briefing.date)}
               </p>
             </div>
           </div>

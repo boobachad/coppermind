@@ -436,118 +436,11 @@ export interface RetrospectiveStats {
 }
 
 // ─── Codeforces Ladder System ────────────────────────────────────
-
-/** Matches Rust CFLadderRow (serde camelCase) */
-export interface CFLadder {
-    id: string;
-    name: string;
-    description: string | null;
-    ratingMin: number | null;
-    ratingMax: number | null;
-    difficulty: number | null;
-    source: string;
-    problemCount: number;
-    createdAt: string;
-}
-
-/** Matches Rust CFLadderProblemRow (serde camelCase) */
-export interface CFLadderProblem {
-    id: string;
-    ladderId: string;
-    position: number;
-    problemId: string;
-    problemName: string;
-    problemUrl: string;
-    difficulty: number | null;
-    onlineJudge: string;
-    createdAt: string;
-    solvedByFriends?: string[];
-    status?: string; // Actual verdict from pos_submissions (OK, WRONG_ANSWER, COMPILATION_ERROR, etc.)
-}
-
-export interface CFLadderProgress {
-    id: string;
-    ladderId: string;
-    problemId: string;
-    solvedAt: string | null;
-    attempts: number;
-    createdAt: string;
-}
-
-/** Matches Rust LadderStats (serde camelCase) */
-export interface LadderStats {
-    totalProblems: number;
-    solved: number;
-    attempted: number;
-    unsolved: number;
-    progressPercentage: number;
-}
-
-export interface ImportLadderRequest {
-    htmlContent: string;
-    source: string;
-}
-
-/** Matches Rust CFFriendRow (serde camelCase) */
-export interface CFFriend {
-    id: string;
-    cfHandle: string;
-    displayName: string | null;
-    currentRating: number | null;
-    maxRating: number | null;
-    lastSynced: string | null;
-    createdAt: string;
-    submissionCount: number | null;
-    totalSubmissions: number | null;
-}
-
-/** Matches Rust CFCategoryRow (serde camelCase) */
-export interface CFCategory {
-    id: string;
-    name: string;
-    description: string | null;
-    problemCount: number;
-    createdAt: string;
-}
-
-/** Matches Rust CFCategoryProblemRow (serde camelCase) */
-export interface CFCategoryProblem {
-    id: string;
-    categoryId: string;
-    problemId: string;
-    problemName: string;
-    problemUrl: string;
-    position: number;
-    difficulty: number | null;
-    onlineJudge: string;
-    year: string | null;
-    contest: string | null;
-    createdAt: string;
-    solvedByFriends?: string[];
-    status?: string;
-}
-
-/** Matches Rust DailyRecommendation (serde camelCase) */
-export interface DailyRecommendation {
-    problemId: string;
-    problemName: string;
-    problemUrl: string;
-    onlineJudge: string;
-    difficulty: number | null;
-    reason: string;
-    strategy: string;
-}
-
-/** Matches Rust FriendsLadderProblem (serde camelCase) */
-export interface FriendsLadderProblem {
-    problemId: string;
-    problemName: string;
-    problemUrl: string;
-    difficulty: number | null;
-    solveCount: number;
-    solvedBy: string[];
-    mostRecentSolve: string | null;
-}
+// Moved to types-cf.ts — re-exported here for backward compat.
+export type {
+    CFLadder, CFLadderProblem, CFLadderProgress, LadderStats, ImportLadderRequest,
+    CFFriend, CFCategory, CFCategoryProblem, DailyRecommendation, FriendsLadderProblem,
+} from './types-cf';
 
 // ─── Yearly Graph Data (from get_yearly_graph_data backend command) ───────
 // Pre-flight O: all field names match Rust #[serde(rename_all = "camelCase")]
@@ -660,44 +553,5 @@ export interface CodeforcesUserStats {
 }
 
 // ─── Book Tracking ──────────────────────────────────────────────
-
-export interface BookMetadata {
-    isbn: string;
-    title: string;
-    authors: string[];
-    numberOfPages: number | null;
-    publisher: string | null;
-    publishDate: string | null;
-    coverUrl: string | null;
-}
-
-export interface Book {
-    id: string;
-    isbn: string | null;
-    title: string;
-    authors: string[];  // Parsed from JSONB
-    numberOfPages: number | null;
-    publisher: string | null;
-    publishDate: string | null;
-    coverUrl: string | null;
-    metadata: Record<string, unknown> | null;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface BookReadingHistory {
-    book: Book;
-    activities: BookActivitySummary[];
-    totalPagesRead: number;
-    totalReadingTimeMinutes: number;
-    firstReadDate: string | null;
-    lastReadDate: string | null;
-}
-
-export interface BookActivitySummary {
-    id: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    pagesRead: number | null;
-}
+// Moved to types-book.ts — re-exported here for backward compat.
+export type { BookMetadata, Book, BookReadingHistory, BookActivitySummary } from './types-book';

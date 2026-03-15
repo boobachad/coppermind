@@ -10,8 +10,9 @@ import { buildSlotRing } from '../components/TimeSlot';
 import { Navbar } from '../components/Navbar';
 import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '@/components/Loader';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC, formatISODateDDMMYYYY, parseGoalDate, formatGoalDate } from '../lib/time';
+import { DailyMetricsTab } from '../components/DailyMetricsTab';
+import { DailyGoalsTab } from '../components/DailyGoalsTab';
+import { parseActivityTime, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC, formatISODateDDMMYYYY, parseGoalDate, formatGoalDate } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, UnifiedGoal, Book } from '../lib/types';
 import { BookOpen, Pencil, AlertCircle, ExternalLink } from 'lucide-react';
@@ -295,6 +296,7 @@ export function DailyPage() {
                     mode="day"
                     value={date || getLocalDateString()}
                     onChange={(newDate) => navigate(`/pos/grid/${newDate}`)}
+                    showDayName
                 />
             </div>
             
@@ -310,7 +312,7 @@ export function DailyPage() {
                         }}
                     >
                         <AlertCircle className="w-6 h-6 shrink-0" />
-                        <span>⚠️ {debtCount} incomplete goal{debtCount > 1 ? 's' : ''} from this date (debt)</span>
+                        <span>{debtCount} incomplete goal{debtCount > 1 ? 's' : ''} from this date (debt)</span>
                     </div>
                 </div>
             )}
@@ -512,147 +514,15 @@ export function DailyPage() {
                     </TabsContent>
 
                     <TabsContent value="goals" className="mt-4">
-                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                            <CardHeader className="py-3 px-4">
-                                <CardTitle className="text-sm font-medium">Goals</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pb-4 px-4">
-                                {goals.length === 0 ? (
-                                    <p className="text-muted-foreground text-xs">No goals for this date</p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {goals.map((goal) => {
-                                            // Determine status: verified / pending / debt
-                                            const today = getLocalDateString();
-                                            const dueDate = goal.date;
-                                            const isDebt = goal.isDebt || (dueDate && dueDate < today && !goal.completed);
-                                            
-                                            let statusLabel = 'Pending';
-                                            let statusBg = 'var(--muted)';
-                                            let statusColor = 'var(--muted-foreground)';
-                                            
-                                            if (goal.verified) {
-                                                statusLabel = 'Verified';
-                                                statusBg = 'var(--pos-success-bg)';
-                                                statusColor = 'var(--pos-success-text)';
-                                            } else if (isDebt) {
-                                                statusLabel = 'Debt';
-                                                statusBg = 'var(--pos-debt-bg)';
-                                                statusColor = 'var(--pos-debt-text)';
-                                            }
-                                            
-                                            return (
-                                            <div
-                                                key={goal.id}
-                                                className="border rounded p-3 transition-colors"
-                                                style={{
-                                                    borderColor: goal.verified ? 'var(--pos-success-border)' : isDebt ? 'var(--pos-error-border)' : 'var(--border-color)',
-                                                    backgroundColor: goal.verified ? 'var(--pos-success-bg)' : isDebt ? 'var(--pos-error-bg)' : 'var(--bg-secondary)'
-                                                }}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <p className="text-sm font-medium">{goal.text}</p>
-                                                        {goal.description && <div className="text-xs text-muted-foreground mt-0.5"><MarkdownRenderer content={goal.description} /></div>}
-                                                        {goal.problemId && (
-                                                            <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                                                                Target: {goal.problemId}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <span
-                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 select-none border"
-                                                        onClick={async () => {
-                                                            try {
-                                                                await invoke('update_unified_goal', {
-                                                                    id: goal.id,
-                                                                    req: { verified: !goal.verified }
-                                                                });
-                                                                fetchData();
-                                                            } catch (e) {
-                                                                toast.error("Failed to update goal");
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            backgroundColor: statusBg,
-                                                            color: statusColor,
-                                                            borderColor: goal.verified ? 'var(--pos-success-border)' : isDebt ? 'var(--pos-debt-border)' : 'var(--border-color)'
-                                                        }}
-                                                    >
-                                                        {statusLabel}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )})}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <DailyGoalsTab goals={goals} onRefresh={fetchData} />
                     </TabsContent>
 
-                    <TabsContent value="metrics" className="space-y-4 mt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                                <CardContent className="pt-4 pb-2 px-4">
-                                    <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Total Logged</p>
-                                    <p className="text-xl font-bold" style={{ color: 'var(--pos-info-text)' }}>{metrics.totalMinutes} min</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((metrics.totalMinutes / 1440) * 100)}% of day</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                                <CardContent className="pt-4 pb-2 px-4">
-                                    <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Productive</p>
-                                    <p className="text-xl font-bold" style={{ color: 'var(--pos-success-text)' }}>{metrics.productiveMinutes} min</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{metrics.totalMinutes > 0 ? Math.round((metrics.productiveMinutes / metrics.totalMinutes) * 100) : 0}% of logged</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                                <CardContent className="pt-4 pb-2 px-4">
-                                    <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Goal-Directed</p>
-                                    <p className="text-xl font-bold" style={{ color: 'var(--pos-warning-text)' }}>{metrics.goalDirectedMinutes} min</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{metrics.productiveMinutes > 0 ? Math.round((metrics.goalDirectedMinutes / metrics.productiveMinutes) * 100) : 0}% of productive</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                                <CardContent className="pt-4 pb-2 px-4">
-                                    <p className="text-[10px] text-muted-foreground uppercase mb-0.5">DebtTime</p>
-                                    <p className="text-xl font-bold" style={{ color: 'var(--pos-error-text)' }}>{debtTime} min</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((debtTime / 1440) * 100)}% unaccounted</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                            <CardHeader className="py-3 px-4">
-                                <CardTitle className="text-sm font-medium">Activity Breakdown</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pb-4 px-4">
-                                <div className="space-y-2">
-                                    {Object.entries(
-                                        activities.reduce((acc, activity) => {
-                                            const duration = getActivityDuration(activity.startTime, activity.endTime);
-                                            acc[activity.category] = (acc[activity.category] || 0) + duration;
-                                            return acc;
-                                        }, {} as Record<string, number>)
-                                    ).map(([category, minutes]) => (
-                                        <div key={category} className="flex items-center gap-3">
-                                            <div
-                                                className="w-2.5 h-2.5 rounded"
-                                                style={{ backgroundColor: getActivityColor(category) }}
-                                            />
-                                            <span className="flex-1 text-xs uppercase font-medium">{category.replace('_', ' ')}</span>
-                                            <span className="text-xs font-mono text-muted-foreground">{minutes}m</span>
-                                            <span className="text-[10px] text-muted-foreground w-8 text-right">
-                                                {metrics.totalMinutes > 0 ? Math.round((minutes / metrics.totalMinutes) * 100) : 0}%
-                                            </span>
-                                        </div>
-                                    ))}
-                                    {Object.keys(activities.reduce((acc, a) => ({ ...acc, [a.category]: 1 }), {})).length === 0 && (
-                                        <p className="text-muted-foreground text-xs">No activities logged</p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <TabsContent value="metrics" className="mt-4">
+                        <DailyMetricsTab
+                            activities={activities}
+                            metrics={metrics}
+                            debtTime={debtTime}
+                        />
                     </TabsContent>
                 </Tabs>
 

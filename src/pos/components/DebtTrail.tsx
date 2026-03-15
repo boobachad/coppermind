@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { AlertTriangle, Calendar, ArrowRight, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { UnifiedGoal } from '../lib/types';
-import { getLocalDateString } from '../lib/time';
+import { getLocalDateString, formatMonthYear } from '../lib/time';
 import { GoalCard } from './GoalCard';
 
 interface DebtTrailItem {
@@ -139,7 +139,7 @@ export function DebtTrail({ endDate, onDebtResolved, onEdit, onDelete }: DebtTra
                             <div className="flex items-center gap-3">
                                 <Calendar className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
                                 <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                    {new Date(item.month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                                    {formatMonthYear(new Date(item.month + '-01T00:00:00'))}
                                 </span>
                                 <span
                                     className="px-2 py-1 rounded-full text-xs font-medium"

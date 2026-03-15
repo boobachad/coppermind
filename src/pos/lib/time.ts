@@ -17,6 +17,21 @@ export function formatISODateDDMMYYYY(isoDate: string): string {
     return `${day}/${month}/${year}`;
 }
 
+/** Format ISO date string (YYYY-MM-DD) to "Mon DD/MM/YYYY" with day name prefix */
+export function formatISODateDDMMYYYYWithDay(isoDate: string): string {
+    const clean = isoDate.split('T')[0];
+    const [year, month, day] = clean.split('-');
+    const date = new Date(`${clean}T00:00:00`);
+    const dayName = DAYS_SHORT[date.getDay()];
+    return `${dayName} ${day}/${month}/${year}`;
+}
+
+/** Format month string (YYYY-MM) to "Month YYYY" */
+export function formatMonthDisplay(yearMonth: string): string {
+    const [year, month] = yearMonth.split('-').map(Number);
+    return `${MONTHS_LONG[month - 1]} ${year}`;
+}
+
 export function formatTime(date: Date): string {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }

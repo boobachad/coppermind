@@ -25,10 +25,8 @@ function getMonthDates(year: number, month: number): string[] {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const dates: string[] = [];
     for (let i = 1; i <= daysInMonth; i++) {
-        const d = new Date(year, month, i);
-        const offset = d.getTimezoneOffset() * 60000;
-        const localDate = new Date(d.getTime() - offset);
-        dates.push(localDate.toISOString().split('T')[0]);
+        // Use formatGoalDate to produce YYYY-MM-DD in local timezone — no manual offset math
+        dates.push(formatGoalDate(new Date(year, month, i)));
     }
     return dates;
 }
@@ -128,11 +126,16 @@ export function GridPage() {
                 
                 const allDebtGoals = await invoke<any[]>('get_accumulated_debt', { date: queryDate });
                 
-                // Extract unique original_date values that fall within our date range
+                // Normalize originalDate to YYYY-MM-DD using parseGoalDate + formatGoalDate
+                // Matches DailyPage debt logic exactly — backend may return full ISO or date-only string
                 const datesWithDebt = new Set<string>();
                 allDebtGoals.forEach((goal: any) => {
-                    if (goal.originalDate && dates.includes(goal.originalDate)) {
-                        datesWithDebt.add(goal.originalDate);
+                    if (!goal.originalDate) return;
+                    const isRecurringTemplate = goal.recurringPattern !== null && goal.recurringPattern !== undefined;
+                    if (isRecurringTemplate) return;
+                    const normalized = formatGoalDate(parseGoalDate(goal.originalDate));
+                    if (dates.includes(normalized)) {
+                        datesWithDebt.add(normalized);
                     }
                 });
                 

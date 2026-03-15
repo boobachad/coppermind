@@ -272,7 +272,7 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                                 className="block text-sm font-medium mb-2"
                                 style={{ color: 'var(--text-secondary)' }}
                             >
-                                Captured URLs ({dailyCaptureUrls.length})
+                                Captured Links ({dailyCaptureUrls.length})
                             </label>
                             <div
                                 className="p-3 rounded-lg border max-h-[300px] overflow-y-auto space-y-2"
@@ -283,49 +283,54 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                             >
                                 {dailyCaptureUrls.length === 0 ? (
                                     <div className="text-sm text-center py-4" style={{ color: 'var(--text-tertiary)' }}>
-                                        No URLs captured
+                                        No links captured
                                     </div>
                                 ) : (
-                                    dailyCaptureUrls.map((urlData: any, idx: number) => (
-                                        <div
-                                            key={idx}
-                                            className="p-2 rounded border"
-                                            style={{
-                                                background: 'var(--glass-bg)',
-                                                borderColor: 'var(--glass-border)',
-                                            }}
-                                        >
-                                            <div className="flex items-start gap-2">
-                                                <div className="flex-1 min-w-0">
-                                                    <div
-                                                        className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
-                                                        style={{ color: 'var(--color-accent-primary)' }}
-                                                        onClick={() => invoke('open_link', { url: urlData.url })}
-                                                    >
-                                                        {urlData.url}
-                                                    </div>
-                                                    <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                                        From: {urlData.activity_title} ({urlData.activity_category})
-                                                    </div>
-                                                    {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                                    dailyCaptureUrls.map((urlData: any, idx: number) => {
+                                        const sourceLabel = urlData.source_title || urlData.activity_title || 'Unknown';
+                                        const sourceType = urlData.source_type || 'activity';
+                                        const sourceContext = urlData.source_context || urlData.detected_in || '';
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className="p-2 rounded border"
+                                                style={{
+                                                    background: 'var(--glass-bg)',
+                                                    borderColor: 'var(--glass-border)',
+                                                }}
+                                            >
+                                                <div className="flex items-start gap-2">
+                                                    <div className="flex-1 min-w-0">
                                                         <div
-                                                            className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
-                                                            style={{
-                                                                background: 'var(--color-accent-primary)15',
-                                                                color: 'var(--color-accent-primary)',
-                                                            }}
+                                                            className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
+                                                            style={{ color: 'var(--color-accent-primary)' }}
+                                                            onClick={() => invoke('open_link', { url: urlData.url })}
                                                         >
-                                                            {urlData.url_type}
+                                                            {urlData.url}
                                                         </div>
-                                                    )}
+                                                        <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                                                            {sourceType} · {sourceLabel}{sourceContext ? ` (${sourceContext})` : ''}
+                                                        </div>
+                                                        {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
+                                                            <div
+                                                                className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
+                                                                style={{
+                                                                    background: 'var(--color-accent-primary)15',
+                                                                    color: 'var(--color-accent-primary)',
+                                                                }}
+                                                            >
+                                                                {urlData.url_type}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                             <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-                                Daily capture items are automatically generated from activity logs. URLs cannot be edited manually.
+                                Daily capture items are auto-generated. Links cannot be edited manually.
                             </p>
                         </div>
                     ) : (
