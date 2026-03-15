@@ -1,10 +1,13 @@
 import { ExternalLink, Edit2, Trash2, Archive, Calendar, Link as LinkIcon, FileText, Folder } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import type { KnowledgeItem } from '@/pos/lib/types';
 import { extractDomain, detectUrlType, formatReviewDate } from '@/lib/kb-utils';
 import { Button } from '@/components/ui/button';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
+import { CapturedLinkItem } from './CapturedLinkItem';
+import type { CapturedUrlData } from './CapturedLinkItem';
 
 interface KnowledgeItemCardProps {
     item: KnowledgeItem;
@@ -88,18 +91,17 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
         return urls.length > 0 ? urls[0] : null;
     };
 
-    const handleOpenLink = () => {
+    const handleOpenLink = async () => {
         const urls = extractAllUrls();
         if (urls.length === 0) return;
 
-        // Open all URLs using Tauri command
-        urls.forEach(url => {
-            invoke('open_link', { url });
-        });
-
-        // If multiple URLs, show toast
-        if (urls.length > 1) {
-            console.log(`Opened ${urls.length} links`);
+        for (const url of urls) {
+            try {
+                await invoke('open_link', { url });
+            } catch (err) {
+                console.error('Failed to open link:', err);
+                toast.error(`Failed to open link: ${url}`, { description: String(err) });
+            }
         }
     };
 
@@ -114,9 +116,14 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                         return (
                             <span
                                 key={index}
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                     e.stopPropagation();
-                                    invoke('open_link', { url: part });
+                                    try {
+                                        await invoke('open_link', { url: part });
+                                    } catch (err) {
+                                        console.error('Failed to open link:', err);
+                                        toast.error(`Failed to open link: ${part}`, { description: String(err) });
+                                    }
                                 }}
                                 style={{
                                     color: 'var(--color-accent-primary)',
@@ -145,55 +152,9 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
 
         return (
             <div className="space-y-2">
-                {dailyCaptureUrls.map((urlData: any, idx: number) => {
-                    // Support both old shape (activity_title) and new shape (source_title/source_type)
-                    const sourceLabel = urlData.source_title || urlData.activity_title || 'Unknown';
-                    const sourceType = urlData.source_type || 'activity';
-                    const sourceContext = urlData.source_context || urlData.detected_in || '';
-
-                    return (
-                        <div
-                            key={idx}
-                            className="p-2 rounded-lg border"
-                            style={{
-                                background: 'var(--glass-bg-subtle)',
-                                borderColor: 'var(--glass-border)',
-                            }}
-                        >
-                            <div className="flex items-start gap-2">
-                                <div className="flex-1 min-w-0">
-                                    <div
-                                        onClick={() => invoke('open_link', { url: urlData.url })}
-                                        className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
-                                        style={{ color: 'var(--color-accent-primary)' }}
-                                    >
-                                        {urlData.url}
-                                    </div>
-                                    <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                        {sourceType} · {sourceLabel}{sourceContext ? ` (${sourceContext})` : ''}
-                                    </div>
-                                    {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
-                                        <div
-                                            className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
-                                            style={{
-                                                background: `${getTypeColor()}15`,
-                                                color: getTypeColor(),
-                                            }}
-                                        >
-                                            {urlData.url_type}
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={() => invoke('open_link', { url: urlData.url })}
-                                    className="flex-shrink-0 p-1 rounded hover:bg-secondary"
-                                >
-                                    <ExternalLink className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
+                {dailyCaptureUrls.map((urlData: CapturedUrlData, idx: number) => (
+                    <CapturedLinkItem key={idx} urlData={urlData} />
+                ))}
             </div>
         );
     };
@@ -218,7 +179,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                         <div
                             className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
                             style={{
-                                background: `${getTypeColor()}15`,
+                                background: `color-mix(in srgb, ${getTypeColor()} 15%, transparent)`,
                                 color: getTypeColor(),
                             }}
                         >
@@ -232,7 +193,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                                         key={idx}
                                         className="text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded whitespace-nowrap"
                                         style={{
-                                            background: `${getTypeColor()}15`,
+                                            background: `color-mix(in srgb, ${getTypeColor()} 15%, transparent)`,
                                             color: getTypeColor(),
                                         }}
                                     >
@@ -255,7 +216,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                     <div
                         className="flex-shrink-0 px-2 py-1 rounded text-xs font-medium"
                         style={{
-                            background: `${getStatusColor()}15`,
+                            background: `color-mix(in srgb, ${getStatusColor()} 15%, transparent)`,
                             color: getStatusColor(),
                         }}
                     >
@@ -307,7 +268,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                                         key={idx}
                                         className="text-xs px-2 py-1 rounded"
                                         style={{
-                                            background: 'var(--color-accent-primary)15',
+                                            background: 'color-mix(in srgb, var(--color-accent-primary) 15%, transparent)',
                                             color: 'var(--color-accent-primary)',
                                         }}
                                     >
@@ -335,10 +296,15 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                     {isDailyCapture && dailyCaptureUrls.length > 0 ? (
                         <Button
                             size="sm"
-                            onClick={() => {
-                                dailyCaptureUrls.forEach((urlData: any) => {
-                                    invoke('open_link', { url: urlData.url });
-                                });
+                            onClick={async () => {
+                                for (const urlData of dailyCaptureUrls) {
+                                    try {
+                                        await invoke('open_link', { url: urlData.url });
+                                    } catch (err) {
+                                        console.error('Failed to open link:', err);
+                                        toast.error(`Failed to open link: ${urlData.url}`, { description: String(err) });
+                                    }
+                                }
                             }}
                             className="flex items-center gap-1"
                             style={{

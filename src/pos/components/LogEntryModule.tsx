@@ -206,7 +206,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             let activityId: string;
 
             if (editingActivity) {
-                const milestoneAmount = selectedMilestoneId ? (parseInt(metricValues['milestone'] || '0') || 0) : 0;
+                const milestoneAmount = selectedMilestoneId ? (parseInt(metricValues['milestone'] || '0', 10) || 0) : 0;
                 await invoke('update_activity', {
                     id: editingActivity.id,
                     req: {
@@ -238,24 +238,23 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 });
                 activityId = activityResult.id;
 
-                for (const goalId of selectedGoalIds) {
+                await Promise.all(selectedGoalIds.map(async (goalId) => {
                     await invoke('link_activity_to_unified_goal', { goalId, activityId });
                     const goal = availableGoals.find(g => g.id === goalId);
                     if (goal?.metrics && Object.keys(metricValues).length > 0) {
                         const updatedMetrics = goal.metrics.map(m => ({
-                            ...m, current: m.current + parseInt(metricValues[m.id] || '0')
+                            ...m, current: m.current + (parseInt(metricValues[m.id] || '0', 10) || 0)
                         }));
                         await invoke('update_unified_goal', { id: goalId, req: { metrics: updatedMetrics } });
                         if (goal.parentGoalId) {
-                            const total = Object.values(metricValues).reduce((s, v) => s + parseInt(v || '0'), 0);
+                            const total = Object.values(metricValues).reduce((s, v) => s + (parseInt(v || '0', 10) || 0), 0);
                             try { await invoke('increment_milestone_progress', { milestoneId: goal.parentGoalId, amount: total }); }
                             catch (err) { console.error('Failed to update milestone progress:', err); }
                         }
                     }
-                }
-
+                }));
                 if (selectedMilestoneId && Object.keys(metricValues).length > 0) {
-                    const total = Object.values(metricValues).reduce((s, v) => s + parseInt(v || '0'), 0);
+                    const total = Object.values(metricValues).reduce((s, v) => s + (parseInt(v || '0', 10) || 0), 0);
                     try { await invoke('increment_milestone_progress', { milestoneId: selectedMilestoneId, amount: total }); }
                     catch (err) { console.error('Failed to update milestone progress:', err); toast.error('Failed to update milestone progress'); }
                 }
@@ -421,7 +420,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 selectedMilestone={selectedMilestone}
                 metricValues={metricValues}
                 onMetricChange={(metricId, value) => setMetricValues(prev => ({ ...prev, [metricId]: value }))}
-                onMilestoneMetricChange={(value) => setMetricValues({ milestone: value })}
+                onMilestoneMetricChange={(value) => setMetricValues(prev => ({ ...prev, milestone: value }))}
             />
 
             <div className="flex gap-2">

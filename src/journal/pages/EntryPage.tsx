@@ -14,6 +14,7 @@ import { getDb } from '../../lib/db';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { softDelete } from '@/lib/softDelete';
 import { parseReferences } from '@/lib/entity-linking/core/parser';
+import { extractUrls, detectUrlType } from '@/lib/kb-utils';
 import { invoke } from '@tauri-apps/api/core';
 import { MonthSelector } from '../../pos/components/MonthSelector';
 
@@ -165,7 +166,26 @@ export default function EntryPage() {
             });
           } catch (err) {
             console.error('Failed to update cross-references:', err);
-            // Non-fatal: continue even if cross-reference update fails
+          }
+        }
+
+        // Capture URLs from reflection text to the daily KB item
+        const detectedUrls = extractUrls(reflectionText);
+        if (detectedUrls.length > 0) {
+          try {
+            await invoke('capture_daily_urls', {
+              date,
+              urls: detectedUrls.map((url: string) => ({
+                url,
+                urlType: detectUrlType(url),
+                sourceType: 'journal',
+                sourceId: entry.id,
+                sourceTitle: `Journal Day ${entry.dayX}`,
+                sourceContext: 'reflection',
+              })),
+            });
+          } catch (err) {
+            console.error('Failed to capture URLs from journal:', err);
           }
         }
       }

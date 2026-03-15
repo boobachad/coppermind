@@ -20,7 +20,6 @@ export function GoalMilestoneSelector({
   onGoalToggle,
   onMilestoneSelect,
 }: GoalMilestoneSelectorProps) {
-  // Compute display value for the trigger
   const triggerValue =
     selectedGoalIds.length > 0
       ? `goals-${selectedGoalIds.length}`
@@ -28,8 +27,16 @@ export function GoalMilestoneSelector({
       ? `milestone-${selectedMilestoneId}`
       : '';
 
+  const handleValueChange = (value: string) => {
+    if (value.startsWith('goal:')) {
+      onGoalToggle(value.slice(5));
+    } else if (value.startsWith('milestone:')) {
+      onMilestoneSelect(value.slice(10));
+    }
+  };
+
   return (
-    <Select value={triggerValue} onValueChange={() => {}}>
+    <Select value={triggerValue} onValueChange={handleValueChange}>
       <SelectTrigger className="material-glass-subtle border-none">
         <SelectValue placeholder="Select Goal(s) or Milestone" />
       </SelectTrigger>
@@ -56,27 +63,28 @@ export function GoalMilestoneSelector({
               const isSelected = selectedGoalIds.includes(goal.id);
               const isDisabled = selectedMilestoneId !== null;
               return (
-                <div
+                <SelectItem
                   key={goal.id}
-                  onClick={() => !isDisabled && onGoalToggle(goal.id)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-secondary/50'
-                  } ${isSelected ? 'bg-secondary' : ''}`}
+                  value={`goal:${goal.id}`}
+                  disabled={isDisabled}
+                  className={`${isSelected ? 'bg-secondary' : ''} ${isDisabled ? 'opacity-40' : ''}`}
                 >
-                  <div className="flex items-center justify-center w-4 h-4 rounded border border-input">
-                    {isSelected && <Check className="w-3 h-3" />}
-                  </div>
-                  <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
-                    {goal.date && (
-                      <span className="text-xs text-muted-foreground font-mono shrink-0">
-                        [{formatDateDDMMYYYY(parseGoalDate(goal.date))}]
-                      </span>
-                    )}
-                    <span className="truncate">{goal.text}</span>
-                    {goal.urgent && <Flame className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
-                    {goal.isDebt && <AlertCircle className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
+                  <span className="flex items-center gap-2 w-full">
+                    <div className="flex items-center justify-center w-4 h-4 rounded border border-input shrink-0">
+                      {isSelected && <Check className="w-3 h-3" />}
+                    </div>
+                    <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
+                      {goal.date && (
+                        <span className="text-xs text-muted-foreground font-mono shrink-0">
+                          [{formatDateDDMMYYYY(parseGoalDate(goal.date))}]
+                        </span>
+                      )}
+                      <span className="truncate">{goal.text}</span>
+                      {goal.urgent && <Flame className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
+                      {goal.isDebt && <AlertCircle className="w-3 h-3 shrink-0" style={{ color: 'var(--color-warning)' }} />}
+                    </span>
                   </span>
-                </div>
+                </SelectItem>
               );
             })}
           </>
@@ -99,24 +107,25 @@ export function GoalMilestoneSelector({
                 selectedGoalIds.length > 0 ||
                 (selectedMilestoneId !== null && selectedMilestoneId !== milestone.id);
               return (
-                <div
+                <SelectItem
                   key={milestone.id}
-                  onClick={() => !isDisabled && onMilestoneSelect(milestone.id)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-secondary/50'
-                  } ${isSelected ? 'bg-secondary' : ''}`}
+                  value={`milestone:${milestone.id}`}
+                  disabled={isDisabled}
+                  className={`${isSelected ? 'bg-secondary' : ''} ${isDisabled ? 'opacity-40' : ''}`}
                 >
-                  <div className="flex items-center justify-center w-4 h-4 rounded border border-input">
-                    {isSelected && <Check className="w-3 h-3" />}
-                  </div>
-                  <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
-                    <BarChart3 className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <span className="truncate">{milestone.targetMetric}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      ({milestone.currentValue}/{milestone.targetValue})
+                  <span className="flex items-center gap-2 w-full">
+                    <div className="flex items-center justify-center w-4 h-4 rounded border border-input shrink-0">
+                      {isSelected && <Check className="w-3 h-3" />}
+                    </div>
+                    <span className="flex items-center gap-1 flex-1 min-w-0 text-sm">
+                      <BarChart3 className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="truncate">{milestone.targetMetric}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        ({milestone.currentValue}/{milestone.targetValue})
+                      </span>
                     </span>
                   </span>
-                </div>
+                </SelectItem>
               );
             })}
           </>

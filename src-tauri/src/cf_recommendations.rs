@@ -213,7 +213,7 @@ pub async fn get_daily_recommendations(
                         problem_url,
                         online_judge,
                         difficulty,
-                        reason: format!("{} (level {}{})", category_name, actual_level, level_note),
+                        reason: format!("{} (level {}{})", category_name, base_level, level_note),
                         strategy: "category".to_string(),
                     });
                 }
@@ -237,7 +237,7 @@ pub async fn get_daily_recommendations(
                         problem_url,
                         online_judge,
                         difficulty,
-                        reason: format!("Topic-based problem (level {}{})", actual_level, level_note),
+                        reason: format!("Topic-based problem (level {}{})", base_level, level_note),
                         strategy: "category".to_string(),
                     });
                 }

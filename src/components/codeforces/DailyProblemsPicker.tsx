@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
 import type { DailyRecommendation, CFCategory } from '../../pos/lib/types';
 import { getLocalDateString } from '../../pos/lib/time';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type RecommendationStrategy = 'ladder' | 'friends' | 'category' | 'rating' | 'hybrid';
 
@@ -146,27 +147,25 @@ export function DailyProblemsPicker() {
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               Select Topic (optional - leave empty for random)
             </label>
-            <select
-              value={selectedCategory || ''}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value || null);
-                // Reload recommendations when category changes
+            <Select
+              value={selectedCategory ?? 'all'}
+              onValueChange={(val) => {
+                setSelectedCategory(val === 'all' ? null : val);
                 setTimeout(() => loadRecommendations(), 100);
               }}
-              className="w-full px-4 py-2 rounded-lg"
-              style={{
-                backgroundColor: 'var(--surface-secondary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-primary)',
-              }}
             >
-              <option value="">Random Topics (All Categories)</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.problemCount} problems)
-                </option>
-              ))}
-            </select>
+              <SelectTrigger style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}>
+                <SelectValue placeholder="Random Topics (All Categories)" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                <SelectItem value="all">Random Topics (All Categories)</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name} ({cat.problemCount} problems)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
               {selectedCategory 
                 ? 'Get problems from selected topic at your difficulty level'

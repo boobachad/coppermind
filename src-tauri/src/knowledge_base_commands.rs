@@ -17,14 +17,14 @@ pub async fn quick_save_link(
 ) -> PosResult<KnowledgeItemRow> {
     let pool = &db.0;
 
-    // Check for duplicate URL using LIKE to find URL anywhere in content
+    // Check for exact URL match to avoid false positives from LIKE
     let existing = sqlx::query_as::<_, KnowledgeItemRow>(
         "SELECT id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at \
          FROM knowledge_items \
-         WHERE content LIKE $1 \
+         WHERE content = $1 \
          LIMIT 1"
     )
-    .bind(format!("%{}%", url))
+    .bind(&url)
     .fetch_optional(pool)
     .await
     .map_err(|e| db_context("check duplicate link", e))?;
@@ -81,6 +81,14 @@ pub async fn bulk_update_kb_status(
     item_ids: Vec<String>,
     status: String,
 ) -> PosResult<i64> {
+    const ALLOWED_STATUSES: &[&str] = &["Inbox", "Planned", "Completed", "Archived"];
+    if !ALLOWED_STATUSES.contains(&status.as_str()) {
+        return Err(PosError::InvalidInput(format!(
+            "Invalid status '{}': must be one of {:?}",
+            status, ALLOWED_STATUSES
+        )));
+    }
+
     let pool = &db.0;
     let now = Utc::now();
 
@@ -132,6 +140,11 @@ pub async fn capture_daily_urls(
     urls: Vec<CaptureLink>,
 ) -> PosResult<KnowledgeItemRow> {
     let pool = &db.0;
+
+    // Validate date format before constructing daily_id
+    chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+        .map_err(|_| PosError::InvalidInput(format!("Invalid date format '{}': expected YYYY-MM-DD", date)))?;
+
     let daily_id = format!("daily_{}", date);
     let now = Utc::now();
 
@@ -196,10 +209,23 @@ pub async fn capture_daily_urls(
 
     let total_urls = metadata["urls"].as_array().map(|a| a.len()).unwrap_or(0);
 
+    // Collect unique source types across all stored URLs for tagging
+    let mut source_tags: Vec<String> = vec!["daily-capture".to_string(), date.clone()];
+    if let Some(arr) = metadata["urls"].as_array() {
+        let mut seen = std::collections::HashSet::new();
+        for entry in arr {
+            if let Some(st) = entry.get("source_type").and_then(|v| v.as_str()) {
+                if seen.insert(st.to_string()) {
+                    source_tags.push(st.to_string());
+                }
+            }
+        }
+    }
+
     let row = sqlx::query_as::<_, KnowledgeItemRow>(
         r#"INSERT INTO knowledge_items
            (id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at)
-           VALUES ($1, ARRAY['daily-capture', 'log-activity', $2]::TEXT[], 'ActivityLog', $3, $4, 'Inbox', NULL, NULL, NULL, $5, $5)
+           VALUES ($1, $2, 'DailyCapture', $3, $4, 'Inbox', NULL, NULL, NULL, $5, $5)
            ON CONFLICT (id) DO UPDATE SET
               tags = EXCLUDED.tags,
               content = EXCLUDED.content,
@@ -208,7 +234,7 @@ pub async fn capture_daily_urls(
            RETURNING id, tags, source, content, metadata, status, next_review_date, linked_note_id, linked_journal_date, created_at, updated_at"#
     )
     .bind(&daily_id)
-    .bind(&date)
+    .bind(&source_tags)
     .bind(format!("{} links captured on {}", total_urls, date))
     .bind(sqlx::types::Json(metadata))
     .bind(now)

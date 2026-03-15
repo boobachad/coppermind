@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { invoke } from '@tauri-apps/api/core';
 import { MessageBubble } from '../components/MessageBubble';
 import { StickyNote } from '../components/StickyNote';
 import { StickerLayer, StickerLayerRef } from '../components/StickerLayer';
@@ -10,10 +11,11 @@ import { getDb } from '../lib/db';
 import { setActiveNote } from '../lib/CaptureService';
 import { Note, StickyNote as StickyNoteType, Message } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { formatDateDDMMYYYY } from '../pos/lib/time';
+import { formatDateDDMMYYYY, getLocalDateString } from '../pos/lib/time';
 import { softDelete } from '../lib/softDelete';
 import { migrateTipTapToPlainText } from '../lib/tiptap-migration';
 import { NoteTitleInput, MessageInputArea } from './NotePageComps';
+import { extractUrls, detectUrlType } from '../lib/kb-utils';
 
 export function NotePage() {
   const { id } = useParams<{ id: string }>();
@@ -177,6 +179,23 @@ export function NotePage() {
     const updatedMessages = [...messages, newMsg];
     setMessages(updatedMessages);
     saveMessages(updatedMessages);
+
+    // Capture any URLs in the message to the daily KB item
+    const detectedUrls = extractUrls(content);
+    if (detectedUrls.length > 0 && id) {
+      const today = getLocalDateString();
+      invoke('capture_daily_urls', {
+        date: today,
+        urls: detectedUrls.map(url => ({
+          url,
+          urlType: detectUrlType(url),
+          sourceType: 'note',
+          sourceId: id,
+          sourceTitle: note?.title || 'Untitled Note',
+          sourceContext: 'content',
+        })),
+      }).catch(err => console.error('Failed to capture URLs from note:', err));
+    }
   };
 
   const handleStickyReorder = (stickyId: string, direction: 'front' | 'back') => {
@@ -247,13 +266,16 @@ export function NotePage() {
   const messagesRef = useRef<Message[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  const handleMessageUpdate = useRef((msgId: string, newContent: string) => {
+  const saveMessagesRef = useRef(saveMessages);
+  useEffect(() => { saveMessagesRef.current = saveMessages; }, [saveMessages]);
+
+  const handleMessageUpdate = useCallback((msgId: string, newContent: string) => {
     const current = messagesRef.current;
     const updated = current.map(m => m.id === msgId ? { ...m, content: newContent } : m);
     setMessages(updated);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => saveMessages(updated), 1000);
-  }).current;
+    saveTimeoutRef.current = setTimeout(() => saveMessagesRef.current(updated), 1000);
+  }, []);
 
   const handleMessageDelete = useRef((msgId: string) => {
     const current = messagesRef.current;

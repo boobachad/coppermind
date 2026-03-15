@@ -25,6 +25,14 @@ export interface Book {
     updatedAt: string;
 }
 
+export interface BookActivitySummary {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    pagesRead: number | null;
+}
+
 export interface BookReadingHistory {
     book: Book;
     activities: BookActivitySummary[];
@@ -32,12 +40,4 @@ export interface BookReadingHistory {
     totalReadingTimeMinutes: number;
     firstReadDate: string | null;
     lastReadDate: string | null;
-}
-
-export interface BookActivitySummary {
-    id: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    pagesRead: number | null;
 }

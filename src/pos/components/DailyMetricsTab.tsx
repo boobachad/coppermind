@@ -80,7 +80,8 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
 
     // Radial stacked: productive / unproductive / goal-directed as % of 1440
     const radialData = useMemo(() => {
-        const unproductive = metrics.totalMinutes - metrics.productiveMinutes;
+        const productiveOnly = Math.max(metrics.productiveMinutes - metrics.goalDirectedMinutes, 0);
+        const unproductive = Math.max(metrics.totalMinutes - metrics.productiveMinutes, 0);
         return [
             {
                 name: 'Goal-Directed',
@@ -88,8 +89,8 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
                 fill: resolveCssVar('var(--pos-warning-text)'),
             },
             {
-                name: 'Productive',
-                value: Math.round((metrics.productiveMinutes / 1440) * 100),
+                name: 'Productive (non-goal)',
+                value: Math.round((productiveOnly / 1440) * 100),
                 fill: resolveCssVar('var(--pos-success-text)'),
             },
             {
@@ -113,8 +114,12 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
             const end = parseActivityTime(act.endTime);
             const startH = start.getHours();
             const endH = Math.min(end.getHours() + (end.getMinutes() > 0 ? 1 : 0), 23);
-            for (let h = startH; h <= endH; h++) {
-                buckets[h] += 1;
+            if (endH < startH) {
+                // Activity spans midnight: increment startH..23 then 0..endH
+                for (let h = startH; h <= 23; h++) buckets[h] += 1;
+                for (let h = 0; h <= endH; h++) buckets[h] += 1;
+            } else {
+                for (let h = startH; h <= endH; h++) buckets[h] += 1;
             }
         }
         return buckets.map((count, h) => ({

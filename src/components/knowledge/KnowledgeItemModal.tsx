@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
 import { parseReferences } from '@/lib/entity-linking/core/parser';
+import { CapturedLinkItem } from './CapturedLinkItem';
+import type { CapturedUrlData } from './CapturedLinkItem';
 
 interface KnowledgeItemModalProps {
     isOpen: boolean;
@@ -286,47 +288,9 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
                                         No links captured
                                     </div>
                                 ) : (
-                                    dailyCaptureUrls.map((urlData: any, idx: number) => {
-                                        const sourceLabel = urlData.source_title || urlData.activity_title || 'Unknown';
-                                        const sourceType = urlData.source_type || 'activity';
-                                        const sourceContext = urlData.source_context || urlData.detected_in || '';
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className="p-2 rounded border"
-                                                style={{
-                                                    background: 'var(--glass-bg)',
-                                                    borderColor: 'var(--glass-border)',
-                                                }}
-                                            >
-                                                <div className="flex items-start gap-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <div
-                                                            className="text-sm font-medium truncate cursor-pointer hover:opacity-80"
-                                                            style={{ color: 'var(--color-accent-primary)' }}
-                                                            onClick={() => invoke('open_link', { url: urlData.url })}
-                                                        >
-                                                            {urlData.url}
-                                                        </div>
-                                                        <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                                            {sourceType} · {sourceLabel}{sourceContext ? ` (${sourceContext})` : ''}
-                                                        </div>
-                                                        {urlData.url_type && urlData.url_type !== 'generic' && urlData.url_type !== 'other' && (
-                                                            <div
-                                                                className="text-xs mt-1 inline-block px-1.5 py-0.5 rounded"
-                                                                style={{
-                                                                    background: 'var(--color-accent-primary)15',
-                                                                    color: 'var(--color-accent-primary)',
-                                                                }}
-                                                            >
-                                                                {urlData.url_type}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
+                                    dailyCaptureUrls.map((urlData: CapturedUrlData, idx: number) => (
+                                        <CapturedLinkItem key={idx} urlData={urlData} showOpenButton={false} />
+                                    ))
                                 )}
                             </div>
                             <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>

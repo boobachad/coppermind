@@ -13,7 +13,7 @@ pub async fn fetch_notes_for_cache(pool: &PgPool) -> Result<Vec<CachedEntity>, C
 
     Ok(notes.into_iter().map(|(id, title)| CachedEntity {
         entity_type: "note".to_string(),
-        entity_id: id.clone(),
+        entity_id: id,
         title: title.clone(),
         searchable_text: title,
         metadata: None,

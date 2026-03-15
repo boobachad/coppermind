@@ -57,7 +57,9 @@ export interface CFFriend {
     maxRating: number | null;
     lastSynced: string | null;
     createdAt: string;
+    /** Number of submissions synced/stored locally by our app for this friend (within a tracked timeframe). */
     submissionCount: number | null;
+    /** Total number of submissions on Codeforces as reported by their API. */
     totalSubmissions: number | null;
 }
 
