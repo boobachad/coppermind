@@ -214,7 +214,7 @@ export function UnifiedGoalsPage() {
                 onClick={() => setFilter(f)}
                 className={clsx(
                   'px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all',
-                  filter === f ? 'shadow-sm' : 'hover:bg-white/5'
+                  filter === f ? 'shadow-sm' : 'hover:bg-[var(--glass-bg-subtle)]'
                 )}
                 style={{
                   backgroundColor: filter === f ? 'var(--bg-base)' : 'transparent',

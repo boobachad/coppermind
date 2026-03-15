@@ -255,7 +255,8 @@ pub async fn create_activity(
     Ok(activity)
 }
 
-/// UPDATE: Modify activity details (time, category, description, productive flag).
+/// UPDATE: Modify activity details and reconcile milestone current_value.
+/// Fetches old milestone/metrics before update, reverses old increment, applies new.
 #[tauri::command]
 pub async fn update_activity(
     db: State<'_, PosDb>,
@@ -280,11 +281,41 @@ pub async fn update_activity(
     let date = req.date.unwrap_or_else(|| start.format("%Y-%m-%d").to_string());
     let is_productive = req.is_productive.unwrap_or(true);
 
-    // Validate: goal_ids and milestone_id are mutually exclusive
     if req.goal_ids.is_some() && req.milestone_id.is_some() {
         return Err(PosError::InvalidInput("Cannot link to both goals and milestone".into()));
     }
 
+    let mut tx = pool.begin().await.map_err(|e| db_context("TX begin", e))?;
+
+    // Fetch old activity to get previous milestone_id and metric sum
+    let old: (Option<String>, Option<i32>) = sqlx::query_as(
+        r#"SELECT a.milestone_id,
+                  (SELECT COALESCE(SUM(m.value), 0)::int FROM pos_activity_metrics m WHERE m.activity_id = a.id)
+           FROM pos_activities a WHERE a.id = $1"#,
+    )
+    .bind(&id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| db_context("fetch old activity", e))?;
+
+    let old_milestone_id = old.0;
+    let old_metric_sum = old.1.unwrap_or(0);
+
+    // Reverse old milestone increment
+    if let Some(ref old_mid) = old_milestone_id {
+        if old_metric_sum > 0 {
+            sqlx::query(
+                "UPDATE goal_periods SET current_value = GREATEST(0, current_value - $1) WHERE id = $2",
+            )
+            .bind(old_metric_sum)
+            .bind(old_mid)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| db_context("reverse old milestone", e))?;
+        }
+    }
+
+    // Update the activity row
     sqlx::query(
         r#"UPDATE pos_activities SET
            date = $1, start_time = $2, end_time = $3, category = $4,
@@ -304,9 +335,28 @@ pub async fn update_activity(
     .bind(&req.book_id)
     .bind(&req.pages_read)
     .bind(&id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| db_context("update activity", e))?;
+
+    // Apply new milestone increment from incoming updates
+    if let Some(ref new_mid) = req.milestone_id {
+        let new_total: i32 = req.updates.as_ref()
+            .map(|us| us.iter().map(|u| u.value).sum())
+            .unwrap_or(0);
+        if new_total > 0 {
+            sqlx::query(
+                "UPDATE goal_periods SET current_value = current_value + $1 WHERE id = $2",
+            )
+            .bind(new_total)
+            .bind(new_mid)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| db_context("apply new milestone", e))?;
+        }
+    }
+
+    tx.commit().await.map_err(|e| db_context("TX commit", e))?;
 
     let activity = sqlx::query_as::<_, ActivityRow>(
         r#"SELECT id, date, start_time, end_time, category, title, description,
@@ -318,7 +368,7 @@ pub async fn update_activity(
     .await
     .map_err(|e| db_context("fetch updated activity", e))?;
 
-    log::info!("[POS] Updated activity {}", id);
+    log::info!("[POS] Updated activity {} (old_milestone: {:?}, new_milestone: {:?})", id, old_milestone_id, req.milestone_id);
     Ok(activity)
 }
 

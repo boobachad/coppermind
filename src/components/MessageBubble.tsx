@@ -59,7 +59,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveUp?.(message.id)}
                             disabled={!canMoveUp}
-                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
@@ -68,7 +68,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveDown?.(message.id)}
                             disabled={!canMoveDown}
-                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >
@@ -103,7 +103,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveUp?.(message.id)}
                             disabled={!canMoveUp}
-                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
@@ -112,7 +112,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveDown?.(message.id)}
                             disabled={!canMoveDown}
-                            className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >

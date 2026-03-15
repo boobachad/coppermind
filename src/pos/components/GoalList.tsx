@@ -20,7 +20,7 @@ export function GoalList({ regularGoals, debtGoals, onEdit, onDelete }: GoalList
 
                 {regularGoals.length === 0 && debtGoals.length === 0 && (
                     <div className="text-center py-20 opacity-50">
-                        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-white/5">
+                        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                             <Target className="w-10 h-10 text-(--text-tertiary)" />
                         </div>
                         <h3 className="text-lg font-medium text-muted-foreground">No goals found</h3>

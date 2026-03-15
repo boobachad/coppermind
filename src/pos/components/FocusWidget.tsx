@@ -241,7 +241,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                                 fill="none" stroke="currentColor" strokeWidth="4"
                                 strokeDasharray={alwaysExpanded ? "754" : "565"}
                                 strokeDashoffset={(alwaysExpanded ? 754 : 565) - ((alwaysExpanded ? 754 : 565) * progress / 100)}
-                                className="text-white transition-all duration-1000 ease-linear"
+                                className="transition-all duration-1000 ease-linear" style={{ color: 'var(--color-accent-primary)' }}
                                 transform={alwaysExpanded ? "rotate(-90 128 128)" : "rotate(-90 96 96)"}
                             />
                         )}
@@ -357,7 +357,8 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         {state.mode === 'work' ? (
                             <button
                                 onClick={takeBreak}
-                                className="flex-2 py-2 rounded-lg bg-[#3b82f6]/10 text-[#3b82f6] text-xs font-medium hover:bg-[#3b82f6]/20 border border-[#3b82f6]/20 flex items-center justify-center gap-2 transition-colors"
+                                className="flex-2 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
+                                style={{ backgroundColor: 'var(--pos-info-bg)', color: 'var(--pos-info-text)', borderColor: 'var(--pos-info-border)' }}
                             >
                                 <Coffee className="w-3 h-3" />
                                 Take Break (Log & Pause)
@@ -365,7 +366,8 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         ) : (
                             <button
                                 onClick={resumeWork}
-                                className="flex-2 py-2 rounded-lg bg-[#10b981]/10 text-[#10b981] text-xs font-medium hover:bg-[#10b981]/20 border border-[#10b981]/20 flex items-center justify-center gap-2 transition-colors"
+                                className="flex-2 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
+                                style={{ backgroundColor: 'var(--pos-success-bg)', color: 'var(--pos-success-text)', borderColor: 'var(--pos-success-border)' }}
                             >
                                 <Briefcase className="w-3 h-3" />
                                 Resume Work

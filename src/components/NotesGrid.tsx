@@ -98,7 +98,7 @@ function SortableNote({
       onContextMenu={onContextMenu}
       className={clsx(
         "material-glass-subtle rounded-xl p-6 transition-all flex flex-col h-48 group relative",
-        !isRearrangeMode && "hover:bg-white/10 cursor-pointer hover:-translate-y-1 hover:shadow-xl",
+        !isRearrangeMode && "hover:bg-[var(--glass-bg-subtle)] cursor-pointer hover:-translate-y-1 hover:shadow-xl",
         isRearrangeMode && "cursor-move ring-2 ring-transparent hover:ring-blue-500/50"
       )}
     >

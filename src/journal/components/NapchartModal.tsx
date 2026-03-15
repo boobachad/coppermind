@@ -386,7 +386,10 @@ export default function NapchartModal({ isOpen, onClose, data, onSave, title, da
                 </Button>
               )}
               <Button onClick={handleSave} variant="default" className="font-medium">Save</Button>
-              <button onClick={onClose} className="p-2 rounded hover:bg-white/10 transition-colors">
+              <button onClick={onClose} className="p-2 rounded transition-colors" style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--glass-bg-subtle)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
                 <X className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
               </button>
             </div>

@@ -202,8 +202,9 @@ export function DailyBriefingPage() {
         </form>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-7xl mx-auto columns-1 lg:columns-2 gap-6">
         {/* Today's Goals */}
+        <div className="break-inside-avoid mb-6 inline-block w-full">
         <Section title="Today's Goals" count={briefing.goals.length}>
           {briefing.goals.length === 0 ? (
             <EmptyState message="No goals for today" />
@@ -215,9 +216,11 @@ export function DailyBriefingPage() {
             </div>
           )}
         </Section>
+        </div>
 
         {/* Debt Goals */}
         {briefing.debtGoals.length > 0 && (
+          <div className="break-inside-avoid mb-6 inline-block w-full">
           <Section
             title="Debt Goals"
             count={briefing.debtGoals.length}
@@ -229,9 +232,11 @@ export function DailyBriefingPage() {
               ))}
             </div>
           </Section>
+          </div>
         )}
 
         {/* Active Milestones */}
+        <div className="break-inside-avoid mb-6 inline-block w-full">
         <Section title="Active Milestones" count={milestones.length}>
           {milestones.length === 0 ? (
             <EmptyState message="No active milestones" />
@@ -243,8 +248,10 @@ export function DailyBriefingPage() {
             </div>
           )}
         </Section>
+        </div>
 
         {/* KB Items Due */}
+        <div className="break-inside-avoid mb-6 inline-block w-full">
         <Section title="Knowledge Items Due" count={briefing.kbItemsDue.length}>
           {briefing.kbItemsDue.length === 0 ? (
             <EmptyState message="No KB items due for review" />
@@ -260,6 +267,7 @@ export function DailyBriefingPage() {
             </div>
           )}
         </Section>
+        </div>
       </div>
     </div>
   );

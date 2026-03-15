@@ -238,19 +238,19 @@ export function SheetsPage() {
                         </div>
 
                         <div className="grid grid-cols-4 gap-2 text-center">
-                            <div className="p-2 rounded bg-black/20">
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                 <div className="text-xs opacity-60 mb-1">Total</div>
                                 <div className="font-bold">{statsLoading ? '-' : lcStats?.totalSolved}</div>
                             </div>
-                            <div className="p-2 rounded bg-black/20" style={{ color: 'var(--pos-success-text)' }}>
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--pos-success-text)' }}>
                                 <div className="text-xs opacity-60 mb-1">Easy</div>
                                 <div className="font-bold">{statsLoading ? '-' : lcStats?.easySolved}</div>
                             </div>
-                            <div className="p-2 rounded bg-black/20" style={{ color: 'var(--pos-warning-text)' }}>
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--pos-warning-text)' }}>
                                 <div className="text-xs opacity-60 mb-1">Med</div>
                                 <div className="font-bold">{statsLoading ? '-' : lcStats?.mediumSolved}</div>
                             </div>
-                            <div className="p-2 rounded bg-black/20" style={{ color: 'var(--pos-error-text)' }}>
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--pos-error-text)' }}>
                                 <div className="text-xs opacity-60 mb-1">Hard</div>
                                 <div className="font-bold">{statsLoading ? '-' : lcStats?.hardSolved}</div>
                             </div>
@@ -272,25 +272,25 @@ export function SheetsPage() {
                         </div>
 
                         <div className="grid grid-cols-4 gap-2 text-center">
-                            <div className="p-2 rounded bg-black/20">
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                 <div className="text-xs opacity-60 mb-1">Rating</div>
                                 <div className="font-bold flex flex-col">
                                     <span style={{ color: 'var(--text-primary)' }}>{statsLoading ? '-' : cfStats?.rating || 'Unrated'}</span>
                                 </div>
                             </div>
-                            <div className="p-2 rounded bg-black/20">
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                 <div className="text-xs opacity-60 mb-1">Max Rating</div>
                                 <div className="font-bold text-(--pos-info-text)">
                                     {statsLoading ? '-' : cfStats?.maxRating || '—'}
                                 </div>
                             </div>
-                            <div className="p-2 rounded bg-black/20">
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                 <div className="text-xs opacity-60 mb-1">Solved</div>
                                 <div className="font-bold text-(--pos-success-text)">
                                     {statsLoading ? '-' : cfStats?.totalSolved ?? 0}
                                 </div>
                             </div>
-                            <div className="p-2 rounded bg-black/20">
+                            <div className="p-2 rounded" style={{ backgroundColor: 'var(--glass-bg-subtle)' }}>
                                 <div className="text-xs opacity-60 mb-1">Total Subs</div>
                                 <div className="font-bold text-foreground">
                                     {statsLoading ? '-' : cfStats?.totalSubmissions ?? 0}
@@ -383,7 +383,7 @@ export function SheetsPage() {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-foreground opacity-70 uppercase tracking-wider">Lang</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-zinc-800/50">
+                            <tbody className="divide-y" style={{ borderColor: 'var(--glass-border)' }}>
                                 {filteredSubmissions.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-12 text-center text-foreground opacity-60">

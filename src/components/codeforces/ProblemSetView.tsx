@@ -235,7 +235,7 @@ export function ProblemSetView({
             fontSize: '0.75rem', 
             fontWeight: '500',
             display: 'inline-block',
-            color: '#ffffff'
+            color: 'var(--color-pure-white)'
           }}>
             {value}
           </span>

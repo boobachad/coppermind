@@ -134,7 +134,7 @@ export function SettingsPage() {
                     <div className="flex flex-col items-center justify-center h-full relative">
                       {theme === 'solarized-light' && (
                         <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--pos-info-border)' }}>
-                          <Check className="w-3 h-3 text-white" />
+                          <Check className="w-3 h-3" style={{ color: 'var(--color-pure-white)' }} />
                         </div>
                       )}
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-solarized-bg)', borderColor: 'var(--theme-preview-solarized-border)' }}></div>
@@ -155,7 +155,7 @@ export function SettingsPage() {
                     <div className="flex flex-col items-center justify-center h-full relative">
                       {theme === 'blue-light' && (
                         <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--pos-info-border)' }}>
-                          <Check className="w-3 h-3 text-white" />
+                          <Check className="w-3 h-3" style={{ color: 'var(--color-pure-white)' }} />
                         </div>
                       )}
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-blue-bg)', borderColor: 'var(--theme-preview-blue-border)' }}></div>
@@ -176,7 +176,7 @@ export function SettingsPage() {
                     <div className="flex flex-col items-center justify-center h-full relative">
                       {theme === 'dark' && (
                         <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--pos-info-border)' }}>
-                          <Check className="w-3 h-3 text-white" />
+                          <Check className="w-3 h-3" style={{ color: 'var(--color-pure-white)' }} />
                         </div>
                       )}
                       <div className="w-8 h-8 rounded-full mb-2 border" style={{ backgroundColor: 'var(--theme-preview-dark-bg)', borderColor: 'var(--theme-preview-dark-border)' }}></div>

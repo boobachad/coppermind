@@ -284,6 +284,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             let activityId: string;
             
             if (editingActivity) {
+                // Build milestone amount from metricValues if milestone is selected
+                const milestoneAmount = selectedMilestoneId
+                    ? (parseInt(metricValues['milestone'] || '0') || 0)
+                    : 0;
+
                 // Update activity with multiple goals or milestone
                 await invoke('update_activity', {
                     id: editingActivity.id,
@@ -299,6 +304,10 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         milestoneId: selectedMilestoneId,
                         bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
+                        // Pass milestone amount so backend can reconcile current_value
+                        updates: milestoneAmount > 0
+                            ? [{ metricId: 'milestone_direct', value: milestoneAmount }]
+                            : undefined,
                     }
                 });
 
@@ -312,9 +321,12 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     }
                 }
 
+                // Emit event to refresh milestones widget
+                window.dispatchEvent(new CustomEvent('milestone-updated'));
+
                 toast.success('Activity updated successfully');
                 activityId = editingActivity.id;
-                onSuccess?.(); // Trigger parent refetch to update timeline colors
+                onSuccess?.();
                 onCancelEdit?.();
             } else {
                 // Create activity with multiple goals or milestone

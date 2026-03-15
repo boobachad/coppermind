@@ -38,7 +38,8 @@ export function FloatingNavBar() {
         <NavLink
           to="/"
           end
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "shadow-sm" : "")}
+          style={({ isActive }) => ({ color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)', backgroundColor: isActive ? 'var(--glass-border)' : 'transparent' })}
         >
           <FileText className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Notes</span>
@@ -46,7 +47,8 @@ export function FloatingNavBar() {
 
         <NavLink
           to="/todos"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "shadow-sm" : "")}
+          style={({ isActive }) => ({ color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)', backgroundColor: isActive ? 'var(--glass-border)' : 'transparent' })}
         >
           <CheckSquare className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">To-Dos</span>
@@ -54,7 +56,8 @@ export function FloatingNavBar() {
 
         <NavLink
           to="/nodes"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "shadow-sm" : "")}
+          style={({ isActive }) => ({ color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)', backgroundColor: isActive ? 'var(--glass-border)' : 'transparent' })}
         >
           <Share2 className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Nodes</span>
@@ -62,7 +65,8 @@ export function FloatingNavBar() {
 
         <NavLink
           to="/journal"
-          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "text-white bg-white/10 shadow-sm" : "text-white/50 hover:text-white hover:bg-white/5")}
+          className={({ isActive }) => clsx("flex flex-col items-center p-2 rounded-lg transition-all group", isActive ? "shadow-sm" : "")}
+          style={({ isActive }) => ({ color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)', backgroundColor: isActive ? 'var(--glass-border)' : 'transparent' })}
         >
           <BookOpen className="w-5 h-5 mb-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-medium">Journal</span>

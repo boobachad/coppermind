@@ -91,7 +91,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                             </span>
                         )}
                         {goal.date && (
-                            <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10" style={{ color: 'var(--text-secondary)' }}>
+                            <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md" style={{ backgroundColor: 'var(--glass-bg-subtle)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }}>
                                 <Calendar className="w-3.5 h-3.5" />
                                 {format(parseGoalDate(goal.date), 'MMM d')}
                             </span>
@@ -109,7 +109,8 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                     {goal.problemId && (
                         <div className="mb-4">
                             <code
-                                className="text-xs px-2 py-1 rounded bg-black/20 border border-white/5 text-(--text-tertiary) font-mono"
+                                className="text-xs px-2 py-1 rounded border text-(--text-tertiary) font-mono"
+                                style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)' }}
                             >
                                 {goal.problemId}
                             </code>
@@ -160,7 +161,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                     )}
 
                     {/* Footer metadata */}
-                    <div className="flex items-center gap-3 text-[11px] font-medium text-(--text-tertiary) border-t border-white/5 pt-3 mt-2">
+                    <div className="flex items-center gap-3 text-[11px] font-medium text-(--text-tertiary) border-t pt-3 mt-2" style={{ borderColor: 'var(--glass-border)' }}>
                         <span>Created {goal.createdAt ? (() => {
                             // Convert UTC timestamp to local date
                             // Backend stores as TIMESTAMPTZ (UTC), we need local date for display
@@ -173,7 +174,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
                         })() : 'Unknown'}</span>
                         {goal.originalDate && (
                             <>
-                                <span className="w-1 h-1 rounded-full bg-white/20" />
+                                <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--glass-border-highlight)' }} />
                                 <span style={{ color: 'var(--pos-debt-text)' }}>Originally scheduled for {goal.originalDate}</span>
                             </>
                         )}
