@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { Retrospective, RetrospectiveStats } from '../pos/lib/types';
 import { RetrospectiveForm } from '../components/retrospective/RetrospectiveForm';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { formatISODateDDMMYYYY, getLocalDateString } from '../pos/lib/time';
 
 export function RetrospectivesPage() {
@@ -256,7 +257,7 @@ export function RetrospectivesPage() {
                                             Accomplishments
                                         </div>
                                         <div className="text-sm line-clamp-2" style={{ color: 'var(--text-tertiary)' }}>
-                                            {retro.questionsData.accomplishments}
+                                            <MarkdownRenderer content={retro.questionsData.accomplishments} />
                                         </div>
                                     </div>
                                 )}

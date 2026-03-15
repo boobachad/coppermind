@@ -321,6 +321,7 @@ export interface Milestone {
     unit: string | null;
     createdAt: string;
     updatedAt: string;
+    todayProgress?: number; // Progress logged today specifically
 }
 
 export interface BalancerResult {

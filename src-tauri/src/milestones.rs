@@ -373,3 +373,79 @@ pub async fn increment_milestone_progress(
     log::info!("[MILESTONE] Incremented milestone {} by {}", milestone_id, amount);
     Ok(milestone)
 }
+
+/// Get today's progress for a milestone (from linked unified_goal)
+#[tauri::command]
+pub async fn get_milestone_today_progress(
+    db: State<'_, PosDb>,
+    milestone_id: String,
+    today_date: String, // YYYY-MM-DD format
+) -> PosResult<i32> {
+    let pool = &db.0;
+
+    log::info!("[MILESTONE] Getting today's progress for {} on {}", milestone_id, today_date);
+
+    // Query today's unified_goal linked to this milestone
+    let today_progress: Option<i32> = sqlx::query_scalar(
+        r#"SELECT COALESCE(
+            (SELECT COALESCE(SUM((metric->>'current')::float), 0) 
+             FROM jsonb_array_elements(metrics) AS metric),
+            0
+        )::int
+        FROM unified_goals 
+        WHERE parent_goal_id = $1 
+        AND date = $2
+        LIMIT 1"#
+    )
+    .bind(&milestone_id)
+    .bind(&today_date)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| db_context("get_milestone_today_progress", e))?;
+
+    let result = today_progress.unwrap_or(0);
+    log::info!("[MILESTONE] Today's progress for {}: {}", milestone_id, result);
+    Ok(result)
+}
+
+/// Get milestone with per-day breakdown for debt calculation
+#[tauri::command]
+pub async fn get_milestone_with_daily_breakdown(
+    db: State<'_, PosDb>,
+    milestone_id: String,
+) -> PosResult<serde_json::Value> {
+    let pool = &db.0;
+
+    // Get milestone
+    let milestone = sqlx::query_as::<_, MilestoneRow>(
+        "SELECT * FROM goal_periods WHERE id = $1"
+    )
+    .bind(&milestone_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("get_milestone", e))?;
+
+    // Get daily breakdown from unified_goals
+    let daily_progress: Vec<(String, i32)> = sqlx::query_as(
+        r#"SELECT 
+            date,
+            COALESCE(
+                (SELECT COALESCE(SUM((metric->>'current')::float), 0) 
+                 FROM jsonb_array_elements(metrics) AS metric),
+                0
+            )::int as progress
+        FROM unified_goals 
+        WHERE parent_goal_id = $1 
+        AND date IS NOT NULL
+        ORDER BY date"#
+    )
+    .bind(&milestone_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("get_daily_breakdown", e))?;
+
+    Ok(serde_json::json!({
+        "milestone": milestone,
+        "dailyBreakdown": daily_progress
+    }))
+}

@@ -116,7 +116,7 @@ export function SlotPopup({ open, onClose, date, slotIndex }: SlotPopupProps) {
                                         <div className="flex-1">
                                             <div className="font-medium text-foreground">{activity.title}</div>
                                             {activity.description && (
-                                                <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+                                                <div className="text-xs text-muted-foreground mt-1">
                                                     <MarkdownRenderer content={activity.description} />
                                                 </div>
                                             )}

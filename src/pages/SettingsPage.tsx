@@ -11,14 +11,17 @@ import {
   X,
   Check,
   DatabaseZap,
-  RefreshCw
+  RefreshCw,
+  FlaskConical
 } from 'lucide-react';
 import { formatTime } from '../pos/lib/time';
 import { Button } from '../components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [uiScale, setUiScale] = useState(() => {
     const saved = localStorage.getItem('app_ui_scale');
     return saved ? parseFloat(saved) : 1;
@@ -270,6 +273,35 @@ export function SettingsPage() {
                   <div>
                     <h3 className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Export Notes</h3>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Download your notes in various formats</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
+              </div>
+            </div>
+          </section>
+
+          {/* Experimental Features */}
+          <section className="mb-6">
+            <div className="mb-3">
+              <h2 className="text-lg font-semibold flex items-center" style={{ color: 'var(--text-primary)' }}>
+                <FlaskConical className="w-5 h-5 mr-2" style={{ color: 'var(--text-secondary)' }} />
+                Experimental
+              </h2>
+            </div>
+            <div className="rounded-lg border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+              <div
+                onClick={() => navigate('/experimental')}
+                className="p-5 flex items-center justify-between cursor-pointer transition-colors"
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <div className="flex items-center">
+                  <div className="p-2 rounded-lg mr-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                    <FlaskConical className="w-6 h-6" style={{ color: 'var(--color-accent-primary)' }} />
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Experimental Features</h3>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Test new components and features</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />

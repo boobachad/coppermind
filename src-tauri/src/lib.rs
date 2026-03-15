@@ -372,6 +372,8 @@ pub fn run() {
             milestones::run_balancer_engine,
             milestones::delete_milestone,
             milestones::increment_milestone_progress,
+            milestones::get_milestone_today_progress,
+            milestones::get_milestone_with_daily_breakdown,
             debt_system::get_accumulated_debt,
             debt_system::get_debt_trail,
             debt_system::transition_monthly_debt,

@@ -20,6 +20,8 @@ import KnowledgePage from './pages/KnowledgePage';
 import MilestonesPage from './pages/MilestonesPage';
 import { RetrospectivesPage } from './pages/RetrospectivesPage';
 import { WhiteboardPage } from './components/whiteboard/WhiteboardPage';
+import { ExperimentalPage } from './pages/ExperimentalPage';
+import { KeyboardTestPage } from './pages/KeyboardTestPage';
 import { LadderBrowser } from './components/codeforces/LadderBrowser';
 import LadderView from './components/codeforces/LadderView';
 import CategoryBrowser from './components/codeforces/CategoryBrowser';
@@ -79,6 +81,8 @@ function App() {
             <Route path="briefing" element={<DailyBriefingPage />} />
             <Route path="retrospectives" element={<RetrospectivesPage />} />
             <Route path="whiteboard" element={<WhiteboardPage />} />
+            <Route path="experimental" element={<ExperimentalPage />} />
+            <Route path="experimental/keyboard" element={<KeyboardTestPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="pos" element={<HomePage />} />
             <Route path="pos/grid" element={<GridPage />} />

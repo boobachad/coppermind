@@ -10,12 +10,12 @@ import { getLocalDateString } from '../../pos/lib/time';
 import { JournalEntry, NapchartData } from '../types';
 import ScheduleViewer from '../components/ScheduleViewer';
 import MarkdownEditor from '../components/MarkdownEditor';
-import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { getDb } from '../../lib/db';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { softDelete } from '@/lib/softDelete';
 import { parseReferences } from '@/lib/entity-linking/core/parser';
 import { invoke } from '@tauri-apps/api/core';
+import { MonthSelector } from '../../pos/components/MonthSelector';
 
 export default function EntryPage() {
   const { date } = useParams<{ date: string }>();
@@ -31,10 +31,60 @@ export default function EntryPage() {
   const [expectedScheduleData, setExpectedScheduleData] = useState<NapchartData | null>(null);
   const [actualScheduleData, setActualScheduleData] = useState<NapchartData | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [allEntryDates, setAllEntryDates] = useState<string[]>([]);
 
   useEffect(() => {
-    if (date) loadEntry();
+    if (date) {
+      loadEntry();
+      loadAllEntryDates();
+    }
   }, [date]);
+
+  const loadAllEntryDates = async () => {
+    try {
+      const db = await getDb();
+      const rows = await db.select<any[]>('SELECT date FROM journal_entries ORDER BY date ASC');
+      setAllEntryDates(rows.map(r => r.date));
+    } catch (error) {
+      console.error('Failed to load entry dates:', error);
+    }
+  };
+
+  const handleDateChange = (newDate: string) => {
+    if (hasChanges) {
+      toast.warning('Save changes before navigating');
+      return;
+    }
+    
+    // Find closest existing entry
+    const currentIndex = allEntryDates.indexOf(date!);
+    const targetIndex = allEntryDates.indexOf(newDate);
+    
+    if (targetIndex !== -1) {
+      // Exact match exists
+      navigate(`/journal/${newDate}`);
+    } else if (currentIndex !== -1) {
+      // Navigate to next/prev existing entry
+      const isForward = newDate > date!;
+      if (isForward) {
+        // Find next entry after newDate
+        const nextEntry = allEntryDates.find(d => d > date!);
+        if (nextEntry) {
+          navigate(`/journal/${nextEntry}`);
+        } else {
+          toast.info('No more entries');
+        }
+      } else {
+        // Find previous entry before newDate
+        const prevEntry = [...allEntryDates].reverse().find(d => d < date!);
+        if (prevEntry) {
+          navigate(`/journal/${prevEntry}`);
+        } else {
+          toast.info('No previous entries');
+        }
+      }
+    }
+  };
 
   const loadEntry = async () => {
     try {
@@ -80,6 +130,12 @@ export default function EntryPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (date) {
+      loadEntry();
+    }
+  }, [date]);
 
   const handleSave = async () => {
     if (!date || !hasChanges) return;
@@ -185,20 +241,20 @@ export default function EntryPage() {
 
   if (!entry) return null;
 
-  const isPast = date! < getLocalDateString();
-
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Navbar breadcrumbItems={[{ label: 'journal', href: '/journal' }, { label: `Day ${entry.dayX}` }]} />
       
       <main className="container mx-auto px-6 py-8 flex-1 overflow-auto">
+        <MonthSelector 
+          value={date || getLocalDateString()} 
+          onChange={handleDateChange} 
+          mode="day"
+        />
+        
         <div className="flex justify-between items-center mb-8">
-          <div className="space-y-1">
+          <div>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Day {entry.dayX}</h1>
-            <div className="flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-              <Calendar className="h-5 w-5" />
-              <p className="text-lg">{formatDateDDMMYYYY(new Date(entry.date))}</p>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <Link to={`/pos/grid/${entry.date}`}>
@@ -230,31 +286,29 @@ export default function EntryPage() {
           </div>
         </div>
 
-        {!isPast && (
-          <div className="flex justify-end mb-6">
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="flex items-center gap-2 hover:opacity-90"
-              style={{
-                backgroundColor: 'var(--btn-primary-bg)',
-                color: 'var(--btn-primary-text)'
-              }}
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2" style={{ borderColor: 'currentColor' }}></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        <div className="flex justify-end mb-6">
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+            className="flex items-center gap-2 hover:opacity-90"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg)',
+              color: 'var(--btn-primary-text)'
+            }}
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2" style={{ borderColor: 'currentColor' }}></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <Card style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
@@ -268,7 +322,7 @@ export default function EntryPage() {
                 imageUrl={expectedImage}
                 onScheduleChange={handleExpectedScheduleChange}
                 onImageChange={handleExpectedImageChange}
-                isLocked={isPast}
+                isLocked={date! < getLocalDateString()}
                 title="Expected Schedule"
               />
             </CardContent>
@@ -285,7 +339,7 @@ export default function EntryPage() {
                 imageUrl={actualImage}
                 onScheduleChange={handleActualScheduleChange}
                 onImageChange={handleActualImageChange}
-                isLocked={isPast}
+                isLocked={false}
                 title="Actual Schedule"
                 date={date}
               />
@@ -302,7 +356,7 @@ export default function EntryPage() {
             <MarkdownEditor
               initialContent={reflectionText}
               onContentChange={handleReflectionChange}
-              readOnly={isPast}
+              readOnly={date! < getLocalDateString()}
             />
           </CardContent>
         </Card>

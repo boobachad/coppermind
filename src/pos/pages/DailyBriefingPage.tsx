@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getLocalDateString } from '../lib/time';
 import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
 import { Loader } from '../../components/Loader';
+import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { calculateTodayRequired } from '../lib/balancer-utils';
 import { MonthSelector } from '../components/MonthSelector';
 
@@ -366,9 +367,9 @@ function GoalItem({ goal, isDebt }: GoalItemProps) {
           {goal.text}
         </p>
         {goal.description && (
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-            {goal.description}
-          </p>
+          <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+            <MarkdownRenderer content={goal.description} />
+          </div>
         )}
         <div className="flex items-center gap-2 mt-2">
           <span

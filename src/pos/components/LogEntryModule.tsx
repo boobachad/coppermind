@@ -393,6 +393,9 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
                 toast.success('Activity logged successfully');
 
+                // Emit event to refresh milestones
+                window.dispatchEvent(new CustomEvent('milestone-updated'));
+
                 // Trigger reflection prompt for first goal OR milestone BEFORE form reset
                 if (selectedGoalIds.length > 0) {
                     const firstGoal = availableGoals.find(g => g.id === selectedGoalIds[0]);

@@ -20,6 +20,9 @@ export const ACTIVITY_CATEGORIES = {
     BATH: 'bath',
     WALKING: 'walking',
     BREAK: 'break',
+    DOOM_SCROLL: 'doom_scroll',
+    DISCUSSION: 'discussion',
+    FRESHUP: 'freshup',
 } as const;
 
 export type ActivityCategory = typeof ACTIVITY_CATEGORIES[keyof typeof ACTIVITY_CATEGORIES];
@@ -46,6 +49,9 @@ export const ACTIVITY_COLORS: Record<string, string> = {
     bath: 'var(--pos-activity-bath)',
     walking: 'var(--pos-activity-walking)',
     break: 'var(--pos-activity-break)',
+    doom_scroll: 'var(--pos-activity-doom-scroll)',
+    discussion: 'var(--pos-activity-discussion)',
+    freshup: 'var(--pos-activity-freshup)',
 };
 
 // Helper to get activity color with fallback

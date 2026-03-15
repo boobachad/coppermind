@@ -9,6 +9,7 @@ import { SlotPopup } from '../components/SlotPopup';
 import { Navbar } from '../components/Navbar';
 import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '@/components/Loader';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { parseActivityTime, getActivityDuration, activityOverlapsSlot, formatActivityTime, getLocalDateString, getSlotBoundaries, getDayBoundariesUTC, formatISODateDDMMYYYY, parseGoalDate, formatGoalDate } from '../lib/time';
 import { getActivityColor } from '../lib/config';
 import type { Activity, UnifiedGoal, Book } from '../lib/types';
@@ -553,12 +554,12 @@ export function DailyPage() {
                                             
                                             if (goal.verified) {
                                                 statusLabel = 'Verified';
-                                                statusBg = 'var(--pos-success-border)';
+                                                statusBg = 'var(--pos-success-bg)';
                                                 statusColor = 'var(--pos-success-text)';
                                             } else if (isDebt) {
                                                 statusLabel = 'Debt';
-                                                statusBg = 'var(--pos-error-border)';
-                                                statusColor = 'var(--pos-error-text)';
+                                                statusBg = 'var(--pos-debt-bg)';
+                                                statusColor = 'var(--pos-debt-text)';
                                             }
                                             
                                             return (
@@ -573,7 +574,7 @@ export function DailyPage() {
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <p className="text-sm font-medium">{goal.text}</p>
-                                                        {goal.description && <p className="text-xs text-muted-foreground mt-0.5">{goal.description}</p>}
+                                                        {goal.description && <div className="text-xs text-muted-foreground mt-0.5"><MarkdownRenderer content={goal.description} /></div>}
                                                         {goal.problemId && (
                                                             <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
                                                                 Target: {goal.problemId}
@@ -581,7 +582,7 @@ export function DailyPage() {
                                                         )}
                                                     </div>
                                                     <span
-                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 select-none"
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase cursor-pointer hover:opacity-80 select-none border"
                                                         onClick={async () => {
                                                             try {
                                                                 await invoke('update_unified_goal', {
@@ -595,7 +596,8 @@ export function DailyPage() {
                                                         }}
                                                         style={{
                                                             backgroundColor: statusBg,
-                                                            color: statusColor
+                                                            color: statusColor,
+                                                            borderColor: goal.verified ? 'var(--pos-success-border)' : isDebt ? 'var(--pos-debt-border)' : 'var(--border-color)'
                                                         }}
                                                     >
                                                         {statusLabel}

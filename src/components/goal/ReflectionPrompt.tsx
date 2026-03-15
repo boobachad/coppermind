@@ -6,6 +6,7 @@ import { formatDateDDMMYYYY } from '../../pos/lib/time';
 import { useConfirmDialog } from '../ConfirmDialog';
 import { toast } from 'sonner';
 import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
 interface ReflectionPromptProps {
     entityType: 'goal' | 'milestone';
@@ -318,9 +319,9 @@ export function ReflectionList({ entityType, entityId }: ReflectionListProps) {
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
-                                <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
-                                    {reflection.learningText}
-                                </p>
+                                <div className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
+                                    <MarkdownRenderer content={reflection.learningText} />
+                                </div>
                                 <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
                                     <span>{formatDateDDMMYYYY(new Date(reflection.createdAt))}</span>
                                     {reflection.kbItemId && (

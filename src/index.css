@@ -194,7 +194,40 @@
   --pos-activity-bath: #22d3ee;
   --pos-activity-walking: #34d399;
   --pos-activity-break: #a78bfa;
+  --pos-activity-doom-scroll: #ef4444;
+  --pos-activity-discussion: #8b5cf6;
+  --pos-activity-freshup: #06b6d4;
 
+
+  /* Semantic status colors - Dark Default */
+  --pos-success-bg: rgba(22, 163, 74, 0.15);
+  --pos-success-border: #16a34a;
+  --pos-success-text: #4ade80;
+
+  --pos-warning-bg: rgba(217, 119, 6, 0.15);
+  --pos-warning-border: #d97706;
+  --pos-warning-text: #fbbf24;
+
+  --pos-error-bg: rgba(220, 38, 38, 0.15);
+  --pos-error-border: #dc2626;
+  --pos-error-text: #f87171;
+
+  --pos-info-bg: rgba(37, 99, 235, 0.15);
+  --pos-info-border: #2563eb;
+  --pos-info-text: #60a5fa;
+
+  --pos-debt-bg: rgba(220, 38, 38, 0.15);
+  --pos-debt-border: #dc2626;
+  --pos-debt-text: #f87171;
+
+  --pos-today-bg: rgba(37, 99, 235, 0.15);
+  --pos-today-border: #2563eb;
+  --pos-today-text: #60a5fa;
+
+  --pos-goal-accent: #3b82f6;
+  --pos-milestone-accent: #a855f7;
+  --pos-segment-empty: rgba(255, 255, 255, 0.03);
+  --pos-activity-fallback: #94a3b8;
 
   /* Legacy shadcn variables */
   --chart-3: oklch(0.398 0.07 227.392);
@@ -266,6 +299,9 @@
   --pos-activity-bath: #0891b2;
   --pos-activity-walking: #059669;
   --pos-activity-break: #7c3aed;
+  --pos-activity-doom-scroll: #dc2626;
+  --pos-activity-discussion: #7c3aed;
+  --pos-activity-freshup: #0891b2;
 
 
   /* Semantic status colors - Solarized Light */
@@ -327,6 +363,31 @@
   --btn-primary-text: #000000;
   --primary: oklch(1 0 0);
   --primary-foreground: oklch(0 0 0);
+
+  /* Semantic status colors - Dark Mode */
+  --pos-success-bg: rgba(22, 163, 74, 0.15);
+  --pos-success-border: #16a34a;
+  --pos-success-text: #4ade80;
+
+  --pos-warning-bg: rgba(217, 119, 6, 0.15);
+  --pos-warning-border: #d97706;
+  --pos-warning-text: #fbbf24;
+
+  --pos-error-bg: rgba(220, 38, 38, 0.15);
+  --pos-error-border: #dc2626;
+  --pos-error-text: #f87171;
+
+  --pos-info-bg: rgba(37, 99, 235, 0.15);
+  --pos-info-border: #2563eb;
+  --pos-info-text: #60a5fa;
+
+  --pos-debt-bg: rgba(220, 38, 38, 0.15);
+  --pos-debt-border: #dc2626;
+  --pos-debt-text: #f87171;
+
+  --pos-today-bg: rgba(37, 99, 235, 0.15);
+  --pos-today-border: #2563eb;
+  --pos-today-text: #60a5fa;
 }
 
 /* Theme Overrides */
@@ -407,6 +468,9 @@
   --pos-activity-bath: #0891b2;
   --pos-activity-walking: #059669;
   --pos-activity-break: #7c3aed;
+  --pos-activity-doom-scroll: #dc2626;
+  --pos-activity-discussion: #7c3aed;
+  --pos-activity-freshup: #0891b2;
 
 
   /* Semantic status colors - Blue Light */
@@ -627,6 +691,7 @@ body {
   margin: 0;
   line-height: 1.5;
   color: var(--text-primary);
+  white-space: pre-wrap;
 }
 
 .markdown-content strong,
@@ -1015,4 +1080,81 @@ ul[data-type="taskList"] li>div {
   to {
     opacity: 1;
   }
+}
+
+/* Journal Entry Badges */
+.journal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  cursor: default;
+  border: 1px solid transparent;
+}
+
+.journal-badge:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.journal-badge-expected {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.journal-badge-actual {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.journal-badge-reflection {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Dark theme adjustments */
+.dark .journal-badge-expected {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.dark .journal-badge-actual {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.dark .journal-badge-reflection {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+/* Midnight theme adjustments */
+.midnight .journal-badge-expected {
+  background: rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.5);
+}
+
+.midnight .journal-badge-actual {
+  background: rgba(74, 222, 128, 0.25);
+  color: #86efac;
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.midnight .journal-badge-reflection {
+  background: rgba(252, 211, 77, 0.25);
+  color: #fde047;
+  border-color: rgba(252, 211, 77, 0.5);
 }

@@ -43,6 +43,17 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
     }
   }, [openCreateModal]);
 
+  // Listen for milestone updates from activity logging
+  useEffect(() => {
+    const handleMilestoneUpdate = () => {
+      console.log('[MilestoneWidget] Milestone updated, reloading...');
+      loadMilestones();
+    };
+
+    window.addEventListener('milestone-updated', handleMilestoneUpdate);
+    return () => window.removeEventListener('milestone-updated', handleMilestoneUpdate);
+  }, [month, showAll]);
+
   const loadMilestones = async () => {
     setLoading(true);
     try {
@@ -50,8 +61,29 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
         activeOnly: false, // Always fetch all milestones for month filtering
       });
 
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // Fetch today's progress for each milestone
+      const milestonesWithProgress = await Promise.all(
+        result.map(async (milestone) => {
+          try {
+            const todayProgress = await invoke<number>('get_milestone_today_progress', {
+              milestoneId: milestone.id,
+              todayDate: todayStr,
+            });
+            console.log(`[Milestone] ${milestone.targetMetric} - Today's progress: ${todayProgress}`);
+            return { ...milestone, todayProgress };
+          } catch (err) {
+            console.error(`[Milestone] Failed to fetch today's progress for ${milestone.targetMetric}:`, err);
+            return { ...milestone, todayProgress: 0 };
+          }
+        })
+      );
+
       // Filter by month if specified
-      let filtered = result;
+      let filtered = milestonesWithProgress;
       if (month) {
         // Get month boundaries in YYYY-MM-DD format (no timezone conversion)
         const [year, monthNum] = month.split('-').map(Number);
@@ -61,7 +93,7 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
         const lastDay = new Date(year, monthNum, 0).getDate(); // monthNum is next month, day 0 = last day of previous
         const monthEndStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-        filtered = result.filter(goal => {
+        filtered = milestonesWithProgress.filter(goal => {
           const goalStart = goal.periodStart.split('T')[0];
           const goalEnd = goal.periodEnd.split('T')[0];
           
@@ -73,7 +105,7 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
       } else if (!showAll) {
         // If no month specified and not showAll, filter active only
         const now = new Date().toISOString();
-        filtered = result.filter(goal => goal.periodEnd >= now);
+        filtered = milestonesWithProgress.filter(goal => goal.periodEnd >= now);
       }
 
       setGoals(filtered);

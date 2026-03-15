@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { ExternalLink, CheckCircle, Circle, Target, ArrowLeft, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/Loader';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import type { CFLadderProblem, LadderStats } from '../../pos/lib/types';
 import { getLocalDateString } from '../../pos/lib/time';
 
@@ -369,9 +370,9 @@ export function ProblemSetView({
             </div>
 
             {item.description && (
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6', marginLeft: headerIcon ? '4.5rem' : '0' }}>
-                {item.description}
-              </p>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6', marginLeft: headerIcon ? '4.5rem' : '0' }}>
+                <MarkdownRenderer content={item.description} />
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '2rem', marginLeft: headerIcon ? '0.5rem' : '0' }}>

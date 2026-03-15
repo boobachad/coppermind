@@ -271,7 +271,7 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
                     <>
                         {/* Preview with clickable links */}
                         <div
-                            className="text-sm mb-3 whitespace-pre-wrap"
+                            className="text-sm mb-3"
                             style={{ color: 'var(--text-secondary)' }}
                         >
                             {renderContentWithLinks(item.content)}

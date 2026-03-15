@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { CheckCircle2, Repeat, Flame, AlertTriangle, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { GoalResources } from '../../components/goal/GoalResources';
 import { ReflectionList } from '../../components/goal/ReflectionPrompt';
+import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 
 interface GoalCardProps {
     goal: UnifiedGoal;
@@ -99,9 +100,9 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
                     {/* Description */}
                     {goal.description && (
-                        <p className="text-sm leading-relaxed mb-4 text-muted-foreground whitespace-pre-wrap">
-                            {goal.description}
-                        </p>
+                        <div className="text-sm leading-relaxed mb-4 text-muted-foreground">
+                            <MarkdownRenderer content={goal.description} />
+                        </div>
                     )}
 
                     {/* Problem ID */}

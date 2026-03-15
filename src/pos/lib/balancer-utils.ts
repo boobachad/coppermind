@@ -75,47 +75,59 @@ export function calculateScheduleStatus(
 }
 
 /**
- * Calculate debt (accumulated from past incomplete days)
+ * Calculate debt (accumulated from past incomplete days ONLY)
+ * Debt = shortfall from completed days (before today)
  */
 export function calculateDebt(
     current: number,
     _target: number,
     dailyAmount: number,
     periodStart: string,
-    _periodEnd: string
+    _periodEnd: string,
+    todayProgress: number = 0
 ): number {
     const today = getLocalDateString();
     const startDate = periodStart.split('T')[0];
     
-    // Calculate how many days have passed (not including today)
+    // Days that have COMPLETED (before today)
     const startTime = new Date(`${startDate}T00:00:00Z`).getTime();
     const todayTime = new Date(`${today}T00:00:00Z`).getTime();
-    const daysPassed = Math.floor((todayTime - startTime) / (1000 * 60 * 60 * 24));
+    const daysCompleted = Math.floor((todayTime - startTime) / (1000 * 60 * 60 * 24));
     
-    // Expected progress for days that have passed (not including today)
-    const expectedByNow = dailyAmount * daysPassed;
+    if (daysCompleted <= 0) {
+        // No completed days yet, no debt
+        return 0;
+    }
     
-    // Debt = what we should have done by now - what we actually did
-    const debt = Math.max(0, expectedByNow - current);
+    // Expected from completed days
+    const expectedFromPast = dailyAmount * daysCompleted;
     
-    return debt;
+    // Actual from completed days = total - today's progress
+    const actualFromPast = current - todayProgress;
+    
+    // Debt = shortfall from past only
+    return Math.max(0, expectedFromPast - actualFromPast);
 }
 
 /**
  * Calculate today's required amount (daily target + accumulated debt)
+ * This shows what's remaining for today, not the original daily amount
  */
 export function calculateTodayRequired(
     current: number,
     _target: number,
     dailyAmount: number,
     periodStart: string,
-    _periodEnd: string
-): { todayBase: number; debt: number; total: number } {
-    const debt = calculateDebt(current, _target, dailyAmount, periodStart, _periodEnd);
+    _periodEnd: string,
+    todayProgress: number = 0  // How much was logged today specifically
+): { todayBase: number; debt: number; total: number; todayRemaining: number } {
+    const debt = calculateDebt(current, _target, dailyAmount, periodStart, _periodEnd, todayProgress);
+    const todayRemaining = Math.max(0, dailyAmount - todayProgress);
     
     return {
         todayBase: dailyAmount,
         debt: debt,
-        total: dailyAmount + debt
+        total: todayRemaining + debt,
+        todayRemaining: todayRemaining
     };
 }

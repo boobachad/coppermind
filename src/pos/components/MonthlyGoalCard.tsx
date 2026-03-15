@@ -29,7 +29,8 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
     goal.targetValue,
     goal.dailyAmount,
     goal.periodStart,
-    goal.periodEnd
+    goal.periodEnd,
+    goal.todayProgress || 0
   );
   
   // Calculate remaining days and target using time utils
@@ -157,7 +158,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
           </span>
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-              {todayRequired.todayBase}
+              {todayRequired.todayRemaining}
             </span>
             {todayRequired.debt > 0 && (
               <>
@@ -168,7 +169,7 @@ export function MonthlyGoalCard({ goal, onEdit, onDelete, isArchived = false }: 
                     color: 'var(--color-error)',
                     borderColor: 'var(--color-error)'
                   }}
-                  title={`Debt: ${todayRequired.debt} ${goal.unit || ''}`}
+                  title={`Debt: ${todayRequired.debt} ${goal.unit || 'reps'}`}
                 >
                   {todayRequired.debt}
                 </span>
