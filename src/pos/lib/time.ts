@@ -58,6 +58,11 @@ export function formatMonthYear(date: Date): string {
     return `${MONTHS_LONG[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** Returns local timezone offset in minutes (negative for UTC+, e.g. -330 for UTC+5:30) */
+export function getTimezoneOffsetMinutes(): number {
+    return new Date().getTimezoneOffset();
+}
+
 export function getLocalDateString(): string {
     // CRITICAL: Date methods like getFullYear(), getMonth(), getDate() 
     // automatically convert to LOCAL timezone, even if Date object is UTC

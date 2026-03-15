@@ -349,29 +349,132 @@ pub async fn delete_milestone(
     Ok(())
 }
 
-/// Increment milestone progress by a given amount
+/// Increment milestone progress for a specific date.
+/// Updates the unified_goals row for that date (creates one if missing),
+/// then bumps the aggregate goal_periods.current_value.
 #[tauri::command]
 pub async fn increment_milestone_progress(
     db: State<'_, PosDb>,
     milestone_id: String,
     amount: i32,
+    date: String, // YYYY-MM-DD
 ) -> PosResult<MilestoneRow> {
     let pool = &db.0;
 
+    // Validate date format
+    chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+        .map_err(|_| PosError::InvalidInput("Invalid date, expected YYYY-MM-DD".into()))?;
+
+    // Fetch milestone for daily_amount and target_metric
     let milestone = sqlx::query_as::<_, MilestoneRow>(
-        "UPDATE goal_periods 
-         SET current_value = current_value + $1, updated_at = NOW()
-         WHERE id = $2
-         RETURNING *"
+        "SELECT id, target_metric, target_value, daily_amount, period_type, period_start, period_end, \
+         current_value, problem_id, unit, created_at, updated_at FROM goal_periods WHERE id = $1"
+    )
+    .bind(&milestone_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| db_context("fetch milestone for progress", e))?;
+
+    // Find existing unified_goals row for this milestone on this date
+    let existing: Option<(String, Option<sqlx::types::Json<serde_json::Value>>)> = sqlx::query_as(
+        "SELECT id, metrics FROM unified_goals WHERE parent_goal_id = $1 AND date = $2 LIMIT 1"
+    )
+    .bind(&milestone_id)
+    .bind(&date)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| db_context("find daily goal row", e))?;
+
+    let now = Utc::now();
+
+    if let Some((goal_id, existing_metrics)) = existing {
+        // Read current value from first metric
+        let current_metric_value: f64 = existing_metrics
+            .as_ref()
+            .and_then(|m| m.0.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|m| m.get("current"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        let new_current = current_metric_value + amount as f64;
+        let target = milestone.daily_amount as f64;
+        let is_complete = new_current >= target;
+
+        // Update first metric's current value in-place
+        sqlx::query(
+            r#"UPDATE unified_goals
+               SET metrics = jsonb_set(
+                   COALESCE(metrics, '[]'::jsonb),
+                   '{0,current}',
+                   $1::text::jsonb
+               ),
+               completed = $2,
+               completed_at = CASE WHEN $2 THEN $3 ELSE completed_at END,
+               is_debt = CASE WHEN $2 THEN false ELSE is_debt END,
+               updated_at = $3
+               WHERE id = $4"#
+        )
+        .bind(new_current)
+        .bind(is_complete)
+        .bind(now)
+        .bind(&goal_id)
+        .execute(pool)
+        .await
+        .map_err(|e| db_context("update daily goal metrics", e))?;
+    } else {
+        // No row for this date — create one
+        let new_id = crate::pos::utils::gen_id();
+        let target = milestone.daily_amount as f64;
+        let is_complete = amount as f64 >= target;
+        let unit = milestone.unit.clone().unwrap_or_default();
+
+        let metrics = serde_json::json!([{
+            "id": "milestone_direct",
+            "label": milestone.target_metric,
+            "target": target,
+            "current": amount as f64,
+            "unit": unit
+        }]);
+
+        sqlx::query(
+            r#"INSERT INTO unified_goals (
+                id, text, description, completed, completed_at, verified,
+                date, recurring_pattern, recurring_template_id, priority, urgent,
+                metrics, problem_id, linked_activity_ids, labels, parent_goal_id,
+                created_at, updated_at, original_date, is_debt
+            ) VALUES ($1, $2, NULL, $3, $4, false, $5, NULL, NULL, 'medium', false,
+                      $6, NULL, NULL, NULL, $7, $8, $8, NULL, false)"#
+        )
+        .bind(&new_id)
+        .bind(format!("{} progress ({})", milestone.target_metric, date))
+        .bind(is_complete)
+        .bind(if is_complete { Some(now) } else { None::<DateTime<Utc>> })
+        .bind(&date)
+        .bind(sqlx::types::Json(&metrics))
+        .bind(&milestone_id)
+        .bind(now)
+        .execute(pool)
+        .await
+        .map_err(|e| db_context("create daily goal row", e))?;
+    }
+
+    // Update aggregate current_value on goal_periods
+    let updated = sqlx::query_as::<_, MilestoneRow>(
+        "UPDATE goal_periods \
+         SET current_value = current_value + $1, updated_at = NOW() \
+         WHERE id = $2 \
+         RETURNING id, target_metric, target_value, daily_amount, period_type, period_start, period_end, \
+                   current_value, problem_id, unit, created_at, updated_at"
     )
     .bind(amount)
     .bind(&milestone_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| db_context("increment_milestone_progress", e))?;
+    .map_err(|e| db_context("increment_milestone_progress aggregate", e))?;
 
-    log::info!("[MILESTONE] Incremented milestone {} by {}", milestone_id, amount);
-    Ok(milestone)
+    log::info!("[MILESTONE] Incremented {} by {} on {} (aggregate now {})", milestone_id, amount, date, updated.current_value);
+    Ok(updated)
 }
 
 /// Get today's progress for a milestone (from linked unified_goal)

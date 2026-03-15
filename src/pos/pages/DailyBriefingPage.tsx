@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Calendar, CheckCircle2, Circle, TrendingUp, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { getLocalDateString, formatISODateDDMMYYYYWithDay } from '../lib/time';
+import { getLocalDateString, formatISODateDDMMYYYYWithDay, getTimezoneOffsetMinutes } from '../lib/time';
 import { DailyBriefingResponse, UnifiedGoal, Milestone, KnowledgeItem } from '../lib/types';
 import { Loader } from '../../components/Loader';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
@@ -16,6 +16,7 @@ export function DailyBriefingPage() {
   const [addingGoal, setAddingGoal] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [completedGoals, setCompletedGoals] = useState<UnifiedGoal[]>([]);
 
   useEffect(() => {
     loadBriefing();
@@ -24,24 +25,28 @@ export function DailyBriefingPage() {
   const loadBriefing = async () => {
     setLoading(true);
     try {
-      const [briefingResult, allMilestones] = await Promise.all([
+      const [briefingResult, allMilestones, doneToday] = await Promise.all([
         invoke<DailyBriefingResponse>('get_daily_briefing', { localDate: selectedDate }),
-        invoke<Milestone[]>('get_milestones', { activeOnly: false })
+        invoke<Milestone[]>('get_milestones', { activeOnly: false }),
+        invoke<UnifiedGoal[]>('get_completed_goals_for_date', { 
+          localDate: selectedDate,
+          timezoneOffsetMinutes: getTimezoneOffsetMinutes(),
+        }),
       ]);
       
       // Filter milestones that are active on selectedDate
       const filteredMilestones = allMilestones.filter(milestone => {
         const milestoneStart = milestone.periodStart.split('T')[0];
         const milestoneEnd = milestone.periodEnd.split('T')[0];
-        // Milestone is active if selectedDate is within its period
         return selectedDate >= milestoneStart && selectedDate <= milestoneEnd;
       });
       
       setBriefing(briefingResult);
       setMilestones(filteredMilestones);
+      setCompletedGoals(doneToday);
     } catch (err) {
       const errorMsg = err && typeof err === 'object' && 'message' in err
-        ? String(err.message)
+        ? String((err as { message: unknown }).message)
         : String(err);
       console.error('Failed to load daily briefing:', err);
       toast.error('Failed to load daily briefing', { description: errorMsg });
@@ -198,6 +203,19 @@ export function DailyBriefingPage() {
       </div>
 
       <div className="max-w-7xl mx-auto columns-1 lg:columns-2 gap-6">
+        {/* Today's Goal Strikes */}
+        {completedGoals.length > 0 && (
+          <div className="break-inside-avoid mb-6 inline-block w-full">
+            <Section title="Today's Goal Strikes" count={completedGoals.length}>
+              <div className="space-y-2">
+                {completedGoals.map(goal => (
+                  <GoalItem key={goal.id} goal={goal} />
+                ))}
+              </div>
+            </Section>
+          </div>
+        )}
+
         {/* Today's Goals */}
         <div className="break-inside-avoid mb-6 inline-block w-full">
         <Section title="Today's Goals" count={briefing.goals.length}>

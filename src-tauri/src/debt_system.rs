@@ -40,6 +40,54 @@ pub struct TransitionDebtRequest {
 
 // ─── Commands ───────────────────────────────────────────────────────
 
+/// Get goals completed on a specific local date (by completed_at UTC timestamp)
+/// timezone_offset_minutes: JS getTimezoneOffset() value (e.g. -330 for UTC+5:30)
+#[tauri::command]
+pub async fn get_completed_goals_for_date(
+    db: State<'_, PosDb>,
+    local_date: String,           // YYYY-MM-DD in local timezone
+    timezone_offset_minutes: i32, // JS getTimezoneOffset(): negative for UTC+ zones
+) -> PosResult<Vec<UnifiedGoalRow>> {
+    use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Duration};
+
+    let pool = &db.0;
+
+    // Parse local midnight for the given date
+    let naive_date = NaiveDate::parse_from_str(&local_date, "%Y-%m-%d")
+        .map_err(|e| PosError::InvalidInput(format!("Invalid date: {}", e)))?;
+
+    let midnight = NaiveDateTime::new(naive_date, NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+    let end_of_day = NaiveDateTime::new(naive_date, NaiveTime::from_hms_opt(23, 59, 59).unwrap());
+
+    // Convert local boundaries to UTC.
+    // JS getTimezoneOffset() returns -330 for UTC+5:30 (sign is inverted vs standard offset).
+    // UTC = local + JS_offset  →  00:00 + (-330min) = 18:30 prev day UTC  ✓
+    let offset_duration = Duration::minutes(timezone_offset_minutes as i64);
+    let day_start: DateTime<Utc> = DateTime::from_naive_utc_and_offset(
+        midnight + offset_duration,
+        Utc,
+    );
+    let day_end: DateTime<Utc> = DateTime::from_naive_utc_and_offset(
+        end_of_day + offset_duration,
+        Utc,
+    );
+
+    let rows = sqlx::query_as::<_, UnifiedGoalRow>(
+        &format!("SELECT {} FROM unified_goals \
+           WHERE completed = TRUE \
+           AND completed_at >= $1 \
+           AND completed_at <= $2 \
+           ORDER BY completed_at ASC", UNIFIED_GOAL_COLS)
+    )
+    .bind(day_start)
+    .bind(day_end)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("get_completed_goals_for_date", e))?;
+
+    Ok(rows)
+}
+
 /// Get accumulated debt for a specific date
 /// Returns all debt goals from previous dates (debt trail)
 #[tauri::command]

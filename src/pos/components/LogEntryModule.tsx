@@ -248,14 +248,14 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         await invoke('update_unified_goal', { id: goalId, req: { metrics: updatedMetrics } });
                         if (goal.parentGoalId) {
                             const total = Object.values(metricValues).reduce((s, v) => s + (parseInt(v || '0', 10) || 0), 0);
-                            try { await invoke('increment_milestone_progress', { milestoneId: goal.parentGoalId, amount: total }); }
+                            try { await invoke('increment_milestone_progress', { milestoneId: goal.parentGoalId, amount: total, date }); }
                             catch (err) { console.error('Failed to update milestone progress:', err); }
                         }
                     }
                 }));
                 if (selectedMilestoneId && Object.keys(metricValues).length > 0) {
                     const total = Object.values(metricValues).reduce((s, v) => s + (parseInt(v || '0', 10) || 0), 0);
-                    try { await invoke('increment_milestone_progress', { milestoneId: selectedMilestoneId, amount: total }); }
+                    try { await invoke('increment_milestone_progress', { milestoneId: selectedMilestoneId, amount: total, date }); }
                     catch (err) { console.error('Failed to update milestone progress:', err); toast.error('Failed to update milestone progress'); }
                 }
 

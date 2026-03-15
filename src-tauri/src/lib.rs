@@ -380,6 +380,7 @@ pub fn run() {
             debt_system::transition_monthly_debt,
             debt_system::get_debt_archive,
             debt_system::reset_debt_for_month,
+            debt_system::get_completed_goals_for_date,
             context_engine::get_context_for_goal,
             reflection::create_reflection,
             reflection::get_reflections,
