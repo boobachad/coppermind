@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Link, useLocation } from 'react-router-dom';
 import { SlotPopup } from '../components/SlotPopup';
+import { buildSlotRing } from '../components/TimeSlot';
 import { MonthSelector } from '../components/MonthSelector';
 import { Navbar } from '../components/Navbar';
 import { Loader } from '@/components/Loader';
@@ -316,50 +317,18 @@ export function GridPage() {
                                                 {daySlots.map((slot) => {
                                                     const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
                                                     
-                                                    // Check if slot has productive/goal/milestone activities
                                                     const hasProductive = slot.activities.some(a => a.isProductive);
                                                     const hasGoal = slot.activities.some(a => a.goalIds && a.goalIds.length > 0);
                                                     const hasMilestone = slot.activities.some(a => a.milestoneId);
                                                     
-                                                    // Determine ring color priority: milestone > goal > productive
-                                                    let ringColor = '';
-                                                    if (hasMilestone) {
-                                                        ringColor = 'var(--pos-milestone-accent)';
-                                                    } else if (hasGoal) {
-                                                        ringColor = 'var(--pos-goal-accent)';
-                                                    } else if (hasProductive) {
-                                                        ringColor = 'var(--pos-success-border)';
-                                                    }
-                                                    
-                                                    // Build ring classes
-                                                    let ringClass = '';
-                                                    if (isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone)) {
-                                                        // Current slot WITH productive/goal: double ring
-                                                        ringClass = 'ring-2 ring-offset-2';
-                                                    } else if (isCurrentTimeSlot) {
-                                                        // Current slot only: single ring with offset
-                                                        ringClass = 'ring-2 ring-offset-1';
-                                                    } else if (hasProductive && (hasGoal || hasMilestone)) {
-                                                        // Non-current with both productive AND goal/milestone: double ring
-                                                        ringClass = 'ring-2 ring-offset-2';
-                                                    } else if (hasProductive || hasGoal || hasMilestone) {
-                                                        // Non-current with single indicator: single ring
-                                                        ringClass = 'ring-2 ring-offset-1';
-                                                    }
-                                                    
-                                                    // Determine final ring color
-                                                    let finalRingColor = '';
-                                                    if (isCurrentTimeSlot) {
-                                                        finalRingColor = 'var(--pos-today-border)';
-                                                    } else {
-                                                        finalRingColor = ringColor;
-                                                    }
-                                                    
-                                                    // Check if slot contains highlighted activity
                                                     const hasHighlightedActivity = highlightActivity && 
                                                         slot.activities.some(act => 
                                                             act.title.toLowerCase().includes(highlightActivity.toLowerCase())
                                                         );
+
+                                                    const { ringBackground, hasRing, outerShadow } = buildSlotRing(
+                                                        isCurrentTimeSlot, hasMilestone, hasGoal, hasProductive
+                                                    );
 
                                                     return (
                                                         <td
@@ -372,56 +341,60 @@ export function GridPage() {
                                                                     (highlightedActivityRef as React.MutableRefObject<HTMLTableCellElement | null>).current = el;
                                                                 }
                                                             }}
-                                                            className={`w-8 h-8 cursor-pointer transition-all relative group/cell rounded-[4px] ${ringClass}`}
-                                                            style={{
-                                                                background: slot.segments
-                                                                    ? 'transparent'
-                                                                    : slot.color,
-                                                                boxShadow: hasHighlightedActivity 
-                                                                    ? '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)' 
-                                                                    : undefined,
-                                                                '--tw-ring-color': finalRingColor,
-                                                                '--tw-ring-offset-color': 'var(--bg-secondary)'
-                                                            } as React.CSSProperties}
-                                                            onMouseEnter={(e) => {
-                                                                if (!isCurrentTimeSlot && !hasHighlightedActivity) {
-                                                                    e.currentTarget.style.boxShadow = '0 0 0 2px var(--pos-today-border)';
-                                                                }
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                if (!isCurrentTimeSlot && !hasHighlightedActivity) {
-                                                                    e.currentTarget.style.boxShadow = '';
-                                                                } else if (hasHighlightedActivity) {
-                                                                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)';
-                                                                }
-                                                            }}
+                                                            className="w-8 h-8 cursor-pointer transition-all relative group/cell p-0"
                                                             onClick={() => {
                                                                 setSelectedSlot({ date, slot: slot.slotIndex });
                                                                 setShowPopup(true);
                                                             }}
                                                         >
-                                                            {slot.segments && (
-                                                                <div className="absolute inset-0 flex overflow-hidden rounded-[4px]">
-                                                                    {slot.segments.map((seg, idx) => (
-                                                                        <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            {slot.activities.length > 0 && (
-                                                                <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 backdrop-blur border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
-                                                                    {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
-                                                                </div>
-                                                            )}
-                                                            {/* Inner ring for current slot with productive/goal */}
-                                                            {isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone) && (
-                                                                <div 
-                                                                    className="absolute inset-0 rounded-[4px] pointer-events-none ring-2 ring-offset-1"
+                                                            {/* Conic ring wrapper — 2px padding creates the ring layer */}
+                                                            <div
+                                                                className="w-full h-full"
+                                                                style={{
+                                                                    padding: (hasRing && !hasHighlightedActivity) ? '2px' : undefined,
+                                                                    borderRadius: '4px',
+                                                                    background: (hasRing && !hasHighlightedActivity) ? ringBackground : undefined,
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    const { outerShadow: hoverShadow } = buildSlotRing(
+                                                                        isCurrentTimeSlot, hasMilestone, hasGoal, hasProductive, true
+                                                                    );
+                                                                    if (!hasHighlightedActivity) {
+                                                                        (e.currentTarget.firstElementChild as HTMLElement | null)?.style.setProperty('box-shadow', hoverShadow);
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    const inner = e.currentTarget.firstElementChild as HTMLElement | null;
+                                                                    if (inner) {
+                                                                        inner.style.boxShadow = hasHighlightedActivity
+                                                                            ? '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)'
+                                                                            : outerShadow || '';
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    className="w-full h-full relative rounded-[4px]"
                                                                     style={{
-                                                                        '--tw-ring-color': ringColor,
-                                                                        '--tw-ring-offset-color': 'var(--bg-secondary)'
-                                                                    } as React.CSSProperties}
-                                                                />
-                                                            )}
+                                                                        background: slot.segments ? 'transparent' : slot.color,
+                                                                        boxShadow: hasHighlightedActivity
+                                                                            ? '0 0 0 3px var(--color-success), 0 0 12px var(--color-success)'
+                                                                            : outerShadow || undefined,
+                                                                    }}
+                                                                >
+                                                                    {slot.segments && (
+                                                                        <div className="absolute inset-0 flex overflow-hidden rounded-[4px]">
+                                                                            {slot.segments.map((seg, idx) => (
+                                                                                <div key={idx} style={{ width: `${seg.width}%`, background: seg.color }} className="h-full" />
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {slot.activities.length > 0 && (
+                                                                        <div className="hidden group-hover/cell:block absolute z-20 -top-8 left-1/2 -translate-x-1/2 backdrop-blur border text-foreground text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                                                                            {slot.activities.length} activity{slot.activities.length > 1 ? 'ies' : ''}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                     );
                                                 })}

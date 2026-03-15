@@ -10,15 +10,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      closeButton
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-(--glass-bg) group-[.toaster]:text-(--text-primary) group-[.toaster]:border-(--glass-border) group-[.toaster]:shadow-2xl group-[.toaster]:backdrop-blur-xl group-[.toaster]:rounded-xl font-sans",
+          description: "group-[.toast]:text-(--text-secondary)",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-(--text-primary) group-[.toast]:text-(--bg-base) font-medium rounded-md",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group-[.toast]:bg-(--glass-bg-subtle) group-[.toast]:text-(--text-secondary) font-medium rounded-md",
+          closeButton:
+            "group-[.toast]:bg-(--glass-bg) group-[.toast]:text-(--text-primary) group-[.toast]:border-(--glass-border) hover:group-[.toast]:bg-(--glass-bg-subtle) transition-colors !left-auto !right-0 !translate-x-[35%] !-translate-y-[35%]",
         },
       }}
       {...props}

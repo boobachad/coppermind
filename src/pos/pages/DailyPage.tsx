@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LogEntryModule } from '../components/LogEntryModule';
 import { SlotPopup } from '../components/SlotPopup';
+import { buildSlotRing } from '../components/TimeSlot';
 import { Navbar } from '../components/Navbar';
 import { MonthSelector } from '../components/MonthSelector';
 import { Loader } from '@/components/Loader';
@@ -351,58 +352,31 @@ export function DailyPage() {
                         <div className="flex gap-1 h-14 py-1">
                             {daySlots.map((slot) => {
                                 const isCurrentTimeSlot = isToday && slot.slotIndex === currentSlotIndex;
-                                
-                                // Check if slot has productive/goal/milestone activities
                                 const hasProductive = slot.activities.some(a => a.isProductive);
                                 const hasGoal = slot.activities.some(a => a.goalIds && a.goalIds.length > 0);
                                 const hasMilestone = slot.activities.some(a => a.milestoneId);
-                                
-                                // Determine ring color priority: milestone > goal > productive
-                                let ringColor = '';
-                                if (hasMilestone) {
-                                    ringColor = 'var(--pos-milestone-accent)';
-                                } else if (hasGoal) {
-                                    ringColor = 'var(--pos-goal-accent)';
-                                } else if (hasProductive) {
-                                    ringColor = 'var(--pos-success-border)';
-                                }
-                                
-                                // Build ring classes
-                                let ringClass = '';
-                                if (isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone)) {
-                                    // Current slot WITH productive/goal: double ring (inner productive, outer current)
-                                    ringClass = 'ring-2 ring-offset-2';
-                                } else if (isCurrentTimeSlot) {
-                                    // Current slot only: single ring with offset
-                                    ringClass = 'ring-2 ring-offset-1';
-                                } else if (hasProductive && (hasGoal || hasMilestone)) {
-                                    // Non-current with both productive AND goal/milestone: double ring
-                                    ringClass = 'ring-2 ring-offset-2';
-                                } else if (hasProductive || hasGoal || hasMilestone) {
-                                    // Non-current with single indicator: single ring
-                                    ringClass = 'ring-2 ring-offset-1';
-                                }
-                                
-                                // Determine final ring color
-                                let finalRingColor = '';
-                                if (isCurrentTimeSlot) {
-                                    finalRingColor = 'var(--pos-today-border)';
-                                } else {
-                                    finalRingColor = ringColor;
-                                }
+                                const { ringBackground, hasRing, outerShadow } = buildSlotRing(
+                                    isCurrentTimeSlot, hasMilestone, hasGoal, hasProductive
+                                );
 
-                                return (
+                                const slotDiv = (
                                     <div
-                                        key={slot.slotIndex}
-                                        ref={isCurrentTimeSlot ? currentSlotRef : null}
-                                        className={`w-8 h-full rounded-[2px] cursor-pointer hover:opacity-80 transition-opacity border shrink-0 relative group ${ringClass}`}
+                                        className="w-full h-full rounded-[2px] cursor-pointer transition-opacity border shrink-0 relative"
                                         style={{
                                             background: slot.segments ? 'transparent' : slot.color,
                                             borderColor: 'var(--border-color)',
                                             borderWidth: '1px',
-                                            '--tw-ring-color': finalRingColor,
-                                            '--tw-ring-offset-color': 'var(--bg-secondary)'
+                                            boxShadow: outerShadow || undefined,
                                         } as React.CSSProperties}
+                                        onMouseEnter={(e) => {
+                                            const { outerShadow: hoverShadow } = buildSlotRing(
+                                                isCurrentTimeSlot, hasMilestone, hasGoal, hasProductive, true
+                                            );
+                                            e.currentTarget.style.boxShadow = hoverShadow;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.boxShadow = outerShadow || '';
+                                        }}
                                         onClick={() => {
                                             setSelectedSlot(slot.slotIndex);
                                             setShowPopup(true);
@@ -415,16 +389,21 @@ export function DailyPage() {
                                                 ))}
                                             </div>
                                         )}
-                                        {/* Inner ring for current slot with productive/goal */}
-                                        {isCurrentTimeSlot && (hasProductive || hasGoal || hasMilestone) && (
-                                            <div 
-                                                className="absolute inset-0 rounded-[2px] pointer-events-none ring-2 ring-offset-1"
-                                                style={{
-                                                    '--tw-ring-color': ringColor,
-                                                    '--tw-ring-offset-color': 'var(--bg-secondary)'
-                                                } as React.CSSProperties}
-                                            />
-                                        )}
+                                    </div>
+                                );
+
+                                return (
+                                    <div
+                                        key={slot.slotIndex}
+                                        ref={isCurrentTimeSlot ? currentSlotRef : null}
+                                        className="w-8 h-full shrink-0"
+                                        style={{
+                                            padding: hasRing ? '2px' : undefined,
+                                            borderRadius: '2px',
+                                            background: hasRing ? ringBackground : undefined,
+                                        }}
+                                    >
+                                        {slotDiv}
                                     </div>
                                 );
                             })}

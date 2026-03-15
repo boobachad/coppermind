@@ -113,10 +113,10 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
 
     return (
         <div className={clsx(
-            "z-50 material-glass flex flex-col gap-4 transition-all duration-300",
+            "z-50 material-glass flex flex-col gap-4 transition-all duration-300 backdrop-blur-3xl shadow-2xl",
             alwaysExpanded
-                ? "fixed inset-0 w-full h-full rounded-none p-6"
-                : "fixed bottom-6 right-6 w-[320px] rounded-2xl p-5"
+                ? "fixed inset-0 w-full h-full rounded-none p-6 bg-(--bg-base) border-transparent"
+                : "fixed bottom-6 right-6 w-[340px] rounded-[2rem] p-6 bg-(--glass-bg) border border-(--glass-border)"
         )}>
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -154,18 +154,18 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                     placeholder="What are you working on?"
                     value={state.name}
                     onChange={(e) => setDetails({ name: e.target.value })}
-                    className="w-full bg-transparent text-xl font-bold text-(--text-primary) placeholder:text-(--text-tertiary) outline-none"
+                    className="w-full bg-(--glass-bg-subtle) rounded-xl px-4 py-2 text-xl font-bold text-(--text-primary) placeholder:text-(--text-tertiary) outline-none border border-transparent focus:border-ring transition-colors"
                 // autoFocus={!state.name} // Maybe annoying?
                 />
 
                 <div className="relative">
-                    <AlignLeft className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <AlignLeft className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Add details (optional)"
                         value={state.description}
                         onChange={(e) => setDetails({ description: e.target.value })}
-                        className="w-full bg-transparent text-sm text-muted-foreground placeholder:text-muted-foreground outline-none pl-6"
+                        className="w-full bg-(--glass-bg-subtle) rounded-xl py-2 pr-4 pl-9 text-sm text-muted-foreground placeholder:text-(--text-tertiary) outline-none border border-transparent focus:border-ring transition-colors"
                     />
                 </div>
 
@@ -229,27 +229,34 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                     "flex items-center justify-center relative",
                     alwaysExpanded ? "flex-1 py-8" : "py-4"
                 )}>
-                    {/* Progress Ring */}
-                    <svg className={clsx(
-                        "absolute opacity-10 pointer-events-none",
-                        alwaysExpanded ? "w-64 h-64" : "w-48 h-48"
-                    )}>
-                        <circle cx={alwaysExpanded ? "128" : "96"} cy={alwaysExpanded ? "128" : "96"} r={alwaysExpanded ? "120" : "90"} fill="none" stroke="currentColor" strokeWidth="2" />
-                        {state.timerType === 'pomodoro' && (
-                            <circle
-                                cx={alwaysExpanded ? "128" : "96"} cy={alwaysExpanded ? "128" : "96"} r={alwaysExpanded ? "120" : "90"}
-                                fill="none" stroke="currentColor" strokeWidth="4"
-                                strokeDasharray={alwaysExpanded ? "754" : "565"}
-                                strokeDashoffset={(alwaysExpanded ? 754 : 565) - ((alwaysExpanded ? 754 : 565) * progress / 100)}
-                                className="transition-all duration-1000 ease-linear" style={{ color: 'var(--color-accent-primary)' }}
-                                transform={alwaysExpanded ? "rotate(-90 128 128)" : "rotate(-90 96 96)"}
+                    {/* Premium Rounded Progress Ring */}
+                    {state.timerType === 'pomodoro' && (
+                        <svg className={clsx(
+                            "absolute pointer-events-none",
+                            alwaysExpanded ? "w-64 h-64" : "w-52 h-52"
+                        )}>
+                            {/* Track */}
+                            <circle 
+                                cx={alwaysExpanded ? "128" : "104"} cy={alwaysExpanded ? "128" : "104"} r={alwaysExpanded ? "120" : "96"} 
+                                fill="none" stroke="currentColor" strokeWidth={alwaysExpanded ? "8" : "6"} 
+                                className="text-(--text-tertiary) opacity-15" 
                             />
-                        )}
-                    </svg>
+                            {/* Progress */}
+                            <circle
+                                cx={alwaysExpanded ? "128" : "104"} cy={alwaysExpanded ? "128" : "104"} r={alwaysExpanded ? "120" : "96"}
+                                fill="none" stroke="currentColor" strokeWidth={alwaysExpanded ? "8" : "6"}
+                                strokeLinecap="round"
+                                strokeDasharray={alwaysExpanded ? "754" : "603"}
+                                strokeDashoffset={(alwaysExpanded ? 754 : 603) - ((alwaysExpanded ? 754 : 603) * Math.min(Math.max(progress, 0), 100) / 100)}
+                                className="transition-all duration-1000 ease-linear drop-shadow-[0_0_12px_currentColor]" style={{ color: mainColor }}
+                                transform={alwaysExpanded ? "rotate(-90 128 128)" : "rotate(-90 104 104)"}
+                            />
+                        </svg>
+                    )}
 
                     <div className={clsx(
                         "font-mono font-bold text-(--text-primary) tracking-tighter tabular-nums z-10",
-                        alwaysExpanded ? "text-8xl" : "text-6xl"
+                        alwaysExpanded ? "text-8xl" : "text-6xl drop-shadow-sm"
                     )}>
                         {formatDuration(state.timerType === 'stopwatch' ? state.elapsedTime : state.timeLeft)}
                     </div>
@@ -282,7 +289,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         state.mode === 'break' ? (
                             <button
                                 onClick={resumeWork}
-                                className="col-span-2 py-3 rounded-xl bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors"
+                                className="col-span-2 py-3 rounded-full bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors shadow-lg"
                             >
                                 <Briefcase className="w-5 h-5 fill-current" />
                                 Resume Work
@@ -291,14 +298,15 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                             <>
                                 <button
                                     onClick={restartSession}
-                                    className="py-3 rounded-xl bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors"
+                                    className="py-3 rounded-full bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors shadow-lg"
                                 >
                                     <Play className="w-5 h-5 fill-current" />
                                     Go Again
                                 </button>
                                 <button
                                     onClick={takeBreak}
-                                    className="py-3 rounded-xl bg-(--pos-activity-break) text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors"
+                                    className="py-3 rounded-full text-white font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-colors shadow-lg dropdown-shadow"
+                                    style={{ backgroundColor: 'var(--pos-activity-break)' }}
                                 >
                                     <Coffee className="w-5 h-5" />
                                     Take Break
@@ -310,7 +318,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         <button
                             onClick={start}
                             disabled={!state.name || !state.category}
-                            className="col-span-2 py-3 rounded-xl bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="col-span-2 py-3 rounded-full bg-(--text-primary) text-(--bg-base) font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
                         >
                             <Play className="w-5 h-5 fill-current" />
                             Start Focus
@@ -319,7 +327,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         /* Running State */
                         <button
                             onClick={stop}
-                            className="col-span-2 py-3 rounded-xl bg-(--pos-error-bg) text-(--pos-error-text) font-medium flex items-center justify-center gap-2 hover:bg-(--pos-error-border)/20 transition-colors border border-(--pos-error-border)/20"
+                            className="col-span-2 py-3 rounded-full bg-(--pos-error-bg) text-(--pos-error-text) font-medium flex items-center justify-center gap-2 hover:bg-(--pos-error-border)/20 transition-colors border border-(--pos-error-border)/20 shadow-lg"
                         >
                             <Square className="w-4 h-4 fill-current" />
                             Finish
@@ -334,7 +342,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         {state.timerType === 'pomodoro' && (
                             <button
                                 onClick={extendTime}
-                                className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                                className="flex-1 py-2 rounded-full text-xs font-medium flex items-center justify-center gap-1 transition-colors"
                                 style={{
                                     backgroundColor: 'var(--glass-bg-subtle)',
                                     color: 'var(--text-secondary)'
@@ -357,7 +365,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         {state.mode === 'work' ? (
                             <button
                                 onClick={takeBreak}
-                                className="flex-2 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
+                                className="flex-2 py-2 rounded-full text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
                                 style={{ backgroundColor: 'var(--pos-info-bg)', color: 'var(--pos-info-text)', borderColor: 'var(--pos-info-border)' }}
                             >
                                 <Coffee className="w-3 h-3" />
@@ -366,7 +374,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
                         ) : (
                             <button
                                 onClick={resumeWork}
-                                className="flex-2 py-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
+                                className="flex-2 py-2 rounded-full text-xs font-medium border flex items-center justify-center gap-2 transition-colors"
                                 style={{ backgroundColor: 'var(--pos-success-bg)', color: 'var(--pos-success-text)', borderColor: 'var(--pos-success-border)' }}
                             >
                                 <Briefcase className="w-3 h-3" />

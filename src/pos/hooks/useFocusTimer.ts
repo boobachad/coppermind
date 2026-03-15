@@ -244,6 +244,7 @@ export function useFocusTimer() {
                 return {
                     ...prev,
                     timeLeft: prev.timeLeft + (10 * 60),
+                    totalDuration: prev.totalDuration + (10 * 60), // Keep total duration synced to not break progress ring %
                 };
             }
             return prev;

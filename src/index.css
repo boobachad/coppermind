@@ -157,6 +157,7 @@
   --color-pure-black: #000000;
   --color-pure-white: #ffffff;
   --color-highlight-yellow: #fef08a;
+  --glass-text: rgba(255, 255, 255, 0.95);
 
   /* Theme-swatch preview colors (fixed per-theme, used in SettingsPage only) */
   --theme-preview-solarized-bg: #fdf6e3;
@@ -174,29 +175,30 @@
   --pos-slot-empty: rgba(255, 255, 255, 0.03);
 
   /* Category Colors (Retained for Data Viz) */
-  --pos-activity-learning: #3b82f6;
-  --pos-activity-coding-leetcode: #0ea5e9;
-  --pos-activity-coding-codeforces: #14b8a6;
-  --pos-activity-cpp: #06b6d4;
-  --pos-activity-sleep: #475569;
-  --pos-activity-book: #d97706;
-  --pos-activity-real-projects: #3b82f6;
-  --pos-activity-exercise: #dc2626;
-  --pos-activity-college: #818cf8;
-  --pos-activity-food: #10b981;
-  --pos-activity-family: #ec4899;
-  --pos-activity-entertainment: #a78bfa;
-  --pos-activity-commute: #14b8a6;
-  --pos-activity-misc: #94a3b8;
-  --pos-activity-ncc: #f59e0b;
-  --pos-activity-side-projects: #a855f7;
-  --pos-activity-surfing: #64748b;
-  --pos-activity-bath: #22d3ee;
-  --pos-activity-walking: #34d399;
-  --pos-activity-break: #a78bfa;
-  --pos-activity-doom-scroll: #ef4444;
-  --pos-activity-discussion: #8b5cf6;
-  --pos-activity-freshup: #06b6d4;
+  /* Dark mode: rich jewel tones, HSL ~60-70% lightness — visible on #030303 without neon */
+  --pos-activity-learning:          #5b9bd5;  /* steel blue */
+  --pos-activity-coding-leetcode:   #3ab5cc;  /* cyan-teal */
+  --pos-activity-coding-codeforces: #2ec4b6;  /* teal */
+  --pos-activity-cpp:               #3bbfbf;  /* deep cyan */
+  --pos-activity-sleep:             #6b7fa8;  /* slate blue-gray */
+  --pos-activity-book:              #c8883a;  /* warm amber */
+  --pos-activity-real-projects:     #5b9bd5;  /* steel blue */
+  --pos-activity-exercise:          #d95f5f;  /* muted crimson */
+  --pos-activity-college:           #8080cc;  /* medium indigo */
+  --pos-activity-food:              #3aad6e;  /* forest green */
+  --pos-activity-family:            #cc5599;  /* rose */
+  --pos-activity-entertainment:     #9966cc;  /* medium purple */
+  --pos-activity-commute:           #5588aa;  /* muted steel */
+  --pos-activity-misc:              #6b7a8d;  /* blue-gray */
+  --pos-activity-ncc:               #c09040;  /* golden amber */
+  --pos-activity-side-projects:     #8855cc;  /* violet */
+  --pos-activity-surfing:           #4a6680;  /* dark slate */
+  --pos-activity-bath:              #3aaabb;  /* teal-cyan */
+  --pos-activity-walking:           #3aaa77;  /* medium green */
+  --pos-activity-break:             #8866cc;  /* soft violet */
+  --pos-activity-doom-scroll:       #cc4444;  /* muted red */
+  --pos-activity-discussion:        #7755cc;  /* deep violet */
+  --pos-activity-freshup:           #3aaabb;  /* teal-cyan */
 
 
   /* Semantic status colors - Dark Default */
@@ -228,6 +230,17 @@
   --pos-milestone-accent: #a855f7;
   --pos-segment-empty: rgba(255, 255, 255, 0.03);
   --pos-activity-fallback: #94a3b8;
+
+  /* Goal link badge tokens - dark mode */
+  --pos-goal-link-bg: rgba(59, 130, 246, 0.15);
+  --pos-goal-link-border: #3b82f6;
+  --pos-goal-link-text: #60a5fa;
+
+  /* Productive / shadow badge tokens - dark mode */
+  --pos-productive-bg: rgba(22, 163, 74, 0.15);
+  --pos-productive-text: #4ade80;
+  --pos-shadow-bg: rgba(37, 99, 235, 0.15);
+  --pos-shadow-text: #60a5fa;
 
   /* Legacy shadcn variables */
   --chart-3: oklch(0.398 0.07 227.392);
@@ -390,30 +403,15 @@
   --pos-today-text: #60a5fa;
 }
 
-/* Theme Overrides */
-[data-theme="solarized-light"] {
-  /* ... existing overrides ... */
-  /* Buttons - Solarized Light (Dark BG, Light Text) */
-  --btn-primary-bg: #002B36;
-  --btn-primary-text: #FDF6E3;
-  --primary: oklch(0.205 0 0);
-  /* #002B36 approx */
-  --primary-foreground: oklch(0.985 0 0);
-  /* #FDF6E3 approx */
-}
+
 
 [data-theme="blue-light"] {
-  /* ... existing overrides ... */
   /* Buttons - Blue Light (Dark BG, Light Text) */
   --btn-primary-bg: #1A202C;
   --btn-primary-text: #F0F4F8;
   --primary: oklch(0.205 0 0);
-  /* #1A202C approx */
   --primary-foreground: oklch(0.985 0 0);
-  /* #F0F4F8 approx */
-}
 
-[data-theme="blue-light"] {
   /* Base overrides */
   --bg-base: #F0F4F8;
   --bg-primary: #F0F4F8;
@@ -512,10 +510,6 @@
   --color-error: #e53e3e;
   --color-success: #38a169;
   --color-warning: #dd6b20;
-
-  /* Buttons */
-  --btn-primary-bg: #1A202C;
-  --btn-primary-text: #F0F4F8;
 }
 
 html,
