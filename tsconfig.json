@@ -29,8 +29,7 @@
       ]
     }
   },
-  "include": [
-    "src", "area51/DailyBriefingPage.tsx"],
+  "include": ["src"],
   "references": [
     {
       "path": "./tsconfig.node.json"

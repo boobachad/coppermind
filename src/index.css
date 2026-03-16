@@ -365,6 +365,7 @@
   --btn-primary-text: #000000;
 
   /* Surface aliases — solarized light */
+  --bg-tertiary: #D6D0C0;
   --surface-secondary: var(--glass-bg);
   --surface-tertiary: var(--bg-tertiary);
   --surface-error: var(--pos-error-bg);
@@ -433,6 +434,7 @@
   --primary-foreground: oklch(0.985 0 0);
 
   /* Surface aliases — blue light */
+  --bg-tertiary: #CBD5E0;
   --surface-secondary: var(--glass-bg);
   --surface-tertiary: var(--bg-tertiary);
   --surface-error: var(--pos-error-bg);

@@ -49,11 +49,11 @@ export function DailyBriefingView({ selectedDate, onReload }: Props) {
             const milestonesWithProgress = await Promise.all(
                 filtered.map(async (m: Milestone) => {
                     try {
-                        const todayProgress = await invoke<number>('get_milestone_today_progress', {
+                        const todayProgress = await invoke<number | null>('get_milestone_today_progress', {
                             milestoneId: m.id,
                             todayDate: selectedDate,
                         });
-                        return { ...m, todayProgress };
+                        return { ...m, todayProgress: todayProgress ?? 0 };
                     } catch {
                         return { ...m, todayProgress: 0 };
                     }

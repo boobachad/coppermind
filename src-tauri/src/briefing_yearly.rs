@@ -61,11 +61,16 @@ fn compute_yearly_streak(active_days: &std::collections::HashSet<String>, year: 
     let mut cur_start: Option<String> = None;
 
     for m in 1u32..=12 {
-        let days_in = {
-            let next = if m == 12 { chrono::NaiveDate::from_ymd_opt(year + 1, 1, 1) }
-                       else { chrono::NaiveDate::from_ymd_opt(year, m + 1, 1) };
-            next.unwrap().pred_opt().unwrap().day()
-        };
+        // Compute last day of month safely without unwrap
+        let days_in = if m == 12 {
+            chrono::NaiveDate::from_ymd_opt(year + 1, 1, 1)
+        } else {
+            chrono::NaiveDate::from_ymd_opt(year, m + 1, 1)
+        }
+        .and_then(|d| d.pred_opt())
+        .map(|d| d.day())
+        .unwrap_or(30); // safe fallback: 30 days (worst case skips day 31)
+
         for d in 1..=days_in {
             let date_str = format!("{}-{:02}-{:02}", year, m, d);
             if active_days.contains(&date_str) {
@@ -138,13 +143,17 @@ pub async fn get_yearly_briefing(
     for row in &act_rows {
         if row.is_shadow { continue; }
         let dur = (row.end_time - row.start_time).num_minutes();
-        let mk = &row.date[..7]; // YYYY-MM
-        *logged_map.entry(mk.to_string()).or_insert(0) += dur;
-        if row.is_productive { *prod_map.entry(mk.to_string()).or_insert(0) += dur; }
+        // Safe slice: skip row if date is too short to extract YYYY-MM
+        let mk = match row.date.get(..7) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+        *logged_map.entry(mk.clone()).or_insert(0) += dur;
+        if row.is_productive { *prod_map.entry(mk.clone()).or_insert(0) += dur; }
         *cat_year_map.entry(row.category.clone()).or_insert(0) += dur;
         active_days.insert(row.date.clone());
         if row.book_id.is_some() {
-            *pages_map.entry(mk.to_string()).or_insert(0) += row.pages_read.unwrap_or(0);
+            *pages_map.entry(mk).or_insert(0) += row.pages_read.unwrap_or(0);
         }
     }
 
@@ -153,7 +162,10 @@ pub async fn get_yearly_briefing(
     let mut debt_created_map: HashMap<String, i32> = HashMap::with_capacity(12);
 
     for row in &goal_rows {
-        let mk = &row.date[..7];
+        let mk = match row.date.get(..7) {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
         *goals_created_map.entry(mk.to_string()).or_insert(0) += 1;
         if row.completed { *goals_completed_map.entry(mk.to_string()).or_insert(0) += 1; }
         if row.is_debt { *debt_created_map.entry(mk.to_string()).or_insert(0) += 1; }
@@ -197,7 +209,9 @@ pub async fn get_yearly_briefing(
     let mut monthly_rollups: Vec<MonthlyRollup> = Vec::with_capacity(12);
     let mut active_day_counts: HashMap<String, i32> = HashMap::with_capacity(12);
     for d in &active_days {
-        *active_day_counts.entry(d[..7].to_string()).or_insert(0) += 1;
+        if let Some(mk) = d.get(..7) {
+            *active_day_counts.entry(mk.to_string()).or_insert(0) += 1;
+        }
     }
 
     for m in 1u32..=12 {
@@ -256,7 +270,6 @@ pub async fn get_yearly_briefing(
         .map(|m| m.month.clone());
     let worst_month = monthly_rollups.iter()
         .min_by_key(|m| m.productive_minutes)
-        .filter(|m| m.productive_minutes > 0)
         .map(|m| m.month.clone());
 
     let (longest_streak_days, longest_streak_start) = compute_yearly_streak(&active_days, year);

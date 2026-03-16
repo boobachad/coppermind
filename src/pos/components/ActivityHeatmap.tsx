@@ -28,7 +28,11 @@ interface TooltipPosition {
   y: number;
 }
 
-export function ActivityHeatmap() {
+interface ActivityHeatmapProps {
+  year?: number;
+}
+
+export function ActivityHeatmap({ year }: ActivityHeatmapProps = {}) {
   const [monthsData, setMonthsData] = useState<MonthData[]>([]);
   const [streakData, setStreakData] = useState<StreakData>({ current: 0, longest: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -38,19 +42,28 @@ export function ActivityHeatmap() {
 
   useEffect(() => {
     fetchHeatmapData();
-  }, []);
+  }, [year]);
 
   const fetchHeatmapData = async () => {
     setLoading(true);
     try {
-      const now = new Date();
-      const endDate = new Date(now);
-      endDate.setHours(23, 59, 59, 999);
+      let startDate: Date;
+      let endDate: Date;
 
-      const startDate = new Date(endDate);
-      startDate.setMonth(startDate.getMonth() - 11);
-      startDate.setDate(1);
-      startDate.setHours(0, 0, 0, 0);
+      if (year !== undefined) {
+        // Scope to the full calendar year
+        startDate = new Date(year, 0, 1, 0, 0, 0, 0);
+        endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+      } else {
+        // Rolling 12-month window
+        const now = new Date();
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        startDate = new Date(endDate);
+        startDate.setMonth(startDate.getMonth() - 11);
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+      }
 
       const allDates: string[] = [];
       const currentDate = new Date(startDate);

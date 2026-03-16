@@ -64,12 +64,6 @@ struct MilestoneRow {
 }
 
 #[derive(sqlx::FromRow)]
-struct DailyProgressRow {
-    date: String,
-    amount: i32,
-}
-
-#[derive(sqlx::FromRow)]
 struct RetroRow {
     questions_data: serde_json::Value,
 }
@@ -78,10 +72,10 @@ struct RetroRow {
 
 fn days_in_month(year: i32, month: u32) -> u32 {
     NaiveDate::from_ymd_opt(year, month + 1, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap())
-        .pred_opt()
-        .unwrap()
-        .day()
+        .or_else(|| NaiveDate::from_ymd_opt(year + 1, 1, 1))
+        .and_then(|d| d.pred_opt())
+        .map(|d| d.day())
+        .unwrap_or(30)
 }
 
 // Week number within month: days 1-7 = week 1, 8-14 = week 2, etc.
@@ -373,25 +367,49 @@ pub async fn get_monthly_briefing(
     let mut milestone_progress: Vec<MilestoneMonthlyProgress> =
         Vec::with_capacity(milestone_rows.len());
 
-    for ms in &milestone_rows {
-        // Query real per-day amounts from milestone_daily_progress
-        let daily_vals: Vec<DailyProgressRow> = sqlx::query_as(
-            "SELECT date, amount FROM milestone_daily_progress
-             WHERE milestone_id = $1 AND date >= $2 AND date <= $3
-             ORDER BY date"
-        )
-        .bind(&ms.id).bind(&month_start).bind(&month_end)
-        .fetch_all(pool).await
-        .map_err(|e| db_context("milestone_daily_progress_curve", e))?;
+    // Fetch all daily progress rows for all milestones in one query
+    let milestone_ids: Vec<String> = milestone_rows.iter().map(|m| m.id.clone()).collect();
+    let mut grouped_progress: HashMap<String, Vec<(String, i32)>> = HashMap::new();
 
-        let daily_values: Vec<(String, i32)> = daily_vals.iter()
-            .map(|r| (r.date.clone(), r.amount))
-            .collect();
+    if !milestone_ids.is_empty() {
+        // Build a parameterised IN clause dynamically
+        let placeholders: String = milestone_ids
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", i + 3))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let sql = format!(
+            "SELECT milestone_id, date, amount FROM milestone_daily_progress \
+             WHERE date >= $1 AND date <= $2 AND milestone_id IN ({}) ORDER BY date",
+            placeholders
+        );
+        let mut q = sqlx::query_as::<_, (String, String, i32)>(&sql)
+            .bind(&month_start)
+            .bind(&month_end);
+        for id in &milestone_ids {
+            q = q.bind(id);
+        }
+        let all_rows: Vec<(String, String, i32)> = q
+            .fetch_all(pool)
+            .await
+            .map_err(|e| db_context("milestone_daily_progress_batch", e))?;
+
+        for (milestone_id, date, amount) in all_rows {
+            grouped_progress.entry(milestone_id).or_default().push((date, amount));
+        }
+    }
+
+    for ms in &milestone_rows {
+        let daily_values: Vec<(String, i32)> = grouped_progress
+            .get(&ms.id)
+            .cloned()
+            .unwrap_or_default();
 
         let total_days = last_day as i32;
         let mut cum_actual: Vec<(String, i32)> = Vec::with_capacity(total_days as usize);
         let mut cum_expected: Vec<(String, i32)> = Vec::with_capacity(total_days as usize);
-        let val_map: std::collections::HashMap<&str, i32> = daily_values.iter()
+        let val_map: HashMap<&str, i32> = daily_values.iter()
             .map(|(d, v)| (d.as_str(), *v)).collect();
 
         let mut running = 0i32;
@@ -418,13 +436,23 @@ pub async fn get_monthly_briefing(
     // ── Retrospective ────────────────────────────────────────────────────────
     let retrospective = retro_row.map(|r| {
         let qd = &r.questions_data;
-        RetroData {
-            energy: qd["energy"].as_f64().unwrap_or(0.0),
-            satisfaction: qd["satisfaction"].as_f64().unwrap_or(0.0),
-            deep_work_hours: qd["deep_work_hours"].as_f64().unwrap_or(0.0),
-            accomplishments: qd["accomplishments"].as_str().map(String::from),
-            challenges: qd["challenges"].as_str().map(String::from),
-        }
+
+        let energy = qd["energy"].as_f64().unwrap_or_else(|| {
+            log::warn!("[BRIEFING] retro missing/invalid key 'energy' for {}-{:02}", year, month);
+            0.0
+        });
+        let satisfaction = qd["satisfaction"].as_f64().unwrap_or_else(|| {
+            log::warn!("[BRIEFING] retro missing/invalid key 'satisfaction' for {}-{:02}", year, month);
+            0.0
+        });
+        let deep_work_hours = qd["deep_work_hours"].as_f64().unwrap_or_else(|| {
+            log::warn!("[BRIEFING] retro missing/invalid key 'deep_work_hours' for {}-{:02}", year, month);
+            0.0
+        });
+        let accomplishments = qd["accomplishments"].as_str().map(String::from);
+        let challenges = qd["challenges"].as_str().map(String::from);
+
+        RetroData { energy, satisfaction, deep_work_hours, accomplishments, challenges }
     });
 
     log::info!("[BRIEFING] Monthly {}-{:02}: {} activities, {} goals, {} submissions",

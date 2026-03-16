@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { Loader } from '../../components/Loader';
@@ -48,16 +48,7 @@ export function BriefingPage() {
         localStorage.setItem(MODE_KEY, mode);
     }, [mode]);
 
-    // Fetch data when mode or selector changes
-    useEffect(() => {
-        if (mode === 'monthly') loadMonthly();
-    }, [mode, selectedMonth]);
-
-    useEffect(() => {
-        if (mode === 'yearly') loadYearly();
-    }, [mode, selectedYear]);
-
-    const loadMonthly = async () => {
+    const loadMonthly = useCallback(async () => {
         setLoading(true);
         try {
             const [year, month] = selectedMonth.split('-').map(Number);
@@ -68,9 +59,9 @@ export function BriefingPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedMonth]);
 
-    const loadYearly = async () => {
+    const loadYearly = useCallback(async () => {
         setLoading(true);
         try {
             const year = Number(selectedYear);
@@ -81,7 +72,16 @@ export function BriefingPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedYear]);
+
+    // Fetch data when mode or selector changes
+    useEffect(() => {
+        if (mode === 'monthly') loadMonthly();
+    }, [mode, loadMonthly]);
+
+    useEffect(() => {
+        if (mode === 'yearly') loadYearly();
+    }, [mode, loadYearly]);
 
     const selectorMode = mode === 'daily' ? 'day' : mode === 'monthly' ? 'month' : 'year';
     const selectorValue = mode === 'daily' ? selectedDate : mode === 'monthly' ? selectedMonth : selectedYear;
@@ -135,11 +135,15 @@ export function BriefingPage() {
                                 selectedDate={selectedDate}
                             />
                         )}
-                        {mode === 'monthly' && monthlyData && (
-                            <MonthlyBriefingView data={monthlyData} />
+                        {mode === 'monthly' && (
+                            monthlyData
+                                ? <MonthlyBriefingView data={monthlyData} />
+                                : <p className="text-center py-12 text-sm" style={{ color: 'var(--text-tertiary)' }}>No data for this month</p>
                         )}
-                        {mode === 'yearly' && yearlyData && (
-                            <YearlyBriefingView data={yearlyData} />
+                        {mode === 'yearly' && (
+                            yearlyData
+                                ? <YearlyBriefingView data={yearlyData} />
+                                : <p className="text-center py-12 text-sm" style={{ color: 'var(--text-tertiary)' }}>No data for this year</p>
                         )}
                     </>
                 )}

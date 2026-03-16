@@ -14,6 +14,17 @@ interface Props {
 export function MonthlyReadingSection({ data }: Props) {
     const stats = data.readingStats;
 
+    const infoColor = resolveCssVar('var(--pos-info-text)');
+
+    // Pages per day bar data — use day number as label
+    const pagesData = useMemo(() =>
+        stats.pagesPerDay.map(([date, pages]) => ({
+            day: date.split('-')[2],
+            pages,
+        })),
+        [stats.pagesPerDay],
+    );
+
     if (stats.totalPages === 0) {
         return (
             <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
@@ -26,17 +37,6 @@ export function MonthlyReadingSection({ data }: Props) {
             </Card>
         );
     }
-
-    const infoColor = resolveCssVar('var(--pos-info-text)');
-
-    // Pages per day bar data — use day number as label
-    const pagesData = useMemo(() =>
-        stats.pagesPerDay.map(([date, pages]) => ({
-            day: date.split('-')[2],
-            pages,
-        })),
-        [stats.pagesPerDay],
-    );
 
     return (
         <div className="space-y-4">

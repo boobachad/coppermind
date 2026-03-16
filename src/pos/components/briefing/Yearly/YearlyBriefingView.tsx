@@ -18,6 +18,16 @@ interface Props {
     data: YearlyBriefingResponse;
 }
 
+interface BarShapeProps {
+    fill?: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    aboveAvg?: boolean;
+    delta?: number;
+}
+
 export function YearlyBriefingView({ data }: Props) {
     const successColor = resolveCssVar('var(--pos-success-text)');
     const errorColor = resolveCssVar('var(--pos-error-text)');
@@ -84,7 +94,7 @@ export function YearlyBriefingView({ data }: Props) {
             </div>
 
             {/* Full year activity heatmap */}
-            <ActivityHeatmap />
+            <ActivityHeatmap year={data.year} />
 
             {/* Monthly productive hours + rolling average */}
             <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
@@ -102,7 +112,7 @@ export function YearlyBriefingView({ data }: Props) {
                                     <YAxis tick={{ fontSize: 9, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
                                     <Tooltip content={<ChartTooltip unit="h" />} />
                                     <Bar dataKey="hours" name="Hours"
-                                        shape={(props: { fill?: string; x?: number; y?: number; width?: number; height?: number; aboveAvg?: boolean }) => (
+                                        shape={(props: BarShapeProps) => (
                                             <rect x={props.x} y={props.y} width={props.width} height={props.height} fill={props.aboveAvg ? successColor : infoColor} opacity={0.8} />
                                         )}
                                     />
@@ -151,9 +161,10 @@ export function YearlyBriefingView({ data }: Props) {
                             <YAxis hide />
                             <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.4 }} />
                             <Bar dataKey="delta" name="Delta" radius={[3, 3, 0, 0]} maxBarSize={28}
-                                shape={(props: { fill?: string; x?: number; y?: number; width?: number; height?: number; delta?: number }) => (
-                                    <rect x={props.x} y={props.y} width={props.width} height={props.height} fill={props.delta! > 0 ? errorColor : successColor} rx={3} ry={3} />
-                                )}
+                                shape={(props: BarShapeProps) => {
+                                    const delta = typeof props.delta === 'number' ? props.delta : 0;
+                                    return <rect x={props.x} y={props.y} width={props.width} height={props.height} fill={delta > 0 ? errorColor : successColor} rx={3} ry={3} />;
+                                }}
                             />
                         </BarChart>
                     </ResponsiveContainer>

@@ -14,24 +14,9 @@ interface Props {
 export function MonthlyKbSection({ data }: Props) {
     const stats = data.kbStats;
 
-    if (stats.itemsAdded === 0) {
-        return (
-            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                <CardHeader className="py-3 px-4">
-                    <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-4 px-4">
-                    <EmptyChart message="No KB activity this month" />
-                </CardContent>
-            </Card>
-        );
-    }
-
     const successColor = resolveCssVar('var(--pos-success-text)');
     const errorColor = resolveCssVar('var(--pos-error-text)');
     const infoColor = resolveCssVar('var(--pos-info-text)');
-
-    const inboxDeltaColor = stats.inboxDelta <= 0 ? successColor : errorColor;
 
     // Source donut
     const sourceData = useMemo(() =>
@@ -53,6 +38,21 @@ export function MonthlyKbSection({ data }: Props) {
         stats.topTags.slice(0, 10).map(([tag, count]) => ({ tag, count })),
         [stats.topTags],
     );
+
+    if (stats.itemsAdded === 0) {
+        return (
+            <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                <CardHeader className="py-3 px-4">
+                    <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-4 px-4">
+                    <EmptyChart message="No KB activity this month" />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    const inboxDeltaColor = stats.inboxDelta <= 0 ? successColor : errorColor;
 
     return (
         <div className="space-y-4">

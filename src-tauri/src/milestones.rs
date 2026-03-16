@@ -259,16 +259,14 @@ pub async fn increment_milestone_progress(
     chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
         .map_err(|_| PosError::InvalidInput("Invalid date, expected YYYY-MM-DD".into()))?;
 
-    let id = gen_id();
-
-    // Additive UPSERT: add amount to existing day's amount
+    // Additive UPSERT: add amount to existing day's amount; id only generated on insert
     sqlx::query(
         "INSERT INTO milestone_daily_progress (id, milestone_id, date, amount, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
          ON CONFLICT (milestone_id, date)
          DO UPDATE SET amount = milestone_daily_progress.amount + EXCLUDED.amount, updated_at = NOW()"
     )
-    .bind(&id).bind(&milestone_id).bind(&date).bind(amount)
+    .bind(&milestone_id).bind(&date).bind(amount)
     .execute(pool).await
     .map_err(|e| db_context("upsert milestone_daily_progress", e))?;
 
@@ -307,16 +305,14 @@ pub async fn set_milestone_progress_for_date(
     chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
         .map_err(|_| PosError::InvalidInput("Invalid date, expected YYYY-MM-DD".into()))?;
 
-    let id = gen_id();
-
-    // Absolute UPSERT: overwrite amount for this date
+    // Absolute UPSERT: overwrite amount for this date; id only generated on insert
     sqlx::query(
         "INSERT INTO milestone_daily_progress (id, milestone_id, date, amount, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
          ON CONFLICT (milestone_id, date)
          DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()"
     )
-    .bind(&id).bind(&milestone_id).bind(&date).bind(amount)
+    .bind(&milestone_id).bind(&date).bind(amount)
     .execute(pool).await
     .map_err(|e| db_context("set milestone_daily_progress", e))?;
 
@@ -342,12 +338,13 @@ pub async fn set_milestone_progress_for_date(
 }
 
 /// Get today's progress for a milestone from milestone_daily_progress.
+/// Returns None when no row exists (distinguishable from an explicit 0).
 #[tauri::command]
 pub async fn get_milestone_today_progress(
     db: State<'_, PosDb>,
     milestone_id: String,
     today_date: String,
-) -> PosResult<i32> {
+) -> PosResult<Option<i32>> {
     let pool = &db.0;
 
     let result: Option<i32> = sqlx::query_scalar(
@@ -357,9 +354,15 @@ pub async fn get_milestone_today_progress(
     .fetch_optional(pool).await
     .map_err(|e| db_context("get_milestone_today_progress", e))?;
 
-    let progress = result.unwrap_or(0);
-    log::info!("[MILESTONE] Today's progress for {} on {}: {}", milestone_id, today_date, progress);
-    Ok(progress)
+    match result {
+        None => {
+            log::info!("[MILESTONE] No progress for {} on {}", milestone_id, today_date);
+        }
+        Some(v) => {
+            log::info!("[MILESTONE] Today's progress for {} on {}: {}", milestone_id, today_date, v);
+        }
+    }
+    Ok(result)
 }
 
 /// Get milestone with per-day breakdown from milestone_daily_progress.

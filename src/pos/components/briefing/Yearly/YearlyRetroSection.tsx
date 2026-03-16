@@ -13,10 +13,6 @@ interface Props {
 }
 
 export function YearlyRetroSection({ data }: Props) {
-    // Only render if at least 2 months have retro data
-    const retroMonths = data.monthlyRollups.filter(r => r.energy !== null);
-    if (retroMonths.length < 2) return null;
-
     const successColor = resolveCssVar('var(--pos-success-text)');
     const infoColor = resolveCssVar('var(--pos-info-text)');
     const warningColor = resolveCssVar('var(--pos-warning-text)');
@@ -30,6 +26,10 @@ export function YearlyRetroSection({ data }: Props) {
         })),
         [data.monthlyRollups],
     );
+
+    // Only render if at least 2 months have retro data
+    const retroMonths = data.monthlyRollups.filter(r => r.energy !== null);
+    if (retroMonths.length < 2) return null;
 
     return (
         <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>

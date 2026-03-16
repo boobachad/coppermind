@@ -73,7 +73,7 @@ function MilestoneCard({ ms, successColor, errorColor }: MilestoneCardProps) {
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium">{ms.targetMetric}</CardTitle>
                     <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        <span>{lastActual} / {lastExpected}{ms.unit ? ` ${ms.unit}` : ''}</span>
+                        <span>{lastActual} / {ms.targetValue}{ms.unit ? ` ${ms.unit}` : ''}</span>
                         <span
                             className="px-2 py-0.5 rounded-full font-medium"
                             style={{

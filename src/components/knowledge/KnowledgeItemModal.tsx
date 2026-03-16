@@ -29,31 +29,14 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
     const [linkedKbItemIds, setLinkedKbItemIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResult | null>(null);
-    const [, setKbItems] = useState<KnowledgeItem[]>([]);
-    const [, setLoadingKbItems] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            loadKbItems();
             if (editingItem) {
                 loadExistingLinks(editingItem.id);
             }
         }
     }, [isOpen, editingItem]);
-
-    const loadKbItems = async () => {
-        setLoadingKbItems(true);
-        try {
-            const items = await invoke<KnowledgeItem[]>('get_knowledge_items', {
-                filters: null
-            });
-            setKbItems(items.filter(item => item.id !== editingItem?.id)); // Exclude self
-        } catch (err) {
-            console.error('Failed to load KB items:', err);
-        } finally {
-            setLoadingKbItems(false);
-        }
-    };
 
     const loadExistingLinks = async (itemId: string) => {
         try {

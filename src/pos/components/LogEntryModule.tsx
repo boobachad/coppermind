@@ -93,14 +93,16 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
 
             // Pre-populate milestone amount from existing daily progress for this activity's date
             if (editingActivity.milestoneId) {
-                invoke<number>('get_milestone_today_progress', {
+                invoke<number | null>('get_milestone_today_progress', {
                     milestoneId: editingActivity.milestoneId,
                     todayDate: editingActivity.date,
                 }).then(amount => {
-                    if (amount > 0) {
+                    if ((amount ?? 0) > 0) {
                         setMetricValues({ milestone: String(amount) });
                     }
-                }).catch(() => {});
+                }).catch((err) => {
+                    console.error('Failed to fetch milestone today progress:', err);
+                });
             } else {
                 setMetricValues({});
             }
@@ -235,7 +237,8 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     await invoke('link_activity_to_unified_goal', { goalId, activityId: editingActivity.id });
                 }
                 // Set milestone progress using the activity's original date, not today
-                if (selectedMilestoneId && milestoneAmount > 0) {
+                // Allow zero to support deliberate progress resets
+                if (selectedMilestoneId && milestoneAmount >= 0) {
                     await invoke('set_milestone_progress_for_date', {
                         milestoneId: selectedMilestoneId,
                         date: editingActivity.date,

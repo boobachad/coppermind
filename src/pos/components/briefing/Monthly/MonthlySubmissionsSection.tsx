@@ -26,6 +26,47 @@ const VERDICT_COLORS: Record<string, string> = {
 export function MonthlySubmissionsSection({ data }: Props) {
     const stats = data.submissionStats;
 
+    const acceptanceRate = stats.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0;
+    const successColor = resolveCssVar('var(--pos-success-text)');
+    const errorColor = resolveCssVar('var(--pos-error-text)');
+
+    // Problems by week bar data
+    const weeklyData = useMemo(() =>
+        (stats.byWeek ?? []).map(([wk, count]) => ({ week: `W${wk}`, count })),
+        [stats.byWeek],
+    );
+
+    // Difficulty donut
+    const difficultyData = useMemo(() =>
+        (stats.byDifficulty ?? []).map(([name, value]) => ({
+            name,
+            value,
+            fill: resolveCssVar(DIFFICULTY_COLORS[name] ?? 'var(--pos-info-text)'),
+        })),
+        [stats.byDifficulty],
+    );
+
+    // Verdict bar
+    const verdictData = useMemo(() =>
+        (stats.byVerdict ?? []).map(([name, value]) => ({
+            name: name.length > 12 ? name.slice(0, 12) + '…' : name,
+            fullName: name,
+            value,
+            fill: resolveCssVar(VERDICT_COLORS[name] ?? 'var(--pos-info-text)'),
+        })),
+        [stats.byVerdict],
+    );
+
+    // Platform donut
+    const platformData = useMemo(() =>
+        (stats.byPlatform ?? []).map(([name, value]) => ({
+            name,
+            value,
+            fill: resolveCssVar(name === 'Codeforces' ? 'var(--pos-info-text)' : 'var(--pos-warning-text)'),
+        })),
+        [stats.byPlatform],
+    );
+
     if (stats.total === 0) {
         return (
             <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
@@ -38,47 +79,6 @@ export function MonthlySubmissionsSection({ data }: Props) {
             </Card>
         );
     }
-
-    const acceptanceRate = stats.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0;
-    const successColor = resolveCssVar('var(--pos-success-text)');
-    const errorColor = resolveCssVar('var(--pos-error-text)');
-
-    // Problems by week bar data
-    const weeklyData = useMemo(() =>
-        stats.byWeek.map(([wk, count]) => ({ week: `W${wk}`, count })),
-        [stats.byWeek],
-    );
-
-    // Difficulty donut
-    const difficultyData = useMemo(() =>
-        stats.byDifficulty.map(([name, value]) => ({
-            name,
-            value,
-            fill: resolveCssVar(DIFFICULTY_COLORS[name] ?? 'var(--pos-info-text)'),
-        })),
-        [stats.byDifficulty],
-    );
-
-    // Verdict bar
-    const verdictData = useMemo(() =>
-        stats.byVerdict.map(([name, value]) => ({
-            name: name.length > 12 ? name.slice(0, 12) + '…' : name,
-            fullName: name,
-            value,
-            fill: resolveCssVar(VERDICT_COLORS[name] ?? 'var(--pos-info-text)'),
-        })),
-        [stats.byVerdict],
-    );
-
-    // Platform donut
-    const platformData = useMemo(() =>
-        stats.byPlatform.map(([name, value]) => ({
-            name,
-            value,
-            fill: resolveCssVar(name === 'Codeforces' ? 'var(--pos-info-text)' : 'var(--pos-warning-text)'),
-        })),
-        [stats.byPlatform],
-    );
 
     return (
         <div className="space-y-4">

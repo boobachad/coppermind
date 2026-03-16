@@ -69,12 +69,12 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
       const milestonesWithProgress = await Promise.all(
         result.map(async (milestone) => {
           try {
-            const todayProgress = await invoke<number>('get_milestone_today_progress', {
+            const todayProgress = await invoke<number | null>('get_milestone_today_progress', {
               milestoneId: milestone.id,
               todayDate: todayStr,
             });
-            console.log(`[Milestone] ${milestone.targetMetric} - Today's progress: ${todayProgress}`);
-            return { ...milestone, todayProgress };
+            console.log(`[Milestone] ${milestone.targetMetric} - Today's progress: ${todayProgress ?? 0}`);
+            return { ...milestone, todayProgress: todayProgress ?? 0 };
           } catch (err) {
             console.error(`[Milestone] Failed to fetch today's progress for ${milestone.targetMetric}:`, err);
             return { ...milestone, todayProgress: 0 };
