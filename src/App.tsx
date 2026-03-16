@@ -14,7 +14,7 @@ import { DailyPage } from './pos/pages/DailyPage';
 import JournalPage from './journal/pages/JournalPage';
 import EntryPage from './journal/pages/EntryPage';
 import { UnifiedGoalsPage } from './pages/UnifiedGoalsPage';
-import { DailyBriefingPage } from './pos/pages/DailyBriefingPage';
+import { BriefingPage } from './pos/pages/BriefingPage';
 import { BookDetailPage } from './pos/pages/BookDetailPage';
 import KnowledgePage from './pages/KnowledgePage';
 import MilestonesPage from './pages/MilestonesPage';
@@ -78,7 +78,7 @@ function App() {
             <Route path="goals" element={<UnifiedGoalsPage />} />
             <Route path="milestones" element={<MilestonesPage />} />
             <Route path="knowledge" element={<KnowledgePage />} />
-            <Route path="briefing" element={<DailyBriefingPage />} />
+            <Route path="briefing" element={<BriefingPage />} />
             <Route path="retrospectives" element={<RetrospectivesPage />} />
             <Route path="whiteboard" element={<WhiteboardPage />} />
             <Route path="experimental" element={<ExperimentalPage />} />

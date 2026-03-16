@@ -131,6 +131,14 @@
   --border-primary: var(--glass-border);
   --border-color: var(--glass-border);
 
+  /* Surface aliases — map to glass/bg tokens */
+  --surface-secondary: var(--glass-bg);
+  --surface-tertiary: var(--bg-tertiary);
+  --surface-error: var(--pos-error-bg);
+
+  /* Info color alias */
+  --color-info: var(--pos-info-text);
+
   /* Sidebar Specifics */
   --glass-sidebar-bg: rgba(10, 10, 10, 0.7);
   --glass-sidebar-border: rgba(255, 255, 255, 0.06);
@@ -356,6 +364,12 @@
   --btn-primary-bg: #FFFFFF;
   --btn-primary-text: #000000;
 
+  /* Surface aliases — solarized light */
+  --surface-secondary: var(--glass-bg);
+  --surface-tertiary: var(--bg-tertiary);
+  --surface-error: var(--pos-error-bg);
+  --color-info: var(--pos-info-text);
+
   /* Linking Shadcn Primary to Button Colors */
   --primary: oklch(1 0 0);
   /* White */
@@ -376,6 +390,12 @@
   --btn-primary-text: #000000;
   --primary: oklch(1 0 0);
   --primary-foreground: oklch(0 0 0);
+
+  /* Surface aliases — dark */
+  --surface-secondary: var(--glass-bg);
+  --surface-tertiary: var(--bg-tertiary);
+  --surface-error: var(--pos-error-bg);
+  --color-info: var(--pos-info-text);
 
   /* Semantic status colors - Dark Mode */
   --pos-success-bg: rgba(22, 163, 74, 0.15);
@@ -411,6 +431,12 @@
   --btn-primary-text: #F0F4F8;
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+
+  /* Surface aliases — blue light */
+  --surface-secondary: var(--glass-bg);
+  --surface-tertiary: var(--bg-tertiary);
+  --surface-error: var(--pos-error-bg);
+  --color-info: var(--pos-info-text);
 
   /* Base overrides */
   --bg-base: #F0F4F8;

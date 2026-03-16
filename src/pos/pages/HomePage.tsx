@@ -379,9 +379,9 @@ export function HomePage() {
                           <div 
                             className="flex items-center gap-1 text-xs px-2 py-1 rounded-full"
                             style={{ 
-                              backgroundColor: week.change > 0 ? 'var(--color-success)' : 'var(--color-error)',
-                              color: 'white',
-                              opacity: 0.9
+                              backgroundColor: week.change > 0 ? 'var(--pos-success-bg)' : 'var(--pos-error-bg)',
+                              color: week.change > 0 ? 'var(--pos-success-text)' : 'var(--pos-error-text)',
+                              border: `1px solid ${week.change > 0 ? 'var(--pos-success-border)' : 'var(--pos-error-border)'}`,
                             }}
                           >
                             {week.change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -534,8 +534,9 @@ export function HomePage() {
                       <div 
                         className="px-3 py-1 rounded-full text-xs font-medium"
                         style={{ 
-                          backgroundColor: sub.verdict === 'OK' ? 'var(--color-success)' : 'var(--color-error)',
-                          color: 'white'
+                          backgroundColor: sub.verdict === 'OK' ? 'var(--pos-success-bg)' : 'var(--pos-error-bg)',
+                          color: sub.verdict === 'OK' ? 'var(--pos-success-text)' : 'var(--pos-error-text)',
+                          border: `1px solid ${sub.verdict === 'OK' ? 'var(--pos-success-border)' : 'var(--pos-error-border)'}`,
                         }}
                       >
                         {sub.verdict}

@@ -84,7 +84,7 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
         const unproductive = Math.max(metrics.totalMinutes - metrics.productiveMinutes, 0);
         return [
             {
-                name: 'Goal-Directed',
+                name: 'Productive (goal)',
                 value: Math.round((metrics.goalDirectedMinutes / 1440) * 100),
                 fill: resolveCssVar('var(--pos-warning-text)'),
             },
@@ -129,7 +129,6 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
     }, [activities]);
 
     const totalLogged = metrics.totalMinutes;
-    const productivePct = totalLogged > 0 ? Math.round((metrics.productiveMinutes / totalLogged) * 100) : 0;
 
     if (activities.length === 0) {
         return (
@@ -154,23 +153,21 @@ export function DailyMetricsTab({ activities, metrics, debtTime }: Props) {
                     <CardContent className="pt-4 pb-2 px-4">
                         <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Productive</p>
                         <p className="text-xl font-bold" style={{ color: 'var(--pos-success-text)' }}>{metrics.productiveMinutes}m</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{productivePct}% of logged</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((metrics.productiveMinutes / 1440) * 100)}% of day</p>
                     </CardContent>
                 </Card>
                 <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                     <CardContent className="pt-4 pb-2 px-4">
                         <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Goal-Directed</p>
                         <p className="text-xl font-bold" style={{ color: 'var(--pos-warning-text)' }}>{metrics.goalDirectedMinutes}m</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {metrics.productiveMinutes > 0 ? Math.round((metrics.goalDirectedMinutes / metrics.productiveMinutes) * 100) : 0}% of productive
-                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((metrics.goalDirectedMinutes / 1440) * 100)}% of day</p>
                     </CardContent>
                 </Card>
                 <Card className="border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
                     <CardContent className="pt-4 pb-2 px-4">
                         <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Debt Time</p>
                         <p className="text-xl font-bold" style={{ color: 'var(--pos-error-text)' }}>{debtTime}m</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((debtTime / 1440) * 100)}% unaccounted</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{Math.round((debtTime / 1440) * 100)}% unlogged</p>
                     </CardContent>
                 </Card>
             </div>

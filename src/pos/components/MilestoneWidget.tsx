@@ -6,6 +6,7 @@ import { Milestone } from '../lib/types';
 import { MonthlyGoalCard } from './MonthlyGoalCard';
 import { MonthlyGoalModal } from './MonthlyGoalModal';
 import { Loader } from '@/components/Loader';
+import { getLocalDateString } from '../lib/time';
 
 interface MilestoneWidgetProps {
   /**
@@ -61,9 +62,8 @@ export function MilestoneWidget({ month, showAll = false, openCreateModal = fals
         activeOnly: false, // Always fetch all milestones for month filtering
       });
 
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      // Get today's date in YYYY-MM-DD format (local timezone)
+      const todayStr = getLocalDateString();
 
       // Fetch today's progress for each milestone
       const milestonesWithProgress = await Promise.all(

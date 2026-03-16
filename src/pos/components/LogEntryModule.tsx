@@ -90,6 +90,20 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setSelectedBookId(editingActivity.bookId || null);
             setPagesRead(editingActivity.pagesRead?.toString() || '');
             setShowBookSelector(editingActivity.category === 'book');
+
+            // Pre-populate milestone amount from existing daily progress for this activity's date
+            if (editingActivity.milestoneId) {
+                invoke<number>('get_milestone_today_progress', {
+                    milestoneId: editingActivity.milestoneId,
+                    todayDate: editingActivity.date,
+                }).then(amount => {
+                    if (amount > 0) {
+                        setMetricValues({ milestone: String(amount) });
+                    }
+                }).catch(() => {});
+            } else {
+                setMetricValues({});
+            }
         } else {
             const now = new Date();
             const [year, month, day] = date.split('-').map(Number);
@@ -215,11 +229,18 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         goalIds: selectedGoalIds.length > 0 ? selectedGoalIds : null,
                         milestoneId: selectedMilestoneId, bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
-                        updates: milestoneAmount > 0 ? [{ metricId: 'milestone_direct', value: milestoneAmount }] : undefined,
                     }
                 });
                 for (const goalId of selectedGoalIds) {
                     await invoke('link_activity_to_unified_goal', { goalId, activityId: editingActivity.id });
+                }
+                // Set milestone progress using the activity's original date, not today
+                if (selectedMilestoneId && milestoneAmount > 0) {
+                    await invoke('set_milestone_progress_for_date', {
+                        milestoneId: selectedMilestoneId,
+                        date: editingActivity.date,
+                        amount: milestoneAmount,
+                    });
                 }
                 window.dispatchEvent(new CustomEvent('milestone-updated'));
                 toast.success('Activity updated successfully');

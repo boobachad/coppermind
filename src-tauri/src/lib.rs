@@ -21,6 +21,9 @@ mod cf_recommendations;
 mod date_summary;
 mod books;
 mod daily_briefing;
+mod briefing_aggregates;
+mod briefing_monthly;
+mod briefing_yearly;
 mod cross_references;
 
 pub mod github {
@@ -354,6 +357,8 @@ pub fn run() {
             // REMOVED: toggle_unified_goal_completion - goals only completable via activity linkage
             unified_goals::link_activity_to_unified_goal,
             daily_briefing::get_daily_briefing,
+            briefing_monthly::get_monthly_briefing,
+            briefing_yearly::get_yearly_briefing,
             knowledge_base::create_knowledge_item,
             knowledge_base::get_knowledge_items,
             knowledge_base::update_knowledge_item,
@@ -373,6 +378,7 @@ pub fn run() {
             milestones::run_balancer_engine,
             milestones::delete_milestone,
             milestones::increment_milestone_progress,
+            milestones::set_milestone_progress_for_date,
             milestones::get_milestone_today_progress,
             milestones::get_milestone_with_daily_breakdown,
             debt_system::get_accumulated_debt,

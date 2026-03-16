@@ -555,3 +555,155 @@ export interface CodeforcesUserStats {
 // ─── Book Tracking ──────────────────────────────────────────────
 // Moved to types-book.ts — re-exported here for backward compat.
 export type { BookMetadata, Book, BookReadingHistory, BookActivitySummary } from './types-book';
+
+// ─── Briefing Aggregates ─────────────────────────────────────────────────────
+
+export interface DailyActivityStat {
+    date: string;
+    totalMinutes: number;
+    productiveMinutes: number;
+    goalDirectedMinutes: number;
+    activityCount: number;
+}
+
+export interface CategoryTotal {
+    category: string;
+    minutes: number;
+}
+
+export interface HourlyBucket {
+    hour: number;
+    count: number;
+}
+
+export interface WeeklyGoalStat {
+    weekNum: number;
+    weekStart: string;
+    goalsCreated: number;
+    goalsCompleted: number;
+    goalsDebt: number;
+    completionRate: number;
+}
+
+export interface GoalPriorityBreakdown {
+    highCompleted: number;
+    highTotal: number;
+    mediumCompleted: number;
+    mediumTotal: number;
+    lowCompleted: number;
+    lowTotal: number;
+}
+
+export interface MilestoneMonthlyProgress {
+    milestoneId: string;
+    targetMetric: string;
+    unit: string | null;
+    dailyAmount: number;
+    targetValue: number;
+    currentValue: number;
+    dailyValues: [string, number][];
+    cumulativeActual: [string, number][];
+    cumulativeExpected: [string, number][];
+}
+
+export interface SubmissionMonthStats {
+    total: number;
+    accepted: number;
+    byDifficulty: [string, number][];
+    byPlatform: [string, number][];
+    byVerdict: [string, number][];
+    byWeek: [number, number][];
+}
+
+export interface KbMonthStats {
+    itemsAdded: number;
+    itemsReviewed: number;
+    itemsCompleted: number;
+    bySource: [string, number][];
+    topTags: [string, number][];
+    inboxDelta: number;
+}
+
+export interface ReadingMonthStats {
+    totalPages: number;
+    totalMinutes: number;
+    sessions: number;
+    booksActive: number;
+    pagesPerDay: [string, number][];
+}
+
+export interface RetroData {
+    energy: number;
+    satisfaction: number;
+    deepWorkHours: number;
+    accomplishments: string | null;
+    challenges: string | null;
+}
+
+export interface MonthlyBriefingResponse {
+    year: number;
+    month: number;
+    dailyActivityStats: DailyActivityStat[];
+    categoryTotals: CategoryTotal[];
+    hourlyDensity: HourlyBucket[];
+    totalProductiveMinutes: number;
+    totalLoggedMinutes: number;
+    totalGoalDirectedMinutes: number;
+    daysWithActivity: number;
+    longestStreak: number;
+    weeklyGoalStats: WeeklyGoalStat[];
+    goalPriorityBreakdown: GoalPriorityBreakdown;
+    totalGoalsCreated: number;
+    totalGoalsCompleted: number;
+    totalGoalsVerified: number;
+    totalDebtCreated: number;
+    milestoneProgress: MilestoneMonthlyProgress[];
+    submissionStats: SubmissionMonthStats;
+    kbStats: KbMonthStats;
+    readingStats: ReadingMonthStats;
+    retrospective: RetroData | null;
+}
+
+export interface MonthlyRollup {
+    month: string;
+    productiveMinutes: number;
+    totalLoggedMinutes: number;
+    goalsCreated: number;
+    goalsCompleted: number;
+    completionRate: number;
+    debtNetDelta: number;
+    problemsSolved: number;
+    pagesRead: number;
+    kbItemsAdded: number;
+    kbItemsReviewed: number;
+    energy: number | null;
+    satisfaction: number | null;
+    deepWorkHours: number | null;
+    activeDays: number;
+}
+
+export interface YearlyTotals {
+    totalProductiveHours: number;
+    totalGoalsCompleted: number;
+    totalProblemsSolved: number;
+    totalPagesRead: number;
+    totalKbItems: number;
+    avgCompletionRate: number;
+    avgEnergy: number | null;
+    avgSatisfaction: number | null;
+}
+
+export interface YearlyBriefingResponse {
+    year: number;
+    monthlyRollups: MonthlyRollup[];
+    yearlyTotals: YearlyTotals;
+    bestMonth: string | null;
+    worstMonth: string | null;
+    longestStreakDays: number;
+    longestStreakStart: string | null;
+    totalActiveDays: number;
+    categoryYearlyTotals: CategoryTotal[];
+    submissionRatingProgression: [string, number][];
+}
+
+export type BriefingMode = 'daily' | 'monthly' | 'yearly';

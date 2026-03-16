@@ -29,8 +29,8 @@ export function KnowledgeItemModal({ isOpen, onClose, onSuccess, editingItem }: 
     const [linkedKbItemIds, setLinkedKbItemIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResult | null>(null);
-    const [kbItems, setKbItems] = useState<KnowledgeItem[]>([]);
-    const [loadingKbItems, setLoadingKbItems] = useState(false);
+    const [, setKbItems] = useState<KnowledgeItem[]>([]);
+    const [, setLoadingKbItems] = useState(false);
 
     useEffect(() => {
         if (isOpen) {

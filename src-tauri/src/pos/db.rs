@@ -571,4 +571,18 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         data            JSONB NOT NULL,
         updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )",
+
+    // ─── Milestone Daily Progress ────────────────────────────────────
+    "CREATE TABLE IF NOT EXISTS milestone_daily_progress (
+        id           TEXT PRIMARY KEY,
+        milestone_id TEXT NOT NULL REFERENCES goal_periods(id) ON DELETE CASCADE,
+        date         TEXT NOT NULL,
+        amount       INT NOT NULL DEFAULT 0,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(milestone_id, date)
+    )",
+    "CREATE INDEX IF NOT EXISTS idx_mdp_milestone_date ON milestone_daily_progress(milestone_id, date)",
+    "CREATE INDEX IF NOT EXISTS idx_mdp_date ON milestone_daily_progress(date)",
+
 ];

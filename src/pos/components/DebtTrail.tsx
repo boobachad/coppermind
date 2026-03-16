@@ -144,8 +144,9 @@ export function DebtTrail({ endDate, onDebtResolved, onEdit, onDelete }: DebtTra
                                 <span
                                     className="px-2 py-1 rounded-full text-xs font-medium"
                                     style={{
-                                        backgroundColor: 'var(--color-error)',
-                                        color: 'white',
+                                        backgroundColor: 'var(--pos-error-bg)',
+                                        color: 'var(--pos-error-text)',
+                                        border: '1px solid var(--pos-error-border)',
                                     }}
                                 >
                                     {item.debtCount} debt
