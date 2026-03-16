@@ -417,7 +417,9 @@ pub async fn get_monthly_briefing(
             let date_str = format!("{}-{:02}-{:02}", year, month, d);
             running += val_map.get(date_str.as_str()).copied().unwrap_or(0);
             cum_actual.push((date_str.clone(), running));
-            cum_expected.push((date_str, ms.daily_amount * d));
+            // Cap expected at target_value so it never exceeds the goal
+            let expected = (ms.daily_amount * d).min(ms.target_value);
+            cum_expected.push((date_str, expected));
         }
 
         milestone_progress.push(MilestoneMonthlyProgress {

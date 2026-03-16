@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import {
-    ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { MonthlyBriefingResponse } from '../../../lib/types';
-import { resolveCssVar, ChartTooltip, EmptyChart } from '../BriefingCharts';
+import { resolveCssVar, EmptyChart } from '../BriefingCharts';
 import { getLocalDateString } from '../../../lib/time';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
 export function MonthlyMilestoneSection({ data }: Props) {
     const successColor = resolveCssVar('var(--pos-success-text)');
     const errorColor = resolveCssVar('var(--pos-error-text)');
+    const infoColor = resolveCssVar('var(--pos-info-text)');
 
     if (data.milestoneProgress.length === 0) {
         return (
@@ -36,6 +37,7 @@ export function MonthlyMilestoneSection({ data }: Props) {
                     ms={ms}
                     successColor={successColor}
                     errorColor={errorColor}
+                    infoColor={infoColor}
                 />
             ))}
         </div>
@@ -46,26 +48,57 @@ interface MilestoneCardProps {
     ms: MonthlyBriefingResponse['milestoneProgress'][number];
     successColor: string;
     errorColor: string;
+    infoColor: string;
 }
 
-function MilestoneCard({ ms, successColor, errorColor }: MilestoneCardProps) {
-    // Merge actual and expected into a single chart series keyed by date
-    const chartData = useMemo(() => {
-        const expectedMap = new Map(ms.cumulativeExpected.map(([d, v]) => [d, v]));
-        return ms.cumulativeActual.map(([date, actual]) => ({
-            date: date.slice(8), // day number only
-            actual,
-            expected: expectedMap.get(date) ?? 0,
-        }));
-    }, [ms]);
-
-    // Find today's index in the cumulative arrays to compare actual vs expected so far
+function MilestoneCard({ ms, successColor, errorColor, infoColor }: MilestoneCardProps) {
     const todayStr = getLocalDateString();
+
+    // Build per-day chart data with 3 series:
+    // actual    = what was logged that day
+    // expected  = flat daily target (dailyAmount)
+    // required  = dailyAmount + accumulated debt up to that day
+    const chartData = useMemo(() => {
+        const dailyMap = new Map(ms.dailyValues.map(([d, v]) => [d, v]));
+        const cumExpMap = new Map(ms.cumulativeExpected.map(([d, v]) => [d, v]));
+        const cumActMap = new Map(ms.cumulativeActual.map(([d, v]) => [d, v]));
+
+        return ms.cumulativeActual.map(([date]) => {
+            const dayLabel = date.slice(8); // "01".."31"
+            const actual = dailyMap.get(date) ?? 0;
+            const cumAct = cumActMap.get(date) ?? 0;
+            const cumExp = cumExpMap.get(date) ?? 0;
+            // Debt = how far behind cumulatively; required = base + debt
+            const debt = Math.max(0, cumExp - cumAct);
+            const required = ms.dailyAmount + debt;
+            const isFuture = date > todayStr;
+            return {
+                date,
+                day: dayLabel,
+                actual: isFuture ? null : actual,
+                expected: ms.dailyAmount,
+                required: isFuture ? null : required,
+            };
+        });
+    }, [ms, todayStr]);
+
+    // Compare cumulative at today (or last available day) for status badge
     const todayIdx = ms.cumulativeActual.findIndex(([d]) => d === todayStr);
     const compareIdx = todayIdx >= 0 ? todayIdx : ms.cumulativeActual.length - 1;
     const lastActual = ms.cumulativeActual[compareIdx]?.[1] ?? 0;
     const lastExpected = ms.cumulativeExpected[compareIdx]?.[1] ?? 0;
     const isAhead = lastActual >= lastExpected;
+
+    // Left axis: actual + expected — domain anchored to dailyAmount so both lines are visible
+    const leftMax = Math.max(
+        ms.dailyAmount * 2,
+        ...chartData.map(d => d.actual ?? 0),
+    );
+    // Right axis: required — its own scale so it doesn't crush the left lines
+    const rightMax = Math.max(
+        ms.dailyAmount * 2,
+        ...chartData.map(d => d.required ?? 0),
+    );
 
     return (
         <Card className="border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
@@ -86,29 +119,117 @@ function MilestoneCard({ ms, successColor, errorColor }: MilestoneCardProps) {
                         </span>
                     </div>
                 </div>
+                <div className="flex items-center gap-4 mt-1">
+                    <LegendDot color={successColor} label="Actual" />
+                    <LegendDot color={infoColor} label={`Expected (${ms.dailyAmount}${ms.unit ? ` ${ms.unit}` : ''}/day)`} dashed />
+                    <LegendDot color={errorColor} label="Required (incl. debt) →" />
+                </div>
             </CardHeader>
             <CardContent className="pb-4 px-4">
-                <ResponsiveContainer width="100%" height={110}>
-                    <AreaChart data={chartData} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id={`grad-actual-${ms.milestoneId}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={successColor} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={successColor} stopOpacity={0.05} />
-                            </linearGradient>
-                            <linearGradient id={`grad-expected-${ms.milestoneId}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={errorColor} stopOpacity={0.15} />
-                                <stop offset="95%" stopColor={errorColor} stopOpacity={0.02} />
-                            </linearGradient>
-                        </defs>
+                <ResponsiveContainer width="100%" height={130}>
+                    <LineChart data={chartData} margin={{ left: 0, right: 36, top: 4, bottom: 0 }}>
                         <CartesianGrid stroke="var(--border-color)" strokeOpacity={0.3} />
-                        <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} interval={6} />
-                        <YAxis tick={{ fontSize: 9, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTooltip unit={ms.unit ?? ''} />} />
-                        <Area type="monotone" dataKey="expected" name="Expected" stroke={errorColor} strokeWidth={1} strokeDasharray="4 2" fill={`url(#grad-expected-${ms.milestoneId})`} />
-                        <Area type="monotone" dataKey="actual" name="Actual" stroke={successColor} strokeWidth={2} fill={`url(#grad-actual-${ms.milestoneId})`} />
-                    </AreaChart>
+                        <XAxis
+                            dataKey="day"
+                            tick={{ fontSize: 9, fill: 'var(--text-tertiary)' }}
+                            axisLine={false}
+                            tickLine={false}
+                            interval={6}
+                        />
+                        {/* Left axis: actual + expected */}
+                        <YAxis
+                            yAxisId="left"
+                            domain={[0, leftMax]}
+                            tick={{ fontSize: 9, fill: 'var(--text-tertiary)' }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={32}
+                        />
+                        {/* Right axis: required (debt-inflated) */}
+                        <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            domain={[0, rightMax]}
+                            tick={{ fontSize: 9, fill: errorColor }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={32}
+                        />
+                        <Tooltip
+                            content={({ active, payload, label }) => {
+                                if (!active || !payload?.length) return null;
+                                const unit = ms.unit ? ` ${ms.unit}` : '';
+                                return (
+                                    <div
+                                        className="rounded px-2 py-1.5 text-xs border"
+                                        style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                                    >
+                                        <p className="font-medium mb-0.5">Day {label}</p>
+                                        {payload.map((p, i) =>
+                                            p.value != null ? (
+                                                <p key={i} style={{ color: p.color }}>
+                                                    {p.name}: {p.value}{unit}
+                                                </p>
+                                            ) : null
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        />
+                        {/* Expected flat line */}
+                        <Line
+                            yAxisId="left"
+                            type="monotone"
+                            dataKey="expected"
+                            name="Expected"
+                            stroke={infoColor}
+                            strokeWidth={1}
+                            strokeDasharray="4 2"
+                            dot={false}
+                            connectNulls
+                        />
+                        {/* Actual daily input */}
+                        <Line
+                            yAxisId="left"
+                            type="monotone"
+                            dataKey="actual"
+                            name="Actual"
+                            stroke={successColor}
+                            strokeWidth={2}
+                            dot={{ r: 2, fill: successColor }}
+                            connectNulls={false}
+                        />
+                        {/* Required = base + debt, on its own axis */}
+                        <Line
+                            yAxisId="right"
+                            type="monotone"
+                            dataKey="required"
+                            name="Required"
+                            stroke={errorColor}
+                            strokeWidth={1.5}
+                            strokeDasharray="3 2"
+                            dot={false}
+                            connectNulls={false}
+                        />
+                    </LineChart>
                 </ResponsiveContainer>
             </CardContent>
         </Card>
+    );
+}
+
+function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+    return (
+        <div className="flex items-center gap-1">
+            <svg width="16" height="8">
+                <line
+                    x1="0" y1="4" x2="16" y2="4"
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeDasharray={dashed ? '4 2' : undefined}
+                />
+            </svg>
+            <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{label}</span>
+        </div>
     );
 }
