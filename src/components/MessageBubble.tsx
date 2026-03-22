@@ -59,7 +59,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveUp?.(message.id)}
                             disabled={!canMoveUp}
-                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-(--glass-bg-subtle) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
@@ -68,7 +68,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveDown?.(message.id)}
                             disabled={!canMoveDown}
-                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-(--glass-bg-subtle) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >
@@ -77,20 +77,25 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                     </div>
                 )}
 
-                {/* Bubble */}
+                {/* Bubble / Message Content */}
                 <div
                     onContextMenu={handleContextMenu}
                     className={clsx(
-                        "rounded-2xl px-5 py-3 shadow-md text-sm overflow-hidden max-w-[90%] inline-block backdrop-blur-md border",
+                        "text-sm overflow-hidden",
                         isQuestion
-                            ? "rounded-tr-sm"
-                            : "rounded-tl-sm"
+                            ? "inline-block rounded-2xl rounded-tr-sm px-5 py-3 shadow-md max-w-[90%] backdrop-blur-md border"
+                            : "flex-1 w-full max-w-full py-2"
                     )}
-                    style={{
-                        backgroundColor: isQuestion ? 'var(--glass-bg-subtle)' : 'var(--glass-bg)',
-                        borderColor: 'var(--glass-border)',
-                        color: 'var(--text-primary)'
-                    }}>
+                    style={
+                        isQuestion ? {
+                            backgroundColor: 'var(--glass-bg-subtle)',
+                            borderColor: 'var(--glass-border)',
+                            color: 'var(--text-primary)'
+                        } : {
+                            color: 'var(--text-primary)'
+                        }
+                    }
+                >
                     <MarkdownRenderer
                         content={message.content}
                         className="w-full"
@@ -103,7 +108,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveUp?.(message.id)}
                             disabled={!canMoveUp}
-                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-(--glass-bg-subtle) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move up"
                         >
@@ -112,7 +117,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onUpdate, on
                         <button
                             onClick={() => onMoveDown?.(message.id)}
                             disabled={!canMoveDown}
-                            className="p-1 rounded hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1 rounded hover:bg-(--glass-bg-subtle) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             style={{ color: 'var(--text-secondary)' }}
                             title="Move down"
                         >
