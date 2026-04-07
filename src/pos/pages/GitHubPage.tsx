@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { GitHubRepository, GitHubUserStats } from '../lib/types';
 import { Loader } from '../../components/Loader';
+import { open } from '@tauri-apps/plugin-shell';
 import { Navbar } from '../components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -204,6 +205,12 @@ function RepoCard({ repo }: { repo: GitHubRepository }) {
                         href={repo.repoUrl || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => {
+                            if (repo.repoUrl && (repo.repoUrl.startsWith('http://') || repo.repoUrl.startsWith('https://'))) {
+                                e.preventDefault();
+                                open(repo.repoUrl).catch(err => console.error("Failed to open URL:", err));
+                            }
+                        }}
                         className="text-primary hover:underline font-medium truncate block"
                     >
                         {repo.fullName}

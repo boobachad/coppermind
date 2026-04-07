@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Book, Sparkles } from 'lucide-react';
 import { ContextItem } from '../../pos/lib/types';
+import { open } from '@tauri-apps/plugin-shell';
 
 interface GoalResourcesProps {
     goalId: string;
@@ -79,6 +80,12 @@ export function GoalResources({ goalId }: GoalResourcesProps) {
                                         href={resource.content}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={(e) => {
+                                            if (resource.content.startsWith('http://') || resource.content.startsWith('https://')) {
+                                                e.preventDefault();
+                                                open(resource.content).catch(err => console.error("Failed to open URL:", err));
+                                            }
+                                        }}
                                         className="px-3 py-1.5 rounded-lg text-xs transition-all duration-200 hover:scale-105 flex-shrink-0"
                                         style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
                                     >

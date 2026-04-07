@@ -10,6 +10,7 @@ import { parseReferences } from '@/lib/entity-linking/core/parser';
 import { batchValidate } from '@/lib/entity-linking/core/validator';
 import { useEntityCache } from '@/lib/entity-linking/hooks/useEntityCache';
 import { EntityLink } from '@/lib/entity-linking/components/EntityLink';
+import { open } from '@tauri-apps/plugin-shell';
 import type { Components } from 'react-markdown';
 import type { EntityReference } from '@/lib/entity-linking/core/types';
 
@@ -105,6 +106,25 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
     em: ({ children }) => {
       const processedChildren = processTextWithEntityLinks(children);
       return <em>{processedChildren}</em>;
+    },
+    a: ({ href, children, ...props }) => {
+      const processedChildren = processTextWithEntityLinks(children);
+      return (
+        <a 
+          href={href} 
+          {...props} 
+          onClick={(e) => {
+            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+              e.preventDefault();
+              open(href).catch(err => console.error("Failed to open URL:", err));
+            }
+          }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {processedChildren}
+        </a>
+      );
     },
   };
 
