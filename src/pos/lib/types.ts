@@ -253,21 +253,27 @@ export interface KnowledgeMetadata {
     tags?: string[];
     difficulty?: string;
     relatedItemIds?: string[];
+    // New shape written by capture_daily_urls (Rust CaptureLink struct)
     urls?: Array<{
         url: string;
-        activity_id: string;
-        activity_title: string;
-        activity_category: string;
-        detected_in: string;
         url_type: string;
+        source_type: string;    // "activity" | "note" | "journal" | "manual"
+        source_id: string;
+        source_title: string;
+        source_context: string; // "title" | "description" | "content"
         timestamp: string;
+        // Legacy fields kept for backwards compat with old stored items
+        activity_id?: string;
+        activity_title?: string;
+        activity_category?: string;
+        detected_in?: string;
     }>;
 }
 
 export interface KnowledgeItem {
     id: string;
     tags: string[];           // Array of tags like ["thinking", "space", "inspiration"]
-    source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal';
+    source: 'ActivityLog' | 'Manual' | 'BrowserExtension' | 'Journal' | 'DailyCapture';
     content: string;              // Multi-line text, can contain URLs, notes, anything
     metadata: KnowledgeMetadata | null;  // Title, Tags, Difficulty, RelatedItemIds
     status: 'Inbox' | 'Planned' | 'Completed' | 'Archived';
@@ -296,9 +302,9 @@ export interface ActivityKnowledgeLink {
 
 export interface KnowledgeItemFilters {
     status?: string;
-    item_type?: string;
+    itemType?: string;   // camelCase — Rust deserializes with rename_all = "camelCase"
     search?: string;
-    due_for_review?: boolean;
+    dueForReview?: boolean;
 }
 
 export interface DuplicateCheckResult {

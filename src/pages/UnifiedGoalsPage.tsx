@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Kanban } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { getLocalDateString, parseGoalDate, formatGoalDate } from '../pos/lib/time';
 import clsx from 'clsx';
 import { UnifiedGoal } from '../pos/lib/types';
@@ -14,6 +15,7 @@ import { GoalFormModal } from '../pos/components/GoalFormModal';
 import { DebtTrail } from '../pos/components/DebtTrail';
 
 export function UnifiedGoalsPage() {
+  const navigate = useNavigate();
   const [goals, setGoals] = useState<UnifiedGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'urgent' | 'debt'>('active');
@@ -161,13 +163,25 @@ export function UnifiedGoalsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-(--text-primary)">Goals</h1>
             <p className="mt-1 text-muted-foreground">Unified task and goal management</p>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center px-4 py-2 rounded-lg shadow-md transition-all hover:opacity-90 font-medium bg-primary text-primary-foreground"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            New Goal
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/kanban')}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium border transition-all hover:scale-105"
+              style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            >
+              <Kanban className="w-4 h-4" />
+              Kanban
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center px-4 py-2 rounded-lg shadow-md transition-all hover:opacity-90 font-medium bg-primary text-primary-foreground"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              New Goal
+            </button>
+          </div>
         </div>
 
         {/* Stats Dashboard */}

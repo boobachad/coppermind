@@ -245,3 +245,207 @@ pub async fn capture_daily_urls(
     log::info!("[KB] Captured {} links for date {}", urls.len(), date);
     Ok(row)
 }
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackfillResult {
+    pub dates_processed: usize,
+    pub urls_captured: usize,
+    pub dates: Vec<String>,
+}
+
+/// Strip trailing punctuation that the regex may capture as part of a URL
+/// e.g. "https://github.com/rough-stuff," → "https://github.com/rough-stuff"
+fn clean_url(url: &str) -> String {
+    url.trim_end_matches(|c: char| matches!(c, ',' | ')' | '.' | ';' | ':' | '>' | '"' | '\'' | ']'))
+        .to_string()
+}
+
+/// Backfill daily KB captures from all historical activities that contain URLs.
+/// Safe to run multiple times — deduplicates by (normalized_url, source_id).
+/// Also cleans up duplicate entries in existing daily items.
+#[tauri::command]
+pub async fn backfill_activity_urls(db: State<'_, PosDb>) -> PosResult<BackfillResult> {
+    let pool = &db.0;
+
+    #[derive(sqlx::FromRow)]
+    struct ActivityRow {
+        id: String,
+        date: String,
+        title: String,
+        description: String,
+    }
+
+    // Fetch all activities that contain URLs
+    let activities = sqlx::query_as::<_, ActivityRow>(
+        r#"SELECT id, date, title, description
+           FROM pos_activities
+           WHERE title ~ 'https?://' OR description ~ 'https?://'
+           ORDER BY date ASC, start_time ASC"#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("backfill fetch activities", e))?;
+
+    if activities.is_empty() {
+        return Ok(BackfillResult { dates_processed: 0, urls_captured: 0, dates: vec![] });
+    }
+
+    let url_re = regex::Regex::new(r"https?://[^\s]+")
+        .map_err(|e| crate::pos::error::PosError::InvalidInput(e.to_string()))?;
+
+    let detect_type = |url: &str| -> &'static str {
+        if url.contains("leetcode.com")   { return "leetcode"; }
+        if url.contains("codeforces.com") { return "codeforces"; }
+        if url.contains("github.com")     { return "github"; }
+        "other"
+    };
+
+    // Group by date
+    let mut by_date: std::collections::BTreeMap<String, Vec<&ActivityRow>> =
+        std::collections::BTreeMap::new();
+    for act in &activities {
+        by_date.entry(act.date.clone()).or_default().push(act);
+    }
+
+    let mut total_new = 0usize;
+    let mut processed_dates: Vec<String> = vec![];
+
+    for (date, acts) in &by_date {
+        if chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err() {
+            continue;
+        }
+
+        let daily_id = format!("daily_{}", date);
+        let now = Utc::now();
+
+        // ── Build candidate links from activities ──────────────────
+        // Dedup within this batch by (clean_url, source_id)
+        let mut seen_in_batch: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+        let mut candidates: Vec<serde_json::Value> = vec![];
+
+        for act in acts {
+            let combined = format!("{} {}", act.title, act.description);
+            for m in url_re.find_iter(&combined) {
+                let raw = m.as_str();
+                let url = clean_url(raw);
+                if url.len() < 10 { continue; } // skip garbage
+
+                let key = (url.clone(), act.id.clone());
+                if seen_in_batch.contains(&key) { continue; }
+                seen_in_batch.insert(key);
+
+                let url_type = detect_type(&url);
+                let context = if act.title.contains(raw) { "title" } else { "description" };
+                candidates.push(json!({
+                    "url": url,
+                    "url_type": url_type,
+                    "source_type": "activity",
+                    "source_id": act.id,
+                    "source_title": act.title,
+                    "source_context": context,
+                    "timestamp": now,
+                }));
+            }
+        }
+
+        if candidates.is_empty() { continue; }
+
+        // ── Fetch existing daily item ──────────────────────────────
+        let existing = sqlx::query_as::<_, KnowledgeItemRow>(
+            "SELECT id, tags, source, content, metadata, status, next_review_date, \
+             linked_note_id, linked_journal_date, created_at, updated_at \
+             FROM knowledge_items WHERE id = $1",
+        )
+        .bind(&daily_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| db_context("backfill fetch existing", e))?;
+
+        let (metadata, newly_added) = if let Some(ref item) = existing {
+            let raw_meta: serde_json::Value = item.metadata
+                .as_ref()
+                .map(|m| m.0.clone())
+                .unwrap_or_else(|| json!({"urls": []}));
+
+            // Build seen set from existing entries (all new-shape: source_id)
+            let existing_arr = raw_meta.get("urls")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            let mut seen_existing: std::collections::HashSet<(String, String)> =
+                existing_arr.iter().filter_map(|v| {
+                    let url = v.get("url").and_then(|u| u.as_str()).map(String::from)?;
+                    let sid = v.get("source_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                    Some((url, sid))
+                }).collect();
+
+            // Merge candidates, skip already-present (url, source_id)
+            let mut merged = existing_arr;
+            let mut added = 0usize;
+            for link in candidates {
+                let url = link.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let sid = link.get("source_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let key = (url, sid);
+                if !seen_existing.contains(&key) {
+                    seen_existing.insert(key);
+                    merged.push(link);
+                    added += 1;
+                }
+            }
+
+            (json!({"urls": merged}), added)
+        } else {
+            let added = candidates.len();
+            (json!({"urls": candidates}), added)
+        };
+
+        // Always upsert: either creating new or cleaning up existing duplicates/legacy fields
+        let count = metadata["urls"].as_array().map(|a| a.len()).unwrap_or(0);
+
+        let mut source_tags: Vec<String> = vec!["daily-capture".to_string(), date.clone()];
+        if let Some(arr) = metadata["urls"].as_array() {
+            let mut seen_tags = std::collections::HashSet::new();
+            for entry in arr {
+                if let Some(st) = entry.get("source_type").and_then(|v| v.as_str()) {
+                    if seen_tags.insert(st.to_string()) {
+                        source_tags.push(st.to_string());
+                    }
+                }
+            }
+        }
+
+        sqlx::query(
+            r#"INSERT INTO knowledge_items
+               (id, tags, source, content, metadata, status, next_review_date,
+                linked_note_id, linked_journal_date, created_at, updated_at)
+               VALUES ($1, $2, 'DailyCapture', $3, $4, 'Inbox', NULL, NULL, NULL, $5, $5)
+               ON CONFLICT (id) DO UPDATE SET
+                  source     = 'DailyCapture',
+                  tags       = EXCLUDED.tags,
+                  content    = EXCLUDED.content,
+                  metadata   = EXCLUDED.metadata,
+                  updated_at = EXCLUDED.updated_at"#,
+        )
+        .bind(&daily_id)
+        .bind(&source_tags)
+        .bind(format!("{} links captured on {}", count, date))
+        .bind(sqlx::types::Json(metadata))
+        .bind(now)
+        .execute(pool)
+        .await
+        .map_err(|e| db_context("backfill upsert", e))?;
+
+        total_new += newly_added;
+        processed_dates.push(date.clone());
+        log::info!("[KB Backfill] {} — {} new links ({} total)", date, newly_added, count);
+    }
+
+    log::info!("[KB Backfill] Done: {} dates, {} new links", processed_dates.len(), total_new);
+    Ok(BackfillResult {
+        dates_processed: processed_dates.len(),
+        urls_captured: total_new,
+        dates: processed_dates,
+    })
+}

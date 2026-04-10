@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { KnowledgeItem, KnowledgeItemFilters } from '@/pos/lib/types';
 import { KnowledgeItemCard } from './KnowledgeItemCard';
@@ -22,6 +22,7 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
     const [availableTags, setAvailableTags] = useState<string[]>([]);
+    const [backfilling, setBackfilling] = useState(false);
 
     const loadItems = useCallback(async () => {
         setLoading(true);
@@ -31,22 +32,18 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
             if (statusFilter !== 'all') {
                 filters.status = statusFilter;
             }
-            
+            if (typeFilter !== 'all') {
+                filters.itemType = typeFilter;
+            }
             if (searchQuery.trim()) {
                 filters.search = searchQuery.trim();
             }
 
             const result = await invoke<KnowledgeItem[]>('get_knowledge_items', { filters });
             
-            // Client-side tag filtering (since backend doesn't support array filtering yet)
-            let filteredItems = result;
-            if (typeFilter !== 'all') {
-                filteredItems = result.filter(item => item.tags.includes(typeFilter));
-            }
+            setItems(result);
             
-            setItems(filteredItems);
-            
-            // Extract unique tags from ALL items (not just filtered)
+            // Extract unique tags from ALL items for the tag filter dropdown
             const tagsSet = new Set<string>();
             result.forEach(item => {
                 item.tags.forEach(tag => tagsSet.add(tag));
@@ -106,6 +103,28 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
         }
     };
 
+    const handleBackfill = async () => {
+        setBackfilling(true);
+        try {
+            const result = await invoke<{ datesProcessed: number; urlsCaptured: number; dates: string[] }>(
+                'backfill_activity_urls'
+            );
+            if (result.datesProcessed === 0) {
+                toast.info('Nothing to backfill', { description: 'No activities with URLs found.' });
+            } else {
+                toast.success(
+                    `Backfill complete`,
+                    { description: `${result.urlsCaptured} links across ${result.datesProcessed} days` }
+                );
+            }
+            loadItems();
+        } catch (err) {
+            toast.error('Backfill failed', { description: String(err) });
+        } finally {
+            setBackfilling(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full">
             {/* Header with glassmorphism */}
@@ -124,6 +143,16 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
                     >
                         Knowledge Inbox
                     </h1>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleBackfill}
+                        disabled={backfilling}
+                        className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--glass-bg-subtle)', color: 'var(--text-primary)' }}
+                        title="Backfill links from all past activities"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${backfilling ? 'animate-spin' : ''}`} />
+                    </button>
                     <Button
                         onClick={handleCreateNew}
                         className="flex items-center gap-2"
@@ -135,6 +164,7 @@ export function KnowledgeInbox({ highlightItemId }: KnowledgeInboxProps) {
                         <Plus className="w-4 h-4" />
                         Add Item
                     </Button>
+                </div>
                 </div>
 
                 {/* Filters */}

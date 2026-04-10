@@ -42,6 +42,41 @@ export function RetrospectivesPage() {
         }
     };
 
+    // Auto-trigger: prompt if weekly retro is overdue (no retro in last 7 days)
+    useEffect(() => {
+        const checkDue = async () => {
+            try {
+                const data = await invoke<Retrospective[]>('get_retrospectives', {
+                    periodType: 'weekly',
+                    limit: 1,
+                });
+                const today = new Date();
+                const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon
+                // Prompt on Sundays or Mondays if no retro in last 7 days
+                if (dayOfWeek === 0 || dayOfWeek === 1) {
+                    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    const lastRetro = data[0];
+                    const isDue = !lastRetro || new Date(lastRetro.periodEnd) < sevenDaysAgo;
+                    if (isDue) {
+                        // Only show once per day using localStorage
+                        const key = `retro_prompted_${getLocalDateString()}`;
+                        if (!localStorage.getItem(key)) {
+                            localStorage.setItem(key, '1');
+                            toast.info('Weekly retrospective due', {
+                                description: "It's time for your weekly review.",
+                                action: { label: 'Start', onClick: () => setIsFormOpen(true) },
+                                duration: 8000,
+                            });
+                        }
+                    }
+                }
+            } catch {
+                // silently ignore
+            }
+        };
+        checkDue();
+    }, []);
+
     useEffect(() => {
         loadRetrospectives();
     }, [periodFilter]);

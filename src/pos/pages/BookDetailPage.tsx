@@ -42,7 +42,7 @@ export function BookDetailPage() {
     if (loading) {
         return (
             <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                <Navbar breadcrumbItems={[{ label: 'Books' }, { label: 'Loading...' }]} />
+                <Navbar breadcrumbItems={[{ label: 'Books', href: '/books' }, { label: 'Loading...' }]} />
                 <div className="container mx-auto p-6">
                     <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
                 </div>
@@ -53,7 +53,7 @@ export function BookDetailPage() {
     if (!history) {
         return (
             <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                <Navbar breadcrumbItems={[{ label: 'Books' }, { label: 'Not Found' }]} />
+                <Navbar breadcrumbItems={[{ label: 'Books', href: '/books' }, { label: 'Not Found' }]} />
                 <div className="container mx-auto p-6">
                     <p style={{ color: 'var(--text-secondary)' }}>Book not found</p>
                 </div>
@@ -68,7 +68,7 @@ export function BookDetailPage() {
 
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <Navbar breadcrumbItems={[{ label: 'Books' }, { label: book.title }]} />
+            <Navbar breadcrumbItems={[{ label: 'Books', href: '/books' }, { label: book.title }]} />
             <div className="container mx-auto p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">

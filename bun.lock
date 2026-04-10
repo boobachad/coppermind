@@ -96,6 +96,7 @@
     },
   },
   "trustedDependencies": [
+    "esbuild",
     "core-js",
   ],
   "packages": {

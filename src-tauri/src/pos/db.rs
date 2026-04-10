@@ -247,9 +247,12 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         linked_note_id      TEXT,
         linked_journal_date TEXT,
         tags                TEXT[] DEFAULT '{}',
-        CONSTRAINT knowledge_items_source_check CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal')),
+        CONSTRAINT knowledge_items_source_check CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal', 'DailyCapture')),
         CONSTRAINT knowledge_items_status_check CHECK (status IN ('Inbox', 'Planned', 'Completed', 'Archived'))
     )",
+    // Widen source constraint to include DailyCapture — safe idempotent migration
+    "ALTER TABLE knowledge_items DROP CONSTRAINT IF EXISTS knowledge_items_source_check",
+    "ALTER TABLE knowledge_items ADD CONSTRAINT knowledge_items_source_check CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal', 'DailyCapture'))",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_status ON knowledge_items(status)",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_tags ON knowledge_items USING gin(tags)",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_review ON knowledge_items(next_review_date) WHERE next_review_date IS NOT NULL",

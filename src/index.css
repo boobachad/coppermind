@@ -167,6 +167,10 @@
   --color-highlight-yellow: #fef08a;
   --glass-text: rgba(255, 255, 255, 0.95);
 
+  /* Button tokens — dark default: white bg, black text (high contrast on dark bg) */
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-text: #000000;
+
   /* Theme-swatch preview colors (fixed per-theme, used in SettingsPage only) */
   --theme-preview-solarized-bg: #fdf6e3;
   --theme-preview-solarized-border: #d6d0c0;
@@ -360,9 +364,9 @@
   --pos-today-border: #2563eb;
   --pos-today-text: #1e40af;
   
-  /* Buttons - Dark Mode (White BG, Black Text) v2 */
-  --btn-primary-bg: #FFFFFF;
-  --btn-primary-text: #000000;
+  /* Buttons - Solarized Light (Dark BG, Light Text — inverted from dark mode) */
+  --btn-primary-bg: #002B36;
+  --btn-primary-text: #FDF6E3;
 
   /* Surface aliases — solarized light */
   --bg-tertiary: #D6D0C0;
@@ -372,10 +376,10 @@
   --color-info: var(--pos-info-text);
 
   /* Linking Shadcn Primary to Button Colors */
-  --primary: oklch(1 0 0);
-  /* White */
-  --primary-foreground: oklch(0 0 0);
-  /* Black */
+  --primary: oklch(0.205 0 0);
+  /* Dark (matches --btn-primary-bg: #002B36) */
+  --primary-foreground: oklch(0.97 0.02 90);
+  /* Warm light (matches --btn-primary-text: #FDF6E3) */
   
   --color-accent-primary: #0a84ff;
   /* Apple-style Blue */

@@ -392,3 +392,51 @@ pub async fn get_milestone_with_daily_breakdown(
         "dailyBreakdown": daily_progress
     }))
 }
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyProgressEntry {
+    pub date: String,
+    pub milestone_id: String,
+    pub target_metric: String,
+    pub unit: Option<String>,
+    pub amount: i32,
+    pub daily_amount: i32,   // target per day — for progress bar
+}
+
+/// Fetch all milestone daily progress entries within a date range.
+/// Used by the calendar to show per-day milestone progress.
+#[tauri::command]
+pub async fn get_milestone_progress_for_range(
+    db: State<'_, PosDb>,
+    start_date: String, // YYYY-MM-DD
+    end_date: String,   // YYYY-MM-DD
+) -> PosResult<Vec<DailyProgressEntry>> {
+    let pool = &db.0;
+
+    chrono::NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+        .map_err(|_| PosError::InvalidInput("Invalid start_date".into()))?;
+    chrono::NaiveDate::parse_from_str(&end_date, "%Y-%m-%d")
+        .map_err(|_| PosError::InvalidInput("Invalid end_date".into()))?;
+
+    let rows = sqlx::query_as::<_, DailyProgressEntry>(
+        r#"SELECT
+               mdp.date,
+               mdp.milestone_id,
+               gp.target_metric,
+               gp.unit,
+               mdp.amount,
+               gp.daily_amount
+           FROM milestone_daily_progress mdp
+           JOIN goal_periods gp ON gp.id = mdp.milestone_id
+           WHERE mdp.date >= $1 AND mdp.date <= $2
+           ORDER BY mdp.date ASC, gp.target_metric ASC"#,
+    )
+    .bind(&start_date)
+    .bind(&end_date)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| db_context("get_milestone_progress_for_range", e))?;
+
+    Ok(rows)
+}

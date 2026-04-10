@@ -29,6 +29,9 @@ import CategoryView from './components/codeforces/CategoryView';
 import { FriendsManager } from './components/codeforces/FriendsManager';
 import { FriendsLadder } from './components/codeforces/FriendsLadder';
 import { DailyProblemsPicker } from './components/codeforces/DailyProblemsPicker';
+import { KanbanPage } from './pages/KanbanPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { BooksPage } from './pages/BooksPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -81,6 +84,9 @@ function App() {
             <Route path="briefing" element={<BriefingPage />} />
             <Route path="retrospectives" element={<RetrospectivesPage />} />
             <Route path="whiteboard" element={<WhiteboardPage />} />
+            <Route path="kanban" element={<KanbanPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="books" element={<BooksPage />} />
             <Route path="experimental" element={<ExperimentalPage />} />
             <Route path="experimental/keyboard" element={<KeyboardTestPage />} />
             <Route path="nodes" element={<NodesPage />} />

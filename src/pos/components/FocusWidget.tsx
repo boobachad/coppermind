@@ -64,7 +64,7 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
             <div
                 className={clsx(
                     "fixed bottom-6 right-6 z-50 flex items-center gap-3 p-2 rounded-full shadow-2xl transition-all duration-300 border border-(--glass-border)",
-                    state.isActive ? "bg-(--glass-bg) backdrop-blur-md" : "bg-(--glass-bg) hover:bg-(--glass-bg-subtle)"
+                    state.isActive ? "bg-(--glass-bg)" : "bg-(--glass-bg) hover:bg-(--glass-bg-subtle)"
                 )}
             >
                 {/* Timer Display */}
@@ -113,11 +113,14 @@ export function FocusWidget({ alwaysExpanded = false }: { alwaysExpanded?: boole
 
     return (
         <div className={clsx(
-            "z-50 material-glass flex flex-col gap-4 transition-all duration-300 backdrop-blur-3xl shadow-2xl",
+            "z-50 flex flex-col gap-4 transition-all duration-300 shadow-2xl",
             alwaysExpanded
-                ? "fixed inset-0 w-full h-full rounded-none p-6 bg-(--bg-base) border-transparent"
-                : "fixed bottom-6 right-6 w-[340px] rounded-[2rem] p-6 bg-(--glass-bg) border border-(--glass-border)"
-        )}>
+                ? "fixed inset-0 w-full h-full rounded-none p-6 border-transparent"
+                : "fixed bottom-6 right-6 w-[340px] rounded-[2rem] p-6 border border-(--glass-border)"
+        )}
+        style={{
+            backgroundColor: alwaysExpanded ? 'var(--bg-base)' : 'var(--glass-bg)',
+        }}>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground">

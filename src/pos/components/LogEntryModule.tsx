@@ -52,6 +52,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [reflectionEntityType, setReflectionEntityType] = useState<'goal' | 'milestone'>('goal');
     const [reflectionEntityId, setReflectionEntityId] = useState<string>('');
     const [reflectionEntityText, setReflectionEntityText] = useState<string>('');
+    // Food items (comma-separated list stored in description prefix)
+    const [foodItems, setFoodItems] = useState<string[]>([]);
+    const [foodInput, setFoodInput] = useState('');
+    // Project name for real_projects / side_projects
+    const [projectName, setProjectName] = useState(editingActivity?.title?.startsWith('[') ? editingActivity.title.match(/^\[([^\]]+)\]/)?.[1] ?? '' : '');
 
     // Set default start time to last activity's end time
     useEffect(() => {
@@ -176,6 +181,33 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setSelectedBook(null);
             setTotalPages('');
         }
+        if (value !== 'food') {
+            setFoodItems([]);
+            setFoodInput('');
+        }
+        if (value !== 'real_projects' && value !== 'side_projects') {
+            setProjectName('');
+        }
+    };
+
+    const addFoodItem = () => {
+        const trimmed = foodInput.trim();
+        if (!trimmed) return;
+        setFoodItems(prev => [...prev, trimmed]);
+        setFoodInput('');
+        // Auto-set title from food items
+        const updated = [...foodItems, trimmed];
+        if (!title || title === foodItems.join(', ')) {
+            setTitle(updated.join(', '));
+        }
+    };
+
+    const removeFoodItem = (idx: number) => {
+        const updated = foodItems.filter((_, i) => i !== idx);
+        setFoodItems(updated);
+        if (title === foodItems.join(', ')) {
+            setTitle(updated.join(', '));
+        }
     };
 
     const handleBookSelected = async (bookId: string) => {
@@ -249,8 +281,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 toast.success('Activity updated successfully');
                 activityId = editingActivity.id;
                 onSuccess?.();
-                onCancelEdit?.();
-            } else {
+                onCancelEdit?.();            } else {
                 const activityResult = await invoke<{ id: string }>('create_activity', {
                     req: {
                         startTime: startTimeISO, endTime: endTimeISO, category, title, description,
@@ -300,7 +331,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 const [year, month, day] = date.split('-').map(Number);
                 setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
                 setTitle(''); setDescription(''); setSelectedGoalIds([]); setSelectedMilestoneId(null);
-                setMetricValues({}); setSelectedBookId(null); setPagesRead('');
+            setMetricValues({}); setSelectedBookId(null); setPagesRead('');
                 setShowBookSelector(false); setSelectedBook(null); setTotalPages('');
                 onSuccess?.();
             }
@@ -398,6 +429,52 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 <label className="block text-sm font-medium mb-2">Title</label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What did you do?" required />
             </div>
+
+            {/* Project name for real/side projects */}
+            {(category === 'real_projects' || category === 'side_projects') && (
+                <div>
+                    <label className="block text-sm font-medium mb-2">Project Name (Optional)</label>
+                    <Input
+                        value={projectName}
+                        onChange={e => setProjectName(e.target.value)}
+                        placeholder="e.g. MyApp, Portfolio, etc."
+                    />
+                </div>
+            )}
+
+            {/* Food items for food category */}
+            {category === 'food' && (
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium">Food Items</label>
+                    <div className="flex gap-2">
+                        <Input
+                            value={foodInput}
+                            onChange={e => setFoodInput(e.target.value)}
+                            placeholder="Add food item..."
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFoodItem(); } }}
+                        />
+                        <button
+                            type="button"
+                            onClick={addFoodItem}
+                            className="px-3 py-2 rounded-lg text-sm border transition-colors"
+                            style={{ borderColor: 'var(--glass-border)', color: 'var(--text-secondary)', backgroundColor: 'var(--glass-bg-subtle)' }}
+                        >
+                            Add
+                        </button>
+                    </div>
+                    {foodItems.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                            {foodItems.map((item, i) => (
+                                <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
+                                    style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}>
+                                    {item}
+                                    <button type="button" onClick={() => removeFoodItem(i)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div>
                 <label className="block text-sm font-medium mb-2">Description (Optional)</label>
