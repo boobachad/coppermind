@@ -14,18 +14,18 @@ export function mapUrlToActivity(url: string): ActivityMapping {
 
     // Competitive Coding
     if (hostname.includes('leetcode.com')) {
-        return { category: 'coding_leetcode', description: 'LeetCode', isProductive: true };
+        return { category: 'leetcode', description: 'LeetCode', isProductive: true };
     }
     if (hostname.includes('codeforces.com')) {
-        return { category: 'coding_codeforces', description: 'Codeforces', isProductive: true };
+        return { category: 'codeforces', description: 'Codeforces', isProductive: true };
     }
     if (hostname.includes('codechef.com') || hostname.includes('atcoder.jp') || hostname.includes('hackerrank.com')) {
         return { category: 'cpp', description: 'Competitive Programming', isProductive: true };
     }
 
-    // Code Repositories -> real_projects
+    // Code Repositories -> development
     if (hostname.includes('github.com') || hostname.includes('gitlab.com') || hostname.includes('bitbucket.org')) {
-        return { category: 'real_projects', description: 'Code Repository', isProductive: true };
+        return { category: 'development', description: 'Code Repository', isProductive: true };
     }
 
     // Q&A / Forums -> book (learning)
@@ -66,9 +66,9 @@ export function mapUrlToActivity(url: string): ActivityMapping {
         return { category: 'entertainment', description: 'Social Media', isProductive: false };
     }
 
-    // Work Communication -> real_projects
+    // Work Communication -> development
     if (hostname.includes('slack.com') || hostname.includes('teams.microsoft.com') || hostname.includes('zoom.us') || hostname.includes('discord.com')) {
-        return { category: 'real_projects', description: 'Communication', isProductive: true };
+        return { category: 'development', description: 'Communication', isProductive: true };
     }
 
     // Email -> misc
@@ -76,9 +76,9 @@ export function mapUrlToActivity(url: string): ActivityMapping {
         return { category: 'misc', description: 'Email', isProductive: false };
     }
 
-    // Local Development -> side_projects
+    // Local Development -> development
     if (hostname === 'localhost' || hostname.startsWith('127.') || hostname.startsWith('192.168.')) {
-        return { category: 'side_projects', description: 'Local Dev', isProductive: true };
+        return { category: 'development', description: 'Local Dev', isProductive: true };
     }
 
     // Default - unclassified surfing

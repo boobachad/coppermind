@@ -276,8 +276,8 @@ export function ProblemSetView({
     
     // Use predefined semantic colors for judge badges
     const judgeColors: Record<string, string> = {
-      'codeforces': 'var(--pos-activity-coding-codeforces)',
-      'leetcode': 'var(--pos-activity-coding-leetcode)',
+      'codeforces': 'var(--pos-activity-codeforces)',
+      'leetcode': 'var(--pos-activity-leetcode)',
       'atcoder': 'var(--pos-activity-cpp)',
       'codechef': 'var(--pos-activity-learning)',
     };
@@ -290,10 +290,10 @@ export function ProblemSetView({
     // Fallback to activity category colors based on hash
     const categoryColors = [
       'var(--pos-activity-learning)',
-      'var(--pos-activity-coding-leetcode)',
-      'var(--pos-activity-coding-codeforces)',
+      'var(--pos-activity-leetcode)',
+      'var(--pos-activity-codeforces)',
       'var(--pos-activity-cpp)',
-      'var(--pos-activity-real-projects)',
+      'var(--pos-activity-development)',
     ];
     
     let hash = 0;

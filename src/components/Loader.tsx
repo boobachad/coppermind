@@ -8,7 +8,7 @@ export function Loader({ className }: { className?: string }) {
                 className="absolute inset-0 rounded-full border-2"
                 style={{
                     borderColor: 'transparent',
-                    borderTopColor: 'var(--pos-activity-coding)',
+                    borderTopColor: 'var(--pos-activity-leetcode)',
                     animation: 'spin 1.5s linear infinite'
                 }}
             />

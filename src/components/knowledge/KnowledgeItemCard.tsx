@@ -48,11 +48,11 @@ export function KnowledgeItemCard({ item, onEdit, onDelete, onUpdateStatus, isHi
         
         switch (urlType) {
             case 'leetcode':
-                return 'var(--pos-activity-coding-leetcode)';
+                return 'var(--pos-activity-leetcode)';
             case 'codeforces':
-                return 'var(--pos-activity-coding-codeforces)';
+                return 'var(--pos-activity-codeforces)';
             case 'github':
-                return 'var(--pos-activity-real-projects)';
+                return 'var(--pos-activity-development)';
             case 'docs':
                 return 'var(--pos-activity-book)';
             default:

@@ -30,9 +30,9 @@ export const KIND_COLOR_VAR: Record<NodeKind, string> = {
     year:       '--color-accent-primary',
     month:      '--pos-heatmap-level-3',
     date:       '--text-tertiary',
-    activity:   '--pos-activity-coding-codeforces',
+    activity:   '--pos-activity-codeforces',
     goal:       '--color-highlight-yellow',
-    submission: '--pos-activity-coding-leetcode',
+    submission: '--pos-activity-leetcode',
     kb:         '--pos-activity-book',
     retro:      '--pos-heatmap-level-4',
     journal:    '--color-accent-secondary',
@@ -108,6 +108,8 @@ export interface HierarchyResult {
     nodes:          GraphNode[];
     hierarchyLinks: GraphLink[];
     kbLinks:        GraphLink[];
+    /** Maps each node id → its direct parent node id in the hierarchy */
+    parentMap:      Map<string, string>;
 }
 
 /**
@@ -137,36 +139,53 @@ export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyRe
     const kbLinks: GraphLink[]        = [];
 
     // Flatten all items with their date (convert UTC timestamps to local dates)
+    // Items with no resolvable date are skipped to avoid null-date nodes
     const allItems: DateItem[] = [
-        ...data.activities.map(a => ({
-            id: a.id, date: a.date, label: activityLabel(a),
-            kind: 'activity' as NodeKind, sourceId: a.id,
-        })),
-        ...data.goals.map(g => ({
-            id: g.id, date: g.date || g.dueDate, label: goalLabel(g),
-            kind: 'goal' as NodeKind, sourceId: g.id,
-        })),
-        ...data.submissions.map(s => ({
-            id: s.id, date: toLocalDate(s.submittedTime), label: submissionLabel(s),
-            kind: 'submission' as NodeKind, sourceId: s.id,
-        })),
-        ...data.kbItems.map(k => ({
-            id: k.id, date: toLocalDate(k.createdAt), label: kbLabel(k),
-            kind: 'kb' as NodeKind, sourceId: k.id,
-        })),
-        ...data.retrospectives.map(r => ({
-            id: r.id, date: toLocalDate(r.periodStart), label: retroLabel(r),
-            kind: 'retro' as NodeKind, sourceId: r.id,
-        })),
-        ...data.journalEntries.map(j => ({
-            id: `journal-${j.id}`, date: j.date, label: journalLabel(j),
-            kind: 'journal' as NodeKind, sourceId: j.id,
-        })),
-        ...data.notes.map(n => ({
-            id: `note-${n.id}`, date: toLocalDate(new Date(n.createdAtMs).toISOString()), label: noteLabel(n),
-            kind: 'note' as NodeKind, sourceId: n.id,
-        })),
-    ];
+        ...data.activities
+            .filter(a => a.date)
+            .map(a => ({
+                id: a.id, date: a.date, label: activityLabel(a),
+                kind: 'activity' as NodeKind, sourceId: a.id,
+            })),
+        ...data.goals
+            .filter(g => g.date || g.dueDate)
+            .map(g => ({
+                id: g.id,
+                date: g.date || toLocalDate(g.dueDate),
+                label: goalLabel(g),
+                kind: 'goal' as NodeKind, sourceId: g.id,
+            })),
+        ...data.submissions
+            .filter(s => s.submittedTime)
+            .map(s => ({
+                id: s.id, date: toLocalDate(s.submittedTime), label: submissionLabel(s),
+                kind: 'submission' as NodeKind, sourceId: s.id,
+            })),
+        ...data.kbItems
+            .filter(k => k.createdAt)
+            .map(k => ({
+                id: k.id, date: toLocalDate(k.createdAt), label: kbLabel(k),
+                kind: 'kb' as NodeKind, sourceId: k.id,
+            })),
+        ...data.retrospectives
+            .filter(r => r.periodStart)
+            .map(r => ({
+                id: r.id, date: toLocalDate(r.periodStart), label: retroLabel(r),
+                kind: 'retro' as NodeKind, sourceId: r.id,
+            })),
+        ...data.journalEntries
+            .filter(j => j.date)
+            .map(j => ({
+                id: `journal-${j.id}`, date: j.date, label: journalLabel(j),
+                kind: 'journal' as NodeKind, sourceId: j.id,
+            })),
+        ...data.notes
+            .filter(n => n.createdAtMs)
+            .map(n => ({
+                id: `note-${n.id}`, date: toLocalDate(new Date(n.createdAtMs).toISOString()), label: noteLabel(n),
+                kind: 'note' as NodeKind, sourceId: n.id,
+            })),
+    ].filter(item => item.date && item.date.match(/^\d{4}-\d{2}-\d{2}$/));
 
     // Group items: year → month → date
     const yearNode = `year-${year}`;
@@ -227,7 +246,16 @@ export function buildHierarchy(data: YearlyGraphData, year: number): HierarchyRe
         });
     }
 
-    return { nodes, hierarchyLinks, kbLinks };
+    // Build parentMap from hierarchy links
+    const parentMap = new Map<string, string>();
+    parentMap.set(yearNode, yearNode); // year is its own anchor
+    for (const link of hierarchyLinks) {
+        const src = typeof link.source === 'string' ? link.source : (link.source as GraphNode).id;
+        const tgt = typeof link.target === 'string' ? link.target : (link.target as GraphNode).id;
+        parentMap.set(tgt, src);
+    }
+
+    return { nodes, hierarchyLinks, kbLinks, parentMap };
 }
 
 /** Build a map: nodeId → Set<connected nodeIds> (for hover highlight) */
