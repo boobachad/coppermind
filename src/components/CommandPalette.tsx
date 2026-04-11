@@ -22,6 +22,8 @@ import {
   RefreshCw,
   Github,
   Users,
+  UtensilsCrossed,
+  FolderKanban,
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -199,6 +201,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               </CommandItem>
               <CommandItem icon={<TrendingUp />} onSelect={() => handleNavigate('/pos/sheets')}>
                 Sheets
+              </CommandItem>
+              <CommandItem icon={<UtensilsCrossed />} onSelect={() => handleNavigate('/pos/food')}>
+                Food Log
+              </CommandItem>
+              <CommandItem icon={<FolderKanban />} onSelect={() => handleNavigate('/pos/projects')}>
+                Project Log
               </CommandItem>
               <CommandItem icon={<Code2 />} onSelect={() => handleNavigate('/cf/ladders')}>
                 Codeforces Ladders

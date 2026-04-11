@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Navbar } from '../components/Navbar';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
@@ -8,6 +8,7 @@ import { SkillTree } from '../../components/gamification/SkillTree';
 import { TrendingUp, TrendingDown, Activity as ActivityIcon, Target, Code2, Zap } from 'lucide-react';
 import type { Activity, Submission, Milestone } from '../lib/types';
 import { getLocalDateString } from '../lib/time';
+import { getActivityColor } from '../lib/config';
 
 interface WeeklyTrend {
   week: string;
@@ -31,6 +32,7 @@ export function HomePage() {
   const [activeMilestones, setActiveMilestones] = useState<Milestone[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [totalStats, setTotalStats] = useState({ totalTime: 0, productiveTime: 0, activitiesCount: 0 });
+  const [batchData, setBatchData] = useState<Record<string, { activities: Activity[] }>>({});
   
   // Month selector state using time utils
   const todayStr = getLocalDateString();
@@ -47,6 +49,7 @@ export function HomePage() {
     try {
       const dates = getMonthDates(selectedMonth);
       const batchResponse = await invoke<Record<string, { activities: Activity[] }>>('get_activities_batch', { dates });
+      setBatchData(batchResponse);
       
       const trends = calculateWeeklyTrends(batchResponse, dates);
       setWeeklyTrends(trends);
@@ -179,11 +182,20 @@ export function HomePage() {
         category,
         minutes: Math.round(minutes),
         percentage: totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0,
-        color: `var(--pos-${category.toLowerCase()})`
+        color: getActivityColor(category),
       });
     });
 
-    return breakdown.sort((a, b) => b.minutes - a.minutes).slice(0, 5);
+    // Sort by minutes desc, group tail into "others" if more than 6 categories
+    const sorted = breakdown.sort((a, b) => b.minutes - a.minutes);
+    if (sorted.length <= 6) return sorted;
+
+    const top = sorted.slice(0, 6);
+    const rest = sorted.slice(6);
+    const othersMinutes = rest.reduce((s, c) => s + c.minutes, 0);
+    const othersPercent = rest.reduce((s, c) => s + c.percentage, 0);
+    top.push({ category: 'others', minutes: othersMinutes, percentage: othersPercent, color: 'var(--pos-activity-fallback)' });
+    return top;
   };
 
   const calculateTotalStats = (batchData: Record<string, { activities: Activity[] }>) => {
@@ -207,6 +219,29 @@ export function HomePage() {
     };
   };
 
+  // All derived values must be above any early return (Rules of Hooks)
+  const productivityRate = totalStats.totalTime > 0 ? Math.round((totalStats.productiveTime / totalStats.totalTime) * 100) : 0;
+
+  const skillMinutes = useMemo(() => {
+    const map: Record<string, number> = {};
+    Object.values(batchData).forEach(({ activities }) => {
+      activities.forEach(act => {
+        const dur = (new Date(act.endTime).getTime() - new Date(act.startTime).getTime()) / 60000;
+        map[act.category] = (map[act.category] || 0) + dur;
+      });
+    });
+    return map;
+  }, [batchData]);
+
+  const codingMinutes = Math.round(
+    (skillMinutes['leetcode'] || 0) + (skillMinutes['codeforces'] || 0) + (skillMinutes['cpp'] || 0)
+  );
+  const developmentMinutes = Math.round(skillMinutes['development'] || 0);
+  const readingMinutes = Math.round(skillMinutes['book'] || 0);
+  const goalCompletionRate = activeMilestones.length > 0
+    ? Math.round((activeMilestones.filter(m => m.currentValue >= m.targetValue).length / activeMilestones.length) * 100)
+    : 0;
+
   if (loading) {
     return (
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
@@ -219,15 +254,6 @@ export function HomePage() {
       </div>
     );
   }
-
-  const productivityRate = totalStats.totalTime > 0 ? Math.round((totalStats.productiveTime / totalStats.totalTime) * 100) : 0;
-
-  // Calculate skill metrics for SkillTree
-  const codingCount = categoryBreakdown.find(c => c.category.toLowerCase().includes('coding') || c.category.toLowerCase().includes('leetcode'))?.minutes || 0;
-  const readingMinutes = categoryBreakdown.find(c => c.category.toLowerCase().includes('book') || c.category.toLowerCase().includes('reading'))?.minutes || 0;
-  const goalCompletionRate = activeMilestones.length > 0 
-    ? Math.round((activeMilestones.filter(m => m.currentValue >= m.targetValue).length / activeMilestones.length) * 100)
-    : 0;
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
@@ -346,7 +372,8 @@ export function HomePage() {
             }}
           >
             <SkillTree 
-              codingCount={Math.floor(codingCount / 60)} // Convert minutes to hours for counting
+              codingMinutes={codingMinutes}
+              developmentMinutes={developmentMinutes}
               readingMinutes={readingMinutes}
               productivePercentage={productivityRate}
               goalCompletionRate={goalCompletionRate}
@@ -418,30 +445,33 @@ export function HomePage() {
               <h2 className="text-xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
                 Time Distribution
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {categoryBreakdown.map((cat, idx) => (
                   <div key={idx}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium capitalize" style={{ color: 'var(--text-secondary)' }}>
-                        {cat.category.replace('_', ' ')}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          {cat.minutes}m
-                        </span>
-                        <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                          {cat.percentage}%
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                        <span className="text-sm font-medium capitalize" style={{ color: 'var(--text-primary)' }}>
+                          {cat.category.replace(/_/g, ' ')}
                         </span>
                       </div>
+                      <div className="flex items-center gap-2 text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                        <span>{Math.floor(cat.minutes / 60)}h {cat.minutes % 60}m</span>
+                        <span className="font-bold w-8 text-right" style={{ color: 'var(--text-primary)' }}>{cat.percentage}%</span>
+                      </div>
                     </div>
-                    <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-tertiary)' }}>
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${cat.percentage}%`,
-                          backgroundColor: cat.color
-                        }}
+                    <div className="relative h-5 rounded-md overflow-hidden"
+                        style={{ backgroundColor: 'var(--glass-bg-subtle)', border: '1px solid var(--glass-border)' }}>
+                      <div
+                        className="h-full rounded-md transition-all duration-700"
+                        style={{ width: `${cat.percentage}%`, backgroundColor: cat.color, opacity: 0.85 }}
                       />
+                      {cat.percentage >= 12 && (
+                        <span className="absolute inset-y-0 left-2 flex items-center text-[10px] font-semibold"
+                            style={{ color: 'var(--bg-primary)', mixBlendMode: 'difference' }}>
+                          {cat.percentage}%
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

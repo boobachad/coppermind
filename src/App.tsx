@@ -32,6 +32,8 @@ import { DailyProblemsPicker } from './components/codeforces/DailyProblemsPicker
 import { KanbanPage } from './pages/KanbanPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { BooksPage } from './pages/BooksPage';
+import { FoodLogPage } from './pos/pages/FoodLogPage';
+import { ProjectLogPage } from './pos/pages/ProjectLogPage';
 import { initDb } from './lib/db';
 import { NotesGrid } from './components/NotesGrid';
 import { initCaptureService, cleanupCaptureService } from './lib/CaptureService';
@@ -95,6 +97,8 @@ function App() {
             <Route path="pos/grid/:date" element={<DailyPage />} />
             <Route path="pos/sheets" element={<SheetsPage />} />
             <Route path="pos/github" element={<GitHubPage />} />
+            <Route path="pos/food" element={<FoodLogPage />} />
+            <Route path="pos/projects" element={<ProjectLogPage />} />
             <Route path="books/:bookId" element={<BookDetailPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="journal/:date" element={<EntryPage />} />

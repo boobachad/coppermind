@@ -15,6 +15,7 @@ import { ActivityMetricsInput } from './ActivityMetricsInput';
 import { ReflectionPrompt } from '@/components/goal/ReflectionPrompt';
 import { EntityLinkTextarea } from '@/lib/entity-linking/components/EntityLinkTextarea';
 import { parseReferences } from '@/lib/entity-linking/core/parser';
+import { ProjectUrlField } from './ProjectUrlField';
 
 interface LogEntryModuleProps {
     date: string;
@@ -33,9 +34,18 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         const [year, month, day] = date.split('-').map(Number);
         return new Date(year, month - 1, day, now.getHours(), now.getMinutes());
     });
-    const [category, setCategory] = useState<string>(editingActivity?.category || ACTIVITY_CATEGORIES.REAL_PROJECTS);
+    const [category, setCategory] = useState<string>(editingActivity?.category || ACTIVITY_CATEGORIES.DEVELOPMENT);
     const [title, setTitle] = useState(editingActivity?.title || '');
-    const [description, setDescription] = useState(editingActivity?.description || '');
+    const [description, setDescription] = useState(() => {
+        if (editingActivity?.category === 'development') {
+            const lines = (editingActivity.description ?? '').split('\n');
+            const firstLine = lines[0] ?? '';
+            const hasUrl = !!firstLine.match(/^(https?:\/\/|\/|~\/|\.\/)/);
+            const filtered = lines.filter((l, i) => !(i === 0 && hasUrl) && !l.startsWith('commits:'));
+            return filtered.join('\n').replace(/^\n/, '');
+        }
+        return editingActivity?.description ?? '';
+    });
     const [isProductive, setIsProductive] = useState(editingActivity?.isProductive ?? false);
     const [loading, setLoading] = useState(false);
     const [availableGoals, setAvailableGoals] = useState<UnifiedGoal[]>([]);
@@ -52,11 +62,35 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const [reflectionEntityType, setReflectionEntityType] = useState<'goal' | 'milestone'>('goal');
     const [reflectionEntityId, setReflectionEntityId] = useState<string>('');
     const [reflectionEntityText, setReflectionEntityText] = useState<string>('');
-    // Food items (comma-separated list stored in description prefix)
-    const [foodItems, setFoodItems] = useState<string[]>([]);
+    // Food items — stored in dedicated food_items column as "name|quantity" encoded strings
+    const [foodItems, setFoodItems] = useState<{ name: string; quantity: string }[]>(() => {
+        if (editingActivity?.category === 'food') {
+            return (editingActivity.foodItems ?? []).map(raw => {
+                const [name, quantity = ''] = raw.split('|');
+                return { name, quantity };
+            });
+        }
+        return [];
+    });
     const [foodInput, setFoodInput] = useState('');
-    // Project name for real_projects / side_projects
-    const [projectName, setProjectName] = useState(editingActivity?.title?.startsWith('[') ? editingActivity.title.match(/^\[([^\]]+)\]/)?.[1] ?? '' : '');
+    const [foodQtyInput, setFoodQtyInput] = useState('');
+    // Project URL for development category — stored as first line of description
+    const [projectUrl, setProjectUrl] = useState(() => {
+        if (editingActivity?.category === 'development') {
+            const firstLine = editingActivity.description?.split('\n')[0] ?? '';
+            return firstLine.match(/^(https?:\/\/|\/|~\/|\.\/)/) ? firstLine : '';
+        }
+        return '';
+    });
+    // Local commit count — stored as "commits:N" on second line when URL is a local path
+    const [localCommits, setLocalCommits] = useState<number | null>(() => {
+        if (editingActivity?.category === 'development') {
+            const lines = (editingActivity.description ?? '').split('\n');
+            const commitLine = lines.find(l => l.startsWith('commits:'));
+            return commitLine ? parseInt(commitLine.slice(8)) || null : null;
+        }
+        return null;
+    });
 
     // Set default start time to last activity's end time
     useEffect(() => {
@@ -88,13 +122,37 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setEndDate(new Date(editingActivity.endTime));
             setCategory(editingActivity.category);
             setTitle(editingActivity.title);
-            setDescription(editingActivity.description);
+            // Strip project URL prefix from description for display
+            if (editingActivity.category === 'development') {
+                const lines = (editingActivity.description ?? '').split('\n');
+                const firstLine = lines[0] ?? '';
+                const hasUrl = !!firstLine.match(/^(https?:\/\/|\/|~\/|\.\/)/);
+                setProjectUrl(hasUrl ? firstLine : '');
+                const commitLine = lines.find(l => l.startsWith('commits:'));
+                setLocalCommits(commitLine ? parseInt(commitLine.slice(8)) || null : null);
+                const filtered = lines.filter((l, i) => !(i === 0 && hasUrl) && !l.startsWith('commits:'));
+                setDescription(filtered.join('\n').replace(/^\n/, ''));
+            } else {
+                setDescription(editingActivity.description);
+                setProjectUrl('');
+                setLocalCommits(null);
+            }
             setIsProductive(editingActivity.isProductive);
             setSelectedGoalIds(editingActivity.goalIds || []);
             setSelectedMilestoneId(editingActivity.milestoneId || null);
             setSelectedBookId(editingActivity.bookId || null);
             setPagesRead(editingActivity.pagesRead?.toString() || '');
             setShowBookSelector(editingActivity.category === 'book');
+
+            // Restore food items from dedicated column
+            if (editingActivity.category === 'food') {
+                setFoodItems((editingActivity.foodItems ?? []).map(raw => {
+                    const [name, quantity = ''] = raw.split('|');
+                    return { name, quantity };
+                }));
+            } else {
+                setFoodItems([]);
+            }
 
             // Pre-populate milestone amount from existing daily progress for this activity's date
             if (editingActivity.milestoneId) {
@@ -115,7 +173,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             const now = new Date();
             const [year, month, day] = date.split('-').map(Number);
             setEndDate(new Date(year, month - 1, day, now.getHours(), now.getMinutes()));
-            setCategory(ACTIVITY_CATEGORIES.REAL_PROJECTS);
+            setCategory(ACTIVITY_CATEGORIES.DEVELOPMENT);
             setTitle('');
             setDescription('');
             setIsProductive(false);
@@ -127,6 +185,11 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
             setShowBookSelector(false);
             setSelectedBook(null);
             setTotalPages('');
+            setFoodItems([]);
+            setFoodInput('');
+            setFoodQtyInput('');
+            setProjectUrl('');
+            setLocalCommits(null);
         }
     }, [editingActivity, date]);
 
@@ -184,29 +247,35 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         if (value !== 'food') {
             setFoodItems([]);
             setFoodInput('');
+            setFoodQtyInput('');
         }
-        if (value !== 'real_projects' && value !== 'side_projects') {
-            setProjectName('');
+        if (value !== 'development') {
+            setProjectUrl('');
+            setLocalCommits(null);
         }
     };
 
     const addFoodItem = () => {
         const trimmed = foodInput.trim();
         if (!trimmed) return;
-        setFoodItems(prev => [...prev, trimmed]);
+        const item = { name: trimmed, quantity: foodQtyInput.trim() };
+        setFoodItems(prev => [...prev, item]);
         setFoodInput('');
+        setFoodQtyInput('');
         // Auto-set title from food items
-        const updated = [...foodItems, trimmed];
-        if (!title || title === foodItems.join(', ')) {
-            setTitle(updated.join(', '));
+        const updated = [...foodItems, item];
+        const titleStr = updated.map(f => f.quantity ? `${f.name} x${f.quantity}` : f.name).join(', ');
+        if (!title || title === foodItems.map(f => f.quantity ? `${f.name} x${f.quantity}` : f.name).join(', ')) {
+            setTitle(titleStr);
         }
     };
 
     const removeFoodItem = (idx: number) => {
         const updated = foodItems.filter((_, i) => i !== idx);
         setFoodItems(updated);
-        if (title === foodItems.join(', ')) {
-            setTitle(updated.join(', '));
+        const oldTitle = foodItems.map(f => f.quantity ? `${f.name} x${f.quantity}` : f.name).join(', ');
+        if (title === oldTitle) {
+            setTitle(updated.map(f => f.quantity ? `${f.name} x${f.quantity}` : f.name).join(', '));
         }
     };
 
@@ -250,6 +319,15 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
         const endTimeISO = formatLocalAsUTC(endDate);
         setLoading(true);
 
+        // Build description: prepend URL + optional commits line for development activities
+        const isLocalPath = projectUrl.match(/^(\/|~\/|\.\/)/);
+        const metaLines = [];
+        if (category === 'development' && projectUrl.trim()) metaLines.push(projectUrl.trim());
+        if (category === 'development' && isLocalPath && localCommits != null) metaLines.push(`commits:${localCommits}`);
+        const finalDescription = metaLines.length > 0
+            ? metaLines.join('\n') + (description ? '\n' + description : '')
+            : description;
+
         try {
             let activityId: string;
 
@@ -258,11 +336,12 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 await invoke('update_activity', {
                     id: editingActivity.id,
                     req: {
-                        startTime: startTimeISO, endTime: endTimeISO, category, title, description,
+                        startTime: startTimeISO, endTime: endTimeISO, category, title, description: finalDescription,
                         isProductive, date,
                         goalIds: selectedGoalIds.length > 0 ? selectedGoalIds : null,
                         milestoneId: selectedMilestoneId, bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
+                        foodItems: category === 'food' ? foodItems.map(f => f.quantity ? `${f.name}|${f.quantity}` : f.name) : null,
                     }
                 });
                 for (const goalId of selectedGoalIds) {
@@ -284,11 +363,12 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 onCancelEdit?.();            } else {
                 const activityResult = await invoke<{ id: string }>('create_activity', {
                     req: {
-                        startTime: startTimeISO, endTime: endTimeISO, category, title, description,
+                        startTime: startTimeISO, endTime: endTimeISO, category, title, description: finalDescription,
                         isProductive, date,
                         goalIds: selectedGoalIds.length > 0 ? selectedGoalIds : null,
                         milestoneId: selectedMilestoneId, bookId: selectedBookId,
                         pagesRead: pagesRead ? parseInt(pagesRead) : null,
+                        foodItems: category === 'food' ? foodItems.map(f => f.quantity ? `${f.name}|${f.quantity}` : f.name) : null,
                     }
                 });
                 activityId = activityResult.id;
@@ -333,6 +413,7 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 setTitle(''); setDescription(''); setSelectedGoalIds([]); setSelectedMilestoneId(null);
             setMetricValues({}); setSelectedBookId(null); setPagesRead('');
                 setShowBookSelector(false); setSelectedBook(null); setTotalPages('');
+                setFoodItems([]); setFoodInput(''); setFoodQtyInput(''); setProjectUrl(''); setLocalCommits(null);
                 onSuccess?.();
             }
 
@@ -430,14 +511,15 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What did you do?" required />
             </div>
 
-            {/* Project name for real/side projects */}
-            {(category === 'real_projects' || category === 'side_projects') && (
+            {/* Project URL for development category */}
+            {category === 'development' && (
                 <div>
-                    <label className="block text-sm font-medium mb-2">Project Name (Optional)</label>
-                    <Input
-                        value={projectName}
-                        onChange={e => setProjectName(e.target.value)}
-                        placeholder="e.g. MyApp, Portfolio, etc."
+                    <label className="block text-sm font-medium mb-2">Project URL (Optional)</label>
+                    <ProjectUrlField
+                        value={projectUrl}
+                        onChange={v => setProjectUrl(v)}
+                        localCommits={localCommits}
+                        onLocalCommitsChange={setLocalCommits}
                     />
                 </div>
             )}
@@ -450,13 +532,21 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                         <Input
                             value={foodInput}
                             onChange={e => setFoodInput(e.target.value)}
-                            placeholder="Add food item..."
+                            placeholder="Item name (e.g. Roti)"
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFoodItem(); } }}
+                            className="flex-1"
+                        />
+                        <Input
+                            value={foodQtyInput}
+                            onChange={e => setFoodQtyInput(e.target.value)}
+                            placeholder="Qty (e.g. 2)"
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFoodItem(); } }}
+                            className="w-24"
                         />
                         <button
                             type="button"
                             onClick={addFoodItem}
-                            className="px-3 py-2 rounded-lg text-sm border transition-colors"
+                            className="px-3 py-2 rounded-lg text-sm border transition-colors shrink-0"
                             style={{ borderColor: 'var(--glass-border)', color: 'var(--text-secondary)', backgroundColor: 'var(--glass-bg-subtle)' }}
                         >
                             Add
@@ -465,10 +555,13 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
                     {foodItems.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
                             {foodItems.map((item, i) => (
-                                <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
+                                <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border"
                                     style={{ backgroundColor: 'var(--glass-bg-subtle)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}>
-                                    {item}
-                                    <button type="button" onClick={() => removeFoodItem(i)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+                                    <span>{item.name}</span>
+                                    {item.quantity && (
+                                        <span className="opacity-60 font-mono">×{item.quantity}</span>
+                                    )}
+                                    <button type="button" onClick={() => removeFoodItem(i)} className="ml-0.5 opacity-50 hover:opacity-100 leading-none">×</button>
                                 </span>
                             ))}
                         </div>

@@ -519,9 +519,9 @@ export function KanbanPage() {
         </div>
       </div>
 
-      {/* Board — centered */}
-      <div className="flex-1 overflow-auto">
-        <div className="flex items-start justify-center gap-4 p-6 min-w-max mx-auto">
+      {/* Board */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="flex items-stretch gap-4 p-6 h-full">
           {COLUMNS.map(col => {
             const colCards = columnCards(col.id);
             const isOver = dragOverCol === col.id;
@@ -529,7 +529,7 @@ export function KanbanPage() {
             return (
               <div
                 key={col.id}
-                className="flex flex-col w-72 flex-shrink-0 rounded-2xl border transition-all duration-150"
+                className="flex flex-col w-72 flex-shrink-0 rounded-2xl border transition-all duration-150 min-h-0"
                 style={{
                   backgroundColor: isOver ? 'var(--glass-bg)' : 'var(--glass-bg-subtle)',
                   borderColor: isOver ? col.color : 'var(--glass-border)',
@@ -567,8 +567,8 @@ export function KanbanPage() {
                   </button>
                 </div>
 
-                {/* Cards list */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+                {/* Cards list — scrolls independently */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0" style={{ scrollbarWidth: 'thin' }}>
                   {colCards.map(card => (
                     <KanbanCardItem
                       key={card.id}

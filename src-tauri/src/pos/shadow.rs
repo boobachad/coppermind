@@ -41,11 +41,11 @@ pub async fn process_shadow_log(
         return Ok(None);
     }
 
-    // Determine category from platform
+    // Determine category from platform — only leetcode and codeforces feed shadow logging
     let category = match sub.platform.as_str() {
-        "leetcode" => "coding_leetcode",
-        "codeforces" => "coding_codeforces",
-        _ => "coding",
+        "leetcode" => "leetcode",
+        "codeforces" => "codeforces",
+        _ => "misc", // defensive fallback, should never be reached
     };
 
     let description = format!("{} - {}", sub.platform.to_uppercase(), sub.problem_title);
@@ -175,7 +175,8 @@ async fn match_goal_by_keyword(
     date: &str,
     category: &str,
 ) -> PosResult<Option<(String, String)>> {
-    // Extract keyword from category (e.g., "coding_leetcode" → "leetcode")
+    // Extract keyword from category — categories are now flat (e.g. "leetcode", "codeforces")
+    // The underscore split is kept for any legacy values still in the DB
     let keyword = if category.contains('_') {
         category.split('_').last().unwrap_or(category)
     } else {

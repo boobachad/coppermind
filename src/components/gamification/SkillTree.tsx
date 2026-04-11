@@ -10,29 +10,34 @@ interface Skill {
 }
 
 interface SkillTreeProps {
-    codingCount?: number;
+    codingMinutes?: number;
+    developmentMinutes?: number;
     readingMinutes?: number;
     productivePercentage?: number;
     goalCompletionRate?: number;
 }
 
 export function SkillTree({ 
-    codingCount = 0, 
+    codingMinutes = 0,
+    developmentMinutes = 0,
     readingMinutes = 0, 
     productivePercentage = 0,
     goalCompletionRate = 0 
 }: SkillTreeProps) {
-    // Calculate levels from actual data (0-5 scale)
-    const codingLevel = Math.min(5, Math.floor(codingCount / 10)); // 10 activities per level
-    const readingLevel = Math.min(5, Math.floor(readingMinutes / 300)); // 5 hours per level
-    const focusLevel = Math.min(5, Math.floor(productivePercentage / 20)); // 20% per level
-    const goalsLevel = Math.min(5, Math.floor(goalCompletionRate / 20)); // 20% per level
+    // Progress = actual minutes as % of the cap (5 levels × threshold per level)
+    // This gives a smooth continuous bar rather than discrete level jumps
+    const CAP_CODING = 300;      // 5h = full bar
+    const CAP_DEV    = 300;
+    const CAP_READ   = 1500;     // 25h = full bar (reading is slower)
+    const CAP_FOCUS  = 100;      // percentage, already 0-100
+    const CAP_GOALS  = 100;
 
     const skills: Skill[] = [
-        { id: 'coding', name: 'Coding', level: codingLevel, maxLevel: 5, icon: Code, color: 'var(--pos-activity-coding-leetcode)' },
-        { id: 'reading', name: 'Reading', level: readingLevel, maxLevel: 5, icon: Book, color: 'var(--pos-activity-book)' },
-        { id: 'focus', name: 'Focus', level: focusLevel, maxLevel: 5, icon: Zap, color: 'var(--color-accent-primary)' },
-        { id: 'goals', name: 'Goals', level: goalsLevel, maxLevel: 5, icon: Target, color: 'var(--color-success)' },
+        { id: 'coding',      name: 'Coding',      level: Math.min(100, Math.round((codingMinutes / CAP_CODING) * 100)),      maxLevel: 100, icon: Code,   color: 'var(--pos-activity-leetcode)' },
+        { id: 'development', name: 'Development',  level: Math.min(100, Math.round((developmentMinutes / CAP_DEV) * 100)),    maxLevel: 100, icon: Code,   color: 'var(--pos-activity-development)' },
+        { id: 'reading',     name: 'Reading',      level: Math.min(100, Math.round((readingMinutes / CAP_READ) * 100)),       maxLevel: 100, icon: Book,   color: 'var(--pos-activity-book)' },
+        { id: 'focus',       name: 'Focus',        level: Math.min(100, productivePercentage),                                maxLevel: 100, icon: Zap,    color: 'var(--color-accent-primary)' },
+        { id: 'goals',       name: 'Goals',        level: Math.min(100, goalCompletionRate),                                  maxLevel: 100, icon: Target, color: 'var(--color-success)' },
     ];
 
     return (
@@ -44,10 +49,10 @@ export function SkillTree({
                 </h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {skills.map((skill) => {
                     const Icon = skill.icon;
-                    const progress = (skill.level / skill.maxLevel) * 100;
+                    const progress = skill.level; // already 0-100
 
                     return (
                         <div

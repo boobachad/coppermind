@@ -17,6 +17,7 @@ export interface Activity {
     bookId: string | null;     // Link to books table
     pagesRead: number | null;  // Pages read in this activity
     createdAt: string;
+    foodItems: string[] | null;   // Structured food items (food category)
 }
 
 export interface ActivityMetric {
@@ -561,6 +562,22 @@ export interface CodeforcesUserStats {
 // ─── Book Tracking ──────────────────────────────────────────────
 // Moved to types-book.ts — re-exported here for backward compat.
 export type { BookMetadata, Book, BookReadingHistory, BookActivitySummary } from './types-book';
+
+// ─── Project Log ────────────────────────────────────────────────────
+
+export interface RepoInfo {
+    fullName: string;
+    description: string | null;
+    stars: number;
+    forks: number;
+    primaryLanguage: string | null;
+    openIssues: number;
+    defaultBranch: string;
+    lastPush: string | null;
+    repoUrl: string;
+    isPrivate: boolean;
+    totalCommits: number | null;
+}
 
 // ─── Briefing Aggregates ─────────────────────────────────────────────────────
 

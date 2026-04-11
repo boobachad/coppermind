@@ -61,6 +61,16 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_activities_milestone_id   ON pos_activities (milestone_id) WHERE milestone_id IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_activities_book_id        ON pos_activities (book_id)",
 
+    // ─── Activity schema migrations (idempotent) ─────────────────
+    "ALTER TABLE pos_activities ADD COLUMN IF NOT EXISTS food_items TEXT[] DEFAULT '{}'",
+    "ALTER TABLE pos_activities DROP COLUMN IF EXISTS project_name",
+    "CREATE INDEX IF NOT EXISTS idx_activities_food_items ON pos_activities USING GIN(food_items) WHERE food_items IS NOT NULL AND food_items != '{}'",
+
+    // ─── Category renames (idempotent) ───────────────────────────
+    "UPDATE pos_activities SET category = 'development' WHERE category IN ('real_projects', 'side_projects')",
+    "UPDATE pos_activities SET category = 'leetcode'    WHERE category = 'coding_leetcode'",
+    "UPDATE pos_activities SET category = 'codeforces'  WHERE category = 'coding_codeforces'",
+
     // ─── Activity Metrics ───────────────────────────────────────────
     "CREATE TABLE IF NOT EXISTS pos_activity_metrics (
         id              TEXT PRIMARY KEY,

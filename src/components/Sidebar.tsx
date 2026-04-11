@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Settings, Plus, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar, Pen, Kanban, BookMarked } from 'lucide-react';
+import { FileText, Settings, Plus, Trash2, Grid3x3, Target, Box, FileSpreadsheet, BookOpen, Github, Search, Code, Users, Sparkles, List, Tag, CalendarRange, Brain, Sun, Calendar, Pen, Kanban, BookMarked, UtensilsCrossed, FolderKanban } from 'lucide-react';
 import { getDb } from '../lib/db';
 import { softDelete } from '../lib/softDelete';
 import { Note } from '../lib/types';
@@ -66,6 +66,8 @@ export function Sidebar() {
     { to: "/pos/grid", icon: Grid3x3, label: "Grid" },
     { to: "/pos/sheets", icon: FileSpreadsheet, label: "Sheets" },
     { to: "/pos/github", icon: Github, label: "GitHub" },
+    { to: "/pos/food", icon: UtensilsCrossed, label: "Food Log" },
+    { to: "/pos/projects", icon: FolderKanban, label: "Projects" },
     { to: "/journal", icon: BookOpen, label: "Journal" },
   ];
 

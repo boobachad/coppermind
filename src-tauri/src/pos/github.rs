@@ -195,3 +195,114 @@ pub async fn get_github_user_stats(
         synced_at: row.get("synced_at"),
     })
 }
+
+// ─── Lightweight repo info fetch (for ProjectLogPage) ───────────────
+
+use serde::Deserialize as DeserializeLocal;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoInfo {
+    pub full_name: String,
+    pub description: Option<String>,
+    pub stars: i32,
+    pub forks: i32,
+    pub primary_language: Option<String>,
+    pub open_issues: i32,
+    pub default_branch: String,
+    pub last_push: Option<String>,   // ISO 8601
+    pub repo_url: String,
+    pub is_private: bool,
+    pub total_commits: Option<i32>,  // from contributors stats endpoint (may be None if large repo)
+}
+
+#[derive(Debug, DeserializeLocal)]
+struct RestRepo {
+    full_name: String,
+    description: Option<String>,
+    stargazers_count: i32,
+    forks_count: i32,
+    language: Option<String>,
+    open_issues_count: i32,
+    default_branch: String,
+    pushed_at: Option<String>,
+    html_url: String,
+    private: bool,
+}
+
+/// Fetch live repo info from GitHub REST API for a given owner/repo.
+/// Uses GITHUB_TOKEN from config if available (higher rate limit).
+/// Returns lightweight metadata — no DB write.
+#[tauri::command]
+pub async fn fetch_github_repo_info(
+    config: State<'_, crate::PosConfig>,
+    owner: String,
+    repo: String,
+) -> PosResult<RepoInfo> {
+    let token = config.0.github_token.clone();
+
+    let client = reqwest::Client::builder()
+        .user_agent("coppermind-pos")
+        .build()
+        .map_err(|e| PosError::External(e.to_string()))?;
+
+    let url = format!("https://api.github.com/repos/{}/{}", owner, repo);
+
+    let mut req = client.get(&url).header("Accept", "application/vnd.github+json");
+    if let Some(ref t) = token {
+        req = req.header("Authorization", format!("Bearer {}", t));
+    }
+
+    let resp = req.send().await.map_err(|e| PosError::External(e.to_string()))?;
+
+    if resp.status() == 404 {
+        return Err(PosError::NotFound(format!("{}/{} not found or private", owner, repo)));
+    }
+    if !resp.status().is_success() {
+        return Err(PosError::External(format!("GitHub API error: {}", resp.status())));
+    }
+
+    let data: RestRepo = resp.json().await.map_err(|e| PosError::External(e.to_string()))?;
+
+    // Try to get commit count via contributors stats (works for most repos)
+    // This endpoint returns 202 while computing — we do one attempt only
+    let commit_count = {
+        let stats_url = format!("https://api.github.com/repos/{}/{}/commits?per_page=1", owner, repo);
+        let mut sreq = client.get(&stats_url)
+            .header("Accept", "application/vnd.github+json");
+        if let Some(ref t) = token {
+            sreq = sreq.header("Authorization", format!("Bearer {}", t));
+        }
+        match sreq.send().await {
+            Ok(r) if r.status().is_success() => {
+                // GitHub returns Link header with last page = total commits
+                r.headers()
+                    .get("link")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|link| {
+                        // Parse: <...?page=N>; rel="last"
+                        link.split(',')
+                            .find(|s| s.contains("rel=\"last\""))
+                            .and_then(|s| s.split("page=").nth(1))
+                            .and_then(|s| s.split('>').next())
+                            .and_then(|s| s.parse::<i32>().ok())
+                    })
+            }
+            _ => None,
+        }
+    };
+
+    Ok(RepoInfo {
+        full_name: data.full_name,
+        description: data.description,
+        stars: data.stargazers_count,
+        forks: data.forks_count,
+        primary_language: data.language,
+        open_issues: data.open_issues_count,
+        default_branch: data.default_branch,
+        last_push: data.pushed_at,
+        repo_url: data.html_url,
+        is_private: data.private,
+        total_commits: commit_count,
+    })
+}

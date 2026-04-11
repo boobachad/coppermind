@@ -189,12 +189,12 @@
   /* Category Colors (Retained for Data Viz) */
   /* Dark mode: rich jewel tones, HSL ~60-70% lightness — visible on #030303 without neon */
   --pos-activity-learning:          #5b9bd5;  /* steel blue */
-  --pos-activity-coding-leetcode:   #3ab5cc;  /* cyan-teal */
-  --pos-activity-coding-codeforces: #2ec4b6;  /* teal */
+  --pos-activity-leetcode:          #3ab5cc;  /* cyan-teal */
+  --pos-activity-codeforces:        #2ec4b6;  /* teal */
   --pos-activity-cpp:               #3bbfbf;  /* deep cyan */
   --pos-activity-sleep:             #6b7fa8;  /* slate blue-gray */
   --pos-activity-book:              #c8883a;  /* warm amber */
-  --pos-activity-real-projects:     #5b9bd5;  /* steel blue */
+  --pos-activity-development:       #5b9bd5;  /* steel blue */
   --pos-activity-exercise:          #d95f5f;  /* muted crimson */
   --pos-activity-college:           #8080cc;  /* medium indigo */
   --pos-activity-food:              #3aad6e;  /* forest green */
@@ -203,7 +203,6 @@
   --pos-activity-commute:           #5588aa;  /* muted steel */
   --pos-activity-misc:              #6b7a8d;  /* blue-gray */
   --pos-activity-ncc:               #c09040;  /* golden amber */
-  --pos-activity-side-projects:     #8855cc;  /* violet */
   --pos-activity-surfing:           #4a6680;  /* dark slate */
   --pos-activity-bath:              #3aaabb;  /* teal-cyan */
   --pos-activity-walking:           #3aaa77;  /* medium green */
@@ -305,12 +304,12 @@
 
   /* Activity category colors - Solarized Light (darker for contrast) */
   --pos-activity-learning: #1e40af;
-  --pos-activity-coding-leetcode: #0369a1;
-  --pos-activity-coding-codeforces: #0f766e;
+  --pos-activity-leetcode: #0369a1;
+  --pos-activity-codeforces: #0f766e;
   --pos-activity-cpp: #155e75;
   --pos-activity-sleep: #3f3f46;
   --pos-activity-book: #92400e;
-  --pos-activity-real-projects: #1e40af;
+  --pos-activity-development: #1e40af;
   --pos-activity-exercise: #991b1b;
   --pos-activity-college: #4338ca;
   --pos-activity-food: #065f46;
@@ -319,7 +318,6 @@
   --pos-activity-commute: #115e59;
   --pos-activity-misc: #475569;
   --pos-activity-ncc: #854d0e;
-  --pos-activity-side-projects: #86198f;
   --pos-activity-surfing: #334155;
   --pos-activity-bath: #0891b2;
   --pos-activity-walking: #059669;
@@ -479,12 +477,12 @@
 
   /* Activity category colors - Blue Light */
   --pos-activity-learning: #1e40af;
-  --pos-activity-coding-leetcode: #0369a1;
-  --pos-activity-coding-codeforces: #0f766e;
+  --pos-activity-leetcode: #0369a1;
+  --pos-activity-codeforces: #0f766e;
   --pos-activity-cpp: #155e75;
   --pos-activity-sleep: #3f3f46;
   --pos-activity-book: #92400e;
-  --pos-activity-real-projects: #1e40af;
+  --pos-activity-development: #1e40af;
   --pos-activity-exercise: #991b1b;
   --pos-activity-college: #4338ca;
   --pos-activity-food: #065f46;
@@ -493,7 +491,6 @@
   --pos-activity-commute: #115e59;
   --pos-activity-misc: #475569;
   --pos-activity-ncc: #854d0e;
-  --pos-activity-side-projects: #86198f;
   --pos-activity-surfing: #334155;
   --pos-activity-bath: #0891b2;
   --pos-activity-walking: #059669;
