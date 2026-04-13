@@ -313,10 +313,24 @@ export function LogEntryModule({ date, onSuccess, editingActivity, onCancelEdit 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!startDate || !endDate || !title) { toast.error('Please fill all required fields'); return; }
-        if (startDate >= endDate) { toast.error('End time must be after start time'); return; }
 
-        const startTimeISO = formatLocalAsUTC(startDate);
-        const endTimeISO = formatLocalAsUTC(endDate);
+        // Align dates with the `date` prop to prevent drift when editing only time
+        const [year, month, day] = date.split('-').map(Number);
+        const adjustedStart = new Date(startDate);
+        adjustedStart.setFullYear(year, month - 1, day);
+        
+        const adjustedEnd = new Date(endDate);
+        adjustedEnd.setFullYear(year, month - 1, day);
+        
+        // Handle midnight crossover logic
+        if (adjustedEnd < adjustedStart) {
+            adjustedEnd.setDate(adjustedEnd.getDate() + 1);
+        }
+
+        if (adjustedStart >= adjustedEnd) { toast.error('End time must be after start time'); return; }
+
+        const startTimeISO = formatLocalAsUTC(adjustedStart);
+        const endTimeISO = formatLocalAsUTC(adjustedEnd);
         setLoading(true);
 
         // Build description: prepend URL + optional commits line for development activities

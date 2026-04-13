@@ -258,37 +258,68 @@ export function useFocusTimer() {
 
         const isBreak = forceBreak || s.mode === 'break';
 
-        const payload = {
-            category: isBreak ? 'break' : s.category,
-            title: isBreak ? 'Break' : s.name,
-            description: isBreak ? 'Break Session' : s.description,
-            start_time: formatLocalAsUTC(startTime),
-            end_time: formatLocalAsUTC(endTime),
-            is_productive: isBreak ? false : s.isProductive,
-            is_shadow: false,
-            goal_id: null,
-            // Derive local YYYY-MM-DD from startTime
-            date: (() => {
-                const offset = startTime.getTimezoneOffset() * 60000;
-                const local = new Date(startTime.getTime() - offset);
-                return local.toISOString().split('T')[0];
-            })(),
+        const getLocalDateString = (d: Date) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            const local = new Date(d.getTime() - offset);
+            return local.toISOString().split('T')[0];
         };
 
+        const startDateStr = getLocalDateString(startTime);
+        const endDateStr = getLocalDateString(endTime);
+
         try {
-            await invoke('create_activity', {
-                req: {
-                    startTime: payload.start_time,
-                    endTime: payload.end_time,
-                    category: payload.category,
-                    title: payload.title,
-                    description: payload.description,
-                    isProductive: payload.is_productive,
-                    goalId: payload.goal_id,
-                    date: payload.date
-                }
-            });
-            toast.success(isBreak ? "Break logged" : "Activity logged");
+            // Check if activity crosses midnight
+            if (startDateStr !== endDateStr) {
+                const endOfDay = new Date(startTime);
+                endOfDay.setHours(23, 59, 59, 0);
+
+                const startOfNextDay = new Date(endTime);
+                startOfNextDay.setHours(0, 0, 0, 0);
+
+                // Payload 1: First part of the activity
+                await invoke('create_activity', {
+                    req: {
+                        startTime: formatLocalAsUTC(startTime),
+                        endTime: formatLocalAsUTC(endOfDay),
+                        category: isBreak ? 'break' : s.category,
+                        title: isBreak ? 'Break' : s.name,
+                        description: isBreak ? 'Break Session' : s.description,
+                        isProductive: isBreak ? false : s.isProductive,
+                        goalId: null,
+                        date: startDateStr
+                    }
+                });
+
+                // Payload 2: Second part of the activity
+                await invoke('create_activity', {
+                    req: {
+                        startTime: formatLocalAsUTC(startOfNextDay),
+                        endTime: formatLocalAsUTC(endTime),
+                        category: isBreak ? 'break' : s.category,
+                        title: isBreak ? 'Break' : s.name,
+                        description: isBreak ? 'Break Session' : s.description,
+                        isProductive: isBreak ? false : s.isProductive,
+                        goalId: null,
+                        date: endDateStr
+                    }
+                });
+                toast.success(isBreak ? "Break logged (split across midnight)" : "Activity logged (split across midnight)");
+            } else {
+                // Normal case
+                await invoke('create_activity', {
+                    req: {
+                        startTime: formatLocalAsUTC(startTime),
+                        endTime: formatLocalAsUTC(endTime),
+                        category: isBreak ? 'break' : s.category,
+                        title: isBreak ? 'Break' : s.name,
+                        description: isBreak ? 'Break Session' : s.description,
+                        isProductive: isBreak ? false : s.isProductive,
+                        goalId: null,
+                        date: startDateStr
+                    }
+                });
+                toast.success(isBreak ? "Break logged" : "Activity logged");
+            }
         } catch (e) {
             toast.error("Failed to save activity: " + String(e));
         }
