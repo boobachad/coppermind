@@ -47,8 +47,10 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         milestone_id  TEXT REFERENCES goal_periods(id) ON DELETE SET NULL,
         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         title         TEXT NOT NULL,
-        book_id       TEXT,
+        book_id       TEXT REFERENCES books(id),
         pages_read    INTEGER,
+        food_items    TEXT[] DEFAULT '{}',
+        milestone_amount INTEGER,
         CONSTRAINT check_goal_or_milestone CHECK (
             (goal_ids IS NOT NULL AND milestone_id IS NULL) OR
             (goal_ids IS NULL AND milestone_id IS NOT NULL) OR
@@ -60,11 +62,9 @@ const POS_DDL_STATEMENTS: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS idx_activities_goal_ids       ON pos_activities USING GIN(goal_ids)",
     "CREATE INDEX IF NOT EXISTS idx_activities_milestone_id   ON pos_activities (milestone_id) WHERE milestone_id IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_activities_book_id        ON pos_activities (book_id)",
-
-    // ─── Activity schema migrations (idempotent) ─────────────────
-    "ALTER TABLE pos_activities ADD COLUMN IF NOT EXISTS food_items TEXT[] DEFAULT '{}'",
-    "ALTER TABLE pos_activities DROP COLUMN IF EXISTS project_name",
     "CREATE INDEX IF NOT EXISTS idx_activities_food_items ON pos_activities USING GIN(food_items) WHERE food_items IS NOT NULL AND food_items != '{}'",
+
+
 
     // ─── Category renames (idempotent) ───────────────────────────
     "UPDATE pos_activities SET category = 'development' WHERE category IN ('real_projects', 'side_projects')",
@@ -260,9 +260,7 @@ const POS_DDL_STATEMENTS: &[&str] = &[
         CONSTRAINT knowledge_items_source_check CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal', 'DailyCapture')),
         CONSTRAINT knowledge_items_status_check CHECK (status IN ('Inbox', 'Planned', 'Completed', 'Archived'))
     )",
-    // Widen source constraint to include DailyCapture — safe idempotent migration
-    "ALTER TABLE knowledge_items DROP CONSTRAINT IF EXISTS knowledge_items_source_check",
-    "ALTER TABLE knowledge_items ADD CONSTRAINT knowledge_items_source_check CHECK (source IN ('ActivityLog', 'Manual', 'BrowserExtension', 'Journal', 'DailyCapture'))",
+
     "CREATE INDEX IF NOT EXISTS idx_kb_items_status ON knowledge_items(status)",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_tags ON knowledge_items USING gin(tags)",
     "CREATE INDEX IF NOT EXISTS idx_kb_items_review ON knowledge_items(next_review_date) WHERE next_review_date IS NOT NULL",
