@@ -68,7 +68,7 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
     "react-moveable": "^0.56.0",
-    "react-router-dom": "^7.13.0",
+    "react-router-dom": "^7.17.0",
     "react-select": "^5.10.2",
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
